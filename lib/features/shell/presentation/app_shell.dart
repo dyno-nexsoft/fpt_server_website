@@ -169,7 +169,9 @@ class _QueueSidebar extends ConsumerWidget {
               ListTile(
                 leading: const Icon(Icons.dns),
                 title: Text(data.hostname),
-                subtitle: Text('up ${data.uptime} · Dart ${data.dartVersion}'),
+                subtitle: Text(
+                  'up ${data.uptime} · Dart ${formatDartVersion(data.dartVersion)}',
+                ),
               ),
             ],
           );

@@ -67,44 +67,57 @@ final routerProvider = Provider<GoRouter>((ref) {
     refreshListenable: notifier,
     redirect: notifier.redirect,
     routes: [
-      GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
+      GoRoute(
+        path: '/login',
+        pageBuilder: (context, state) =>
+            NoTransitionPage(child: const LoginScreen()),
+      ),
       ShellRoute(
         builder: (context, state, child) => AppShell(child: child),
         routes: [
           GoRoute(
             path: '/dashboard',
-            builder: (context, state) => const DashboardScreen(),
+            pageBuilder: (context, state) =>
+                NoTransitionPage(child: const DashboardScreen()),
           ),
           GoRoute(
             path: '/builds',
-            builder: (context, state) => const BuildsScreen(),
+            pageBuilder: (context, state) =>
+                NoTransitionPage(child: const BuildsScreen()),
           ),
           GoRoute(
             path: '/jobs/:id',
-            builder: (context, state) {
+            pageBuilder: (context, state) {
               final id = state.pathParameters['id']!;
-              return JobDetailScreen(key: ValueKey(id), jobId: id);
+              return NoTransitionPage(
+                child: JobDetailScreen(key: ValueKey(id), jobId: id),
+              );
             },
           ),
           GoRoute(
             path: '/actions/:name',
-            builder: (context, state) {
+            pageBuilder: (context, state) {
               final name = state.pathParameters['name']!;
-              return ActionFormScreen(key: ValueKey(name), actionName: name);
+              return NoTransitionPage(
+                child: ActionFormScreen(key: ValueKey(name), actionName: name),
+              );
             },
           ),
           // The file server redirects `/<artifactKey>/` here — see
           // `ftp_handler.dart`'s `_redirectToArtifactBrowser`.
           GoRoute(
             path: '/artifacts/:key',
-            builder: (context, state) {
+            pageBuilder: (context, state) {
               final key = state.pathParameters['key']!;
-              return ArtifactsScreen(key: ValueKey(key), artifactKey: key);
+              return NoTransitionPage(
+                child: ArtifactsScreen(key: ValueKey(key), artifactKey: key),
+              );
             },
           ),
           GoRoute(
             path: '/settings',
-            builder: (context, state) => const SettingsScreen(),
+            pageBuilder: (context, state) =>
+                NoTransitionPage(child: const SettingsScreen()),
           ),
         ],
       ),

@@ -136,7 +136,7 @@ class _JobsTable extends ConsumerWidget {
       cells: [
         DataCell(Text(job.id)),
         DataCell(Text(job.actionName)),
-        DataCell(Text(_paramsSummary(job))),
+        DataCell(_ParamsCell(summary: _paramsSummary(job))),
         DataCell(JobStateChip(state: job.state)),
         DataCell(
           Text(
@@ -152,8 +152,29 @@ class _JobsTable extends ConsumerWidget {
   }
 
   String _paramsSummary(Job job) => job.actionParams.entries
+      .where((entry) => entry.value != null)
       .map((entry) => '${entry.key}=${entry.value}')
       .join(', ');
+}
+
+/// A single truncated line instead of the raw `key=value, ...` dump
+/// wrapping across the row — the full value is still one hover away.
+class _ParamsCell extends StatelessWidget {
+  const _ParamsCell({required this.summary});
+
+  final String summary;
+
+  @override
+  Widget build(BuildContext context) {
+    if (summary.isEmpty) return const Text('—');
+    return Tooltip(
+      message: summary,
+      child: SizedBox(
+        width: 260,
+        child: Text(summary, overflow: TextOverflow.ellipsis, maxLines: 1),
+      ),
+    );
+  }
 }
 
 class _RowActions extends ConsumerWidget {

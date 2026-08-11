@@ -32,6 +32,12 @@ String formatRelativeTimestamp(DateTime dateTime) {
 String formatUptime(int uptimeSeconds) =>
     formatDuration(Duration(seconds: uptimeSeconds));
 
+/// `Platform.version` reads like `3.12.2 (stable) (Tue Jun 9 01:11:39 2026
+/// -0700) on "macos_arm64"` — useful in a diagnostics dump, not in a sidebar
+/// tile. Keeps just the leading semver.
+String formatDartVersion(String platformVersion) =>
+    platformVersion.split(' ').first;
+
 String formatFileSize(int bytes) {
   if (bytes < 1024) return '$bytes B';
   if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
