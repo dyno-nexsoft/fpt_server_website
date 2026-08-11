@@ -6,6 +6,7 @@ import '../../../core/api/api_exception.dart';
 import '../../../core/api/jobs_api.dart';
 import '../../../core/models/job.dart';
 import '../../../core/providers/core_providers.dart';
+import '../../../core/providers/job_seed_provider.dart';
 import '../../../core/providers/status_provider.dart';
 import '../../../core/sse/job_event_source.dart';
 
@@ -58,6 +59,7 @@ class JobLogController extends Notifier<JobLogState> {
   Timer? _pollTimer;
   int _nextOffset = 0;
   bool _disposed = false;
+  Job? _seed;
 
   @override
   JobLogState build() {
@@ -66,6 +68,11 @@ class JobLogController extends Notifier<JobLogState> {
       _sse?.close();
       _pollTimer?.cancel();
     });
+    final pendingSeed = ref.read(pendingJobSeedProvider);
+    if (pendingSeed != null && pendingSeed.id == jobId) {
+      _seed = pendingSeed;
+      ref.read(pendingJobSeedProvider.notifier).clear();
+    }
     unawaited(_start());
     return const JobLogState();
   }
@@ -90,13 +97,19 @@ class JobLogController extends Notifier<JobLogState> {
     }
   }
 
+  /// A 404 here means the server restarted mid-build and re-invoked the
+  /// recorded action under a new id — see docs/rest-api.md "Restart
+  /// mid-build". `resumed_from` on the new job is the exact, unambiguous
+  /// pointer back to this one; matching on `action_name`/`action_params`
+  /// instead would risk a false positive whenever the same action legitimately
+  /// runs more than once (a cron job, or a manual re-run).
   Future<void> _handleMissingJob() async {
     final api = ref.read(apiClientProvider);
     state = state.copyWith(jobMissing: true);
     try {
       final recent = await fetchJobs(api, limit: 20);
       for (final candidate in recent) {
-        if (candidate.id != jobId) {
+        if (candidate.resumedFrom == jobId) {
           state = state.copyWith(resumedJob: candidate);
           break;
         }
@@ -108,7 +121,11 @@ class JobLogController extends Notifier<JobLogState> {
 
   void _setJob(Job job) {
     if (_disposed) return;
-    state = state.copyWith(job: job);
+    final merged = job.copyWith(
+      logUrl: job.logUrl ?? _seed?.logUrl,
+      warnings: job.warnings.isNotEmpty ? job.warnings : _seed?.warnings,
+    );
+    state = state.copyWith(job: merged);
   }
 
   Future<void> _fetchLogOnce() async {
@@ -164,27 +181,11 @@ class JobLogController extends Notifier<JobLogState> {
     final job = state.job;
     if (job != null) {
       _setJob(
-        Job(
-          id: job.id,
+        job.copyWith(
           state: JobState.fromWire(event.state ?? 'succeeded'),
-          command: job.command,
-          actionName: job.actionName,
-          actionParams: job.actionParams,
-          environments: job.environments,
-          createdBy: job.createdBy,
-          artifactKey: job.artifactKey,
-          promoted: job.promoted,
-          announce: job.announce,
-          createdAt: job.createdAt,
-          startedAt: job.startedAt,
           finishedAt: DateTime.now(),
           exitCode: event.exitCode,
-          lastLine: job.lastLine,
-          lastSeq: event.seq ?? job.lastSeq,
-          discordChannelId: job.discordChannelId,
-          discordMessageId: job.discordMessageId,
-          logUrl: job.logUrl,
-          warnings: job.warnings,
+          lastSeq: event.seq,
         ),
       );
     }

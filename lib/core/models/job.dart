@@ -23,6 +23,7 @@ class Job {
     this.logUrl,
     this.warnings = const [],
     this.message,
+    this.resumedFrom,
   });
 
   factory Job.fromJson(Map<String, dynamic> json) {
@@ -54,6 +55,7 @@ class Job {
       warnings:
           (json['warnings'] as List<dynamic>?)?.cast<String>() ?? const [],
       message: json['message'] as String?,
+      resumedFrom: json['resumed_from'] as String?,
     );
   }
 
@@ -81,6 +83,11 @@ class Job {
   /// Only populated on `/cancel` responses — the confirmation text.
   final String? message;
 
+  /// Id of the job this one replaced after a server restart re-invoked its
+  /// recorded action — see docs/rest-api.md "Restart mid-build". Null for
+  /// every job created the normal way.
+  final String? resumedFrom;
+
   bool get isTerminal => state.isTerminal;
 
   Duration? get runningDuration {
@@ -88,6 +95,42 @@ class Job {
     if (start == null) return null;
     return (finishedAt ?? DateTime.now()).difference(start);
   }
+
+  /// `logUrl`/`warnings` only appear on the job-creation response — a later
+  /// `GET /jobs/{id}` won't carry them. Callers that already know those
+  /// values can preserve them across a refetch instead of losing them; the
+  /// other overrides exist for applying an SSE `finished` event in place.
+  Job copyWith({
+    JobState? state,
+    DateTime? finishedAt,
+    int? exitCode,
+    int? lastSeq,
+    String? logUrl,
+    List<String>? warnings,
+  }) => Job(
+    id: id,
+    state: state ?? this.state,
+    command: command,
+    actionName: actionName,
+    actionParams: actionParams,
+    environments: environments,
+    createdBy: createdBy,
+    artifactKey: artifactKey,
+    promoted: promoted,
+    announce: announce,
+    createdAt: createdAt,
+    startedAt: startedAt,
+    finishedAt: finishedAt ?? this.finishedAt,
+    exitCode: exitCode ?? this.exitCode,
+    lastLine: lastLine,
+    lastSeq: lastSeq ?? this.lastSeq,
+    discordChannelId: discordChannelId,
+    discordMessageId: discordMessageId,
+    logUrl: logUrl ?? this.logUrl,
+    warnings: warnings ?? this.warnings,
+    message: message,
+    resumedFrom: resumedFrom,
+  );
 }
 
 enum JobState {

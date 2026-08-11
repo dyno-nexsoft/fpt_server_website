@@ -80,6 +80,8 @@ class _JobHeader extends StatelessWidget {
           JobStateChip(state: job.state),
           if (duration != null) Text(formatDuration(duration)),
           Chip(label: Text(_modeLabel)),
+          if (job.resumedFrom != null)
+            Chip(label: Text('resumed from ${job.resumedFrom}')),
         ],
       ),
     );

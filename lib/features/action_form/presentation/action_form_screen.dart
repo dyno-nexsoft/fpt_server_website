@@ -7,6 +7,7 @@ import '../../../core/models/action_schema.dart';
 import '../../../core/models/job.dart';
 import '../../../core/providers/catalogue_providers.dart';
 import '../../../core/providers/core_providers.dart';
+import '../../../core/providers/job_seed_provider.dart';
 import '../../../core/providers/status_provider.dart';
 import '../../../shared/toast/app_toast.dart';
 import 'action_param_field.dart';
@@ -93,6 +94,9 @@ class _ActionFormScreenState extends ConsumerState<ActionFormScreen> {
       ref.read(statusControllerProvider.notifier).refreshNow();
       if (action.kind == ActionKind.job) {
         final job = Job.fromJson(response);
+        // GET /jobs/{id} won't carry logUrl/warnings — seed them for the
+        // detail screen this navigates to next.
+        ref.read(pendingJobSeedProvider.notifier).set(job);
         if (mounted) context.go('/jobs/${job.id}');
         return;
       }

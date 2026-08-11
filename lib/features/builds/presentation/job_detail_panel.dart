@@ -33,6 +33,11 @@ class JobDetailPanel extends ConsumerWidget {
         const SizedBox(height: 8),
         for (final entry in job.actionParams.entries)
           _ParamRow(name: entry.key, value: '${entry.value}'),
+        if (job.warnings.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          for (final warning in job.warnings)
+            _ParamRow(name: '⚠', value: warning),
+        ],
         const Divider(height: 32),
         if (job.logUrl != null)
           OutlinedButton.icon(
