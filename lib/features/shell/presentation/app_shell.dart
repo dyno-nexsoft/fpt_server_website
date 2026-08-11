@@ -318,7 +318,7 @@ class _QueueJobTile extends StatelessWidget {
     return ListTile(
       dense: true,
       leading: JobStateChip(state: job.state),
-      title: Text(job.actionName),
+      title: Text(job.actionName ?? job.command),
       subtitle: duration != null
           ? Text(formatDuration(duration))
           : const Text('queued'),

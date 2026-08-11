@@ -86,19 +86,25 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       children: [
                         const Icon(Icons.info_outline, size: 18),
                         Expanded(
-                          child: Text.rich(
-                            TextSpan(
-                              children: [
-                                const TextSpan(text: "Don't have a key? Run "),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text("Don't have a key?"),
+                              Text.rich(
                                 TextSpan(
-                                  text: '/admin api-key-add',
-                                  style: textTheme.bodyMedium?.merge(
-                                    AppTheme.monospaceTextStyle,
-                                  ),
+                                  children: [
+                                    const TextSpan(text: 'Run '),
+                                    TextSpan(
+                                      text: '/admin api-key-add',
+                                      style: textTheme.bodyMedium?.merge(
+                                        AppTheme.monospaceTextStyle,
+                                      ),
+                                    ),
+                                    const TextSpan(text: ' in Discord.'),
+                                  ],
                                 ),
-                                const TextSpan(text: ' in Discord.'),
-                              ],
-                            ),
+                              ),
+                            ],
                           ),
                         ),
                       ],

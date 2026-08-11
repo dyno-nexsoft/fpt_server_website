@@ -74,6 +74,7 @@ class _BuildsScreenState extends ConsumerState<BuildsScreen> {
                   avatar: Icon(icon, size: 18),
                   label: Text(label),
                   selected: _stateFilter == value,
+                  showCheckmark: false,
                   onSelected: (_) => setState(() => _stateFilter = value),
                 ),
             ],
@@ -96,7 +97,7 @@ class _BuildsScreenState extends ConsumerState<BuildsScreen> {
     return jobs
         .where(
           (job) =>
-              job.actionName.toLowerCase().contains(query) ||
+              (job.actionName ?? job.command).toLowerCase().contains(query) ||
               job.id.toLowerCase().contains(query),
         )
         .toList();
@@ -146,7 +147,7 @@ class _JobsTable extends ConsumerWidget {
       onSelectChanged: (_) => context.go('/jobs/${job.id}'),
       cells: [
         DataCell(Text(job.id)),
-        DataCell(Text(job.actionName)),
+        DataCell(Text(job.actionName ?? job.command)),
         DataCell(_ParamsCell(summary: _paramsSummary(job))),
         DataCell(JobStateChip(state: job.state)),
         DataCell(

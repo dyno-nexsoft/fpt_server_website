@@ -32,7 +32,7 @@ class Job {
       id: json['id'] as String,
       state: JobState.fromWire(json['state'] as String),
       command: json['command'] as String,
-      actionName: json['action_name'] as String,
+      actionName: json['action_name'] as String?,
       actionParams: (json['action_params'] as Map<String, dynamic>? ?? {}),
       environments: (json['environments'] as Map<String, dynamic>? ?? {}),
       createdBy: json['created_by'] as String?,
@@ -62,7 +62,11 @@ class Job {
   final String id;
   final JobState state;
   final String command;
-  final String actionName;
+
+  /// Null for a handful of legacy/cron records with no recorded action —
+  /// see docs/rest-api.md. Every job created through an Action always has
+  /// one; this only stays nullable for those historical outliers.
+  final String? actionName;
   final Map<String, dynamic> actionParams;
   final Map<String, dynamic> environments;
   final String? createdBy;

@@ -73,7 +73,7 @@ class _ArtifactList extends ConsumerWidget {
           Card(
             child: ListTile(
               leading: const Icon(Icons.precision_manufacturing_outlined),
-              title: Text(job.actionName),
+              title: Text(job.actionName ?? job.command),
               subtitle: Text('Job ${job.id}'),
               trailing: FilledButton.tonal(
                 onPressed: () => context.go('/jobs/${job.id}'),
