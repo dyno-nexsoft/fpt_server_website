@@ -108,6 +108,19 @@ class _ArtifactTile extends StatelessWidget {
 
   String get _url => '$origin/$listingKey/${Uri.encodeComponent(file.name)}';
 
+  bool get _isIpa => file.name.toLowerCase().endsWith('.ipa');
+
+  /// Apple's over-the-air install handoff: the device fetches a manifest
+  /// (served by `ftp_handler`'s `manifest.plist?ipa=` route) which points back
+  /// at the `.ipa`. Only works from an iOS device, and only over HTTPS —
+  /// [origin] is the tunnel URL in the deployment that matters, so it is.
+  String get _installUrl {
+    final ipaPath = Uri.encodeComponent('$listingKey/${file.name}');
+    final manifestUrl = '$origin/manifest.plist?ipa=$ipaPath';
+    return 'itms-services://?action=download-manifest'
+        '&url=${Uri.encodeComponent(manifestUrl)}';
+  }
+
   @override
   Widget build(BuildContext context) {
     final size = file.size;
@@ -127,6 +140,12 @@ class _ArtifactTile extends StatelessWidget {
           : Row(
               mainAxisSize: MainAxisSize.min,
               children: [
+                if (_isIpa)
+                  IconButton(
+                    tooltip: 'Install on iOS',
+                    icon: const Icon(Icons.install_mobile),
+                    onPressed: () => openInNewTab(_installUrl),
+                  ),
                 IconButton(
                   tooltip: 'View raw',
                   icon: const Icon(Icons.open_in_new),
