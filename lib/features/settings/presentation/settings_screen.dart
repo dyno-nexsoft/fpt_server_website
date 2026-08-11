@@ -6,6 +6,7 @@ import '../../../core/providers/catalogue_providers.dart';
 import '../../../core/providers/connection_provider.dart';
 import '../../../core/providers/session_provider.dart';
 import 'api_keys_section.dart';
+import 'appearance_section.dart';
 import 'logs_section.dart';
 import 'system_panel.dart';
 
@@ -22,6 +23,7 @@ class SettingsScreen extends ConsumerWidget {
         spacing: 16,
         children: [
           Text('Settings', style: textTheme.headlineSmall),
+          const AppearanceSection(),
           const _ConnectionCard(),
           const ApiKeysSection(),
           const LogsSection(),
@@ -91,7 +93,10 @@ class _ConnectionCard extends ConsumerWidget {
                 contentPadding: EdgeInsets.zero,
                 leading: Icon(Icons.vpn_key_off_outlined),
                 title: Text('Not connected'),
-                subtitle: Text('Browsing read-only — no key stored.'),
+                subtitle: Text(
+                  'Browsing read-only — no key stored. Run '
+                  '/admin api-key-add in Discord to get one.',
+                ),
               ),
             if (creds.hasKey)
               FilledButton.tonalIcon(

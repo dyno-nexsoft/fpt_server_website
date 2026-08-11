@@ -109,18 +109,25 @@ class _JobsTable extends ConsumerWidget {
     if (jobs.isEmpty) {
       return const Center(child: Text('No builds match this filter'));
     }
+    // Two-axis scroll: DataTable has no intrinsic horizontal scrolling of its
+    // own, so on a narrow screen the seven columns need their own scroll
+    // view nested inside the vertical one, or they'd overflow instead of
+    // scrolling.
     return SingleChildScrollView(
-      child: DataTable(
-        columns: const [
-          DataColumn(label: Text('Job')),
-          DataColumn(label: Text('Action')),
-          DataColumn(label: Text('Params')),
-          DataColumn(label: Text('State')),
-          DataColumn(label: Text('Started')),
-          DataColumn(label: Text('Duration')),
-          DataColumn(label: Text('')),
-        ],
-        rows: [for (final job in jobs) _buildRow(context, ref, job)],
+      scrollDirection: Axis.horizontal,
+      child: SingleChildScrollView(
+        child: DataTable(
+          columns: const [
+            DataColumn(label: Text('Job')),
+            DataColumn(label: Text('Action')),
+            DataColumn(label: Text('Params')),
+            DataColumn(label: Text('State')),
+            DataColumn(label: Text('Started')),
+            DataColumn(label: Text('Duration')),
+            DataColumn(label: Text('')),
+          ],
+          rows: [for (final job in jobs) _buildRow(context, ref, job)],
+        ),
       ),
     );
   }

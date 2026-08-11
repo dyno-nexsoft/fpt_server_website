@@ -75,6 +75,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   'without one.',
                   textAlign: TextAlign.center,
                 ),
+                Text(
+                  "Don't have a key? Run /admin api-key-add in Discord "
+                  'to create one.',
+                  textAlign: TextAlign.center,
+                  style: textTheme.bodySmall,
+                ),
                 TextField(
                   controller: _serverController,
                   keyboardType: TextInputType.url,

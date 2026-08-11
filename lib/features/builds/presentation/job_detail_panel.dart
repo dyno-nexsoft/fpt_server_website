@@ -87,7 +87,10 @@ class JobDetailPanel extends ConsumerWidget {
             label: const Text('Retry'),
           ),
         if (showsAnyAction && !hasKey)
-          const Text('Connect with an API key to manage this build.'),
+          const Text(
+            'Connect with an API key to manage this build — run '
+            '/admin api-key-add in Discord to get one.',
+          ),
       ],
     );
   }

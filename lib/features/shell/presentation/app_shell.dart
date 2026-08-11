@@ -9,6 +9,7 @@ import '../../../core/providers/connection_provider.dart';
 import '../../../core/providers/session_provider.dart';
 import '../../../core/providers/status_provider.dart';
 import '../../../shared/utils/format.dart';
+import '../../../shared/utils/responsive.dart';
 import '../../../shared/widgets/job_state_chip.dart';
 
 /// Persistent layout for every screen: top nav generated from the
@@ -16,6 +17,12 @@ import '../../../shared/widgets/job_state_chip.dart';
 /// the routed screen filling the remaining space. Read is public — this
 /// renders the same with or without a stored key, only the top-right
 /// Connect/Sign-out control changes.
+///
+/// Below [kMobileBreakpoint] the nav row (which would otherwise overflow the
+/// app bar) moves into a leading [Drawer], and the fixed 300px queue column
+/// (which would otherwise leave no room for the routed screen) moves into a
+/// [Scaffold.endDrawer] opened from an app bar icon instead of staying
+/// permanently on screen.
 class AppShell extends ConsumerWidget {
   const AppShell({super.key, required this.child});
 
@@ -27,63 +34,141 @@ class AppShell extends ConsumerWidget {
     final actions = ref.watch(actionsProvider);
     final myKey = ref.watch(myKeyInfoProvider);
     final hasKey = ref.watch(sessionProvider).hasKey;
+    final mobile = isMobileWidth(context);
+
+    final connectControl = hasKey
+        ? IconButton(
+            tooltip: 'Sign out',
+            icon: const Icon(Icons.logout),
+            onPressed: () =>
+                ref.read(connectionControllerProvider.notifier).logout(),
+          )
+        : TextButton.icon(
+            onPressed: () => context.go('/login'),
+            icon: const Icon(Icons.login),
+            label: const Text('Connect'),
+          );
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('CI/CD'),
         actions: [
-          _NavButton(
-            label: 'Dashboard',
-            selected: location == '/dashboard',
-            onPressed: () => context.go('/dashboard'),
-          ),
-          _NavButton(
-            label: 'Builds',
-            selected: location == '/builds',
-            onPressed: () => context.go('/builds'),
-          ),
-          actions.when(
-            data: (data) => _ActionsMenu(actions: data),
-            loading: () => const SizedBox.shrink(),
-            error: (_, _) => const SizedBox.shrink(),
-          ),
-          const SizedBox(width: 8),
-          myKey.maybeWhen(
-            data: (info) => info == null
-                ? const SizedBox.shrink()
-                : Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 8),
-                    child: Center(child: Text(info.name)),
-                  ),
-            orElse: () => const SizedBox.shrink(),
+          if (!mobile) ...[
+            _NavButton(
+              label: 'Dashboard',
+              selected: location == '/dashboard',
+              onPressed: () => context.go('/dashboard'),
+            ),
+            _NavButton(
+              label: 'Builds',
+              selected: location == '/builds',
+              onPressed: () => context.go('/builds'),
+            ),
+            actions.when(
+              data: (data) => _ActionsMenu(actions: data),
+              loading: () => const SizedBox.shrink(),
+              error: (_, _) => const SizedBox.shrink(),
+            ),
+            const SizedBox(width: 8),
+            myKey.maybeWhen(
+              data: (info) => info == null
+                  ? const SizedBox.shrink()
+                  : Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      child: Center(child: Text(info.name)),
+                    ),
+              orElse: () => const SizedBox.shrink(),
+            ),
+          ],
+          Builder(
+            builder: (context) => IconButton(
+              tooltip: 'Queue',
+              icon: const Icon(Icons.list_alt),
+              onPressed: () => Scaffold.of(context).openEndDrawer(),
+            ),
           ),
           IconButton(
             tooltip: 'Settings',
             icon: const Icon(Icons.settings),
             onPressed: () => context.go('/settings'),
           ),
-          if (hasKey)
-            IconButton(
-              tooltip: 'Sign out',
-              icon: const Icon(Icons.logout),
-              onPressed: () =>
-                  ref.read(connectionControllerProvider.notifier).logout(),
-            )
-          else
-            TextButton.icon(
-              onPressed: () => context.go('/login'),
-              icon: const Icon(Icons.login),
-              label: const Text('Connect'),
-            ),
+          connectControl,
         ],
       ),
-      body: Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const SizedBox(width: 300, child: _QueueSidebar()),
-          const VerticalDivider(width: 1),
-          Expanded(child: child),
-        ],
+      drawer: mobile ? _NavDrawer(location: location, actions: actions) : null,
+      endDrawer: const Drawer(width: 300, child: _QueueSidebar()),
+      body: mobile
+          ? child
+          : Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const SizedBox(width: 300, child: _QueueSidebar()),
+                const VerticalDivider(width: 1),
+                Expanded(child: child),
+              ],
+            ),
+    );
+  }
+}
+
+/// Mobile-only replacement for the app bar's nav row — the same
+/// Dashboard/Builds/New build controls, laid out as a list instead of
+/// buttons that would otherwise overflow a phone-width app bar.
+class _NavDrawer extends StatelessWidget {
+  const _NavDrawer({required this.location, required this.actions});
+
+  final String location;
+  final AsyncValue<List<ActionSchema>> actions;
+
+  @override
+  Widget build(BuildContext context) {
+    return Drawer(
+      child: SafeArea(
+        child: ListView(
+          children: [
+            ListTile(
+              leading: const Icon(Icons.dashboard_outlined),
+              title: const Text('Dashboard'),
+              selected: location == '/dashboard',
+              onTap: () {
+                Navigator.of(context).pop();
+                context.go('/dashboard');
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.list_alt_outlined),
+              title: const Text('Builds'),
+              selected: location == '/builds',
+              onTap: () {
+                Navigator.of(context).pop();
+                context.go('/builds');
+              },
+            ),
+            const Divider(),
+            actions.when(
+              data: (data) {
+                final invokable = data.where(isBuildMenuAction).toList();
+                return Column(
+                  children: [
+                    for (final action in invokable)
+                      ListTile(
+                        leading: Icon(
+                          action.isDangerous ? Icons.warning_amber : Icons.bolt,
+                        ),
+                        title: Text(action.name),
+                        onTap: () {
+                          Navigator.of(context).pop();
+                          context.go('/actions/${action.name}');
+                        },
+                      ),
+                  ],
+                );
+              },
+              loading: () => const SizedBox.shrink(),
+              error: (_, _) => const SizedBox.shrink(),
+            ),
+          ],
+        ),
       ),
     );
   }
