@@ -19,14 +19,9 @@ abstract final class AppTheme {
     contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
   );
 
-  static const _navigationRailTheme = NavigationRailThemeData(
-    labelType: NavigationRailLabelType.all,
-  );
-
   static final ThemeData light = ThemeData(
     useMaterial3: true,
     colorScheme: ColorScheme.fromSeed(seedColor: Colors.indigo),
-    navigationRailTheme: _navigationRailTheme,
     inputDecorationTheme: _inputDecorationTheme,
   );
 
@@ -36,7 +31,6 @@ abstract final class AppTheme {
       seedColor: Colors.indigo,
       brightness: Brightness.dark,
     ),
-    navigationRailTheme: _navigationRailTheme,
     inputDecorationTheme: _inputDecorationTheme,
   );
 }
