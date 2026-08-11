@@ -11,14 +11,14 @@ import '../../../shared/utils/format.dart';
 import '../../../shared/widgets/job_state_chip.dart';
 import '../application/jobs_providers.dart';
 
-const _filters = <String, String?>{
-  'All': null,
-  'Running': 'running',
-  'Queued': 'queued',
-  'Succeeded': 'succeeded',
-  'Failed': 'failed',
-  'Cancelled': 'cancelled',
-};
+const _filters = <(String label, String? value, IconData icon)>[
+  ('All', null, Icons.apps),
+  ('Running', 'running', Icons.autorenew),
+  ('Queued', 'queued', Icons.schedule),
+  ('Succeeded', 'succeeded', Icons.check_circle_outline),
+  ('Failed', 'failed', Icons.error_outline),
+  ('Cancelled', 'cancelled', Icons.block),
+];
 
 /// `GET /jobs?state=&limit=` — a live wire-screen of what the API returns;
 /// row actions are derived from each job's own field values so the button
@@ -48,7 +48,9 @@ class _BuildsScreenState extends ConsumerState<BuildsScreen> {
         spacing: 12,
         children: [
           Row(
+            spacing: 8,
             children: [
+              const Icon(Icons.list_alt_outlined),
               Text('Builds', style: textTheme.headlineSmall),
               const Spacer(),
               SizedBox(
@@ -65,12 +67,14 @@ class _BuildsScreenState extends ConsumerState<BuildsScreen> {
           ),
           Wrap(
             spacing: 8,
+            runSpacing: 8,
             children: [
-              for (final entry in _filters.entries)
+              for (final (label, value, icon) in _filters)
                 ChoiceChip(
-                  label: Text(entry.key),
-                  selected: _stateFilter == entry.value,
-                  onSelected: (_) => setState(() => _stateFilter = entry.value),
+                  avatar: Icon(icon, size: 18),
+                  label: Text(label),
+                  selected: _stateFilter == value,
+                  onSelected: (_) => setState(() => _stateFilter = value),
                 ),
             ],
           ),

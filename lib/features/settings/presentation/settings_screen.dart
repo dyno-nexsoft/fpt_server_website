@@ -22,7 +22,13 @@ class SettingsScreen extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         spacing: 16,
         children: [
-          Text('Settings', style: textTheme.headlineSmall),
+          Row(
+            spacing: 8,
+            children: [
+              const Icon(Icons.settings_outlined),
+              Text('Settings', style: textTheme.headlineSmall),
+            ],
+          ),
           const AppearanceSection(),
           const _ConnectionCard(),
           const ApiKeysSection(),

@@ -43,10 +43,10 @@ class AppShell extends ConsumerWidget {
             onPressed: () =>
                 ref.read(connectionControllerProvider.notifier).logout(),
           )
-        : TextButton.icon(
-            onPressed: () => context.go('/login'),
+        : IconButton(
+            tooltip: 'Connect',
             icon: const Icon(Icons.login),
-            label: const Text('Connect'),
+            onPressed: () => context.go('/login'),
           );
 
     return Scaffold(
@@ -56,11 +56,13 @@ class AppShell extends ConsumerWidget {
           if (!mobile) ...[
             _NavButton(
               label: 'Dashboard',
+              icon: Icons.dashboard_outlined,
               selected: location == '/dashboard',
               onPressed: () => context.go('/dashboard'),
             ),
             _NavButton(
               label: 'Builds',
+              icon: Icons.list_alt_outlined,
               selected: location == '/builds',
               onPressed: () => context.go('/builds'),
             ),
@@ -80,23 +82,31 @@ class AppShell extends ConsumerWidget {
               orElse: () => const SizedBox.shrink(),
             ),
           ],
-          Builder(
-            builder: (context) => IconButton(
-              tooltip: 'Queue',
-              icon: const Icon(Icons.list_alt),
-              onPressed: () => Scaffold.of(context).openEndDrawer(),
-            ),
-          ),
           IconButton(
             tooltip: 'Settings',
             icon: const Icon(Icons.settings),
             onPressed: () => context.go('/settings'),
           ),
           connectControl,
+          // Last action, at the trailing corner — matching where Scaffold
+          // would put its own auto-generated endDrawer button, had one not
+          // been supplied explicitly here. On desktop the queue is already
+          // the permanent left sidebar below, so this (and the endDrawer it
+          // opens) would just show the exact same content a second time.
+          if (mobile)
+            Builder(
+              builder: (context) => IconButton(
+                tooltip: 'Queue',
+                icon: const Icon(Icons.list_alt),
+                onPressed: () => Scaffold.of(context).openEndDrawer(),
+              ),
+            ),
         ],
       ),
       drawer: mobile ? _NavDrawer(location: location, actions: actions) : null,
-      endDrawer: const Drawer(width: 300, child: _QueueSidebar()),
+      endDrawer: mobile
+          ? const Drawer(width: 300, child: _QueueSidebar())
+          : null,
       body: mobile
           ? child
           : Row(
@@ -177,19 +187,29 @@ class _NavDrawer extends StatelessWidget {
 class _NavButton extends StatelessWidget {
   const _NavButton({
     required this.label,
+    required this.icon,
     required this.selected,
     required this.onPressed,
   });
 
   final String label;
+  final IconData icon;
   final bool selected;
   final VoidCallback onPressed;
 
   @override
   Widget build(BuildContext context) {
     return selected
-        ? FilledButton.tonal(onPressed: onPressed, child: Text(label))
-        : TextButton(onPressed: onPressed, child: Text(label));
+        ? FilledButton.tonalIcon(
+            onPressed: onPressed,
+            icon: Icon(icon),
+            label: Text(label),
+          )
+        : TextButton.icon(
+            onPressed: onPressed,
+            icon: Icon(icon),
+            label: Text(label),
+          );
   }
 }
 
@@ -241,12 +261,19 @@ class _QueueSidebar extends ConsumerWidget {
           final jobs = [...data.running, ...data.queued];
           return ListView(
             children: [
-              ListTile(
-                leading: const Icon(Icons.list_alt),
-                title: Text(
-                  'Running x${data.running.length}  '
-                  'queued x${data.queued.length}',
-                ),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  Chip(
+                    avatar: const Icon(Icons.autorenew),
+                    label: Text('Running ${data.running.length}'),
+                  ),
+                  Chip(
+                    avatar: const Icon(Icons.schedule),
+                    label: Text('Queued ${data.queued.length}'),
+                  ),
+                ],
               ),
               const Divider(),
               for (final job in jobs) _QueueJobTile(job: job),

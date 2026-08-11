@@ -25,15 +25,29 @@ class DashboardScreen extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         spacing: 12,
         children: [
-          Text('Dashboard', style: textTheme.headlineSmall),
-          Text('Running / queued', style: textTheme.titleMedium),
+          Row(
+            spacing: 8,
+            children: [
+              const Icon(Icons.dashboard_outlined),
+              Text('Dashboard', style: textTheme.headlineSmall),
+            ],
+          ),
+          Row(
+            spacing: 8,
+            children: [
+              const Icon(Icons.autorenew),
+              Text('Running / queued', style: textTheme.titleMedium),
+            ],
+          ),
           status.when(
             data: (data) => _ActiveJobsCard(status: data),
             loading: () => const LinearProgressIndicator(),
             error: (error, _) => _ErrorTile(error: error),
           ),
           Row(
+            spacing: 8,
             children: [
+              const Icon(Icons.history),
               Expanded(
                 child: Text('Recent builds', style: textTheme.titleMedium),
               ),

@@ -6,6 +6,7 @@ import '../../../core/api/api_exception.dart';
 import '../../../core/providers/catalogue_providers.dart';
 import '../../../core/providers/connection_provider.dart';
 import '../../../core/providers/session_provider.dart';
+import '../../../core/theme/app_theme.dart';
 
 /// `GET /health` is unauthenticated, so a pasted API key *is* the session —
 /// see docs/web-ui-wireframe.md "Auth flow" for the full error-code table
@@ -75,11 +76,34 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   'without one.',
                   textAlign: TextAlign.center,
                 ),
-                Text(
-                  "Don't have a key? Run /admin api-key-add in Discord "
-                  'to create one.',
-                  textAlign: TextAlign.center,
-                  style: textTheme.bodySmall,
+                Card(
+                  margin: EdgeInsets.zero,
+                  child: Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      spacing: 8,
+                      children: [
+                        const Icon(Icons.info_outline, size: 18),
+                        Expanded(
+                          child: Text.rich(
+                            TextSpan(
+                              children: [
+                                const TextSpan(text: "Don't have a key? Run "),
+                                TextSpan(
+                                  text: '/admin api-key-add',
+                                  style: textTheme.bodyMedium?.merge(
+                                    AppTheme.monospaceTextStyle,
+                                  ),
+                                ),
+                                const TextSpan(text: ' in Discord.'),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
                 TextField(
                   controller: _serverController,
@@ -87,6 +111,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   decoration: const InputDecoration(
                     labelText: 'Server URL',
                     hintText: 'http://localhost:8080',
+                    prefixIcon: Icon(Icons.dns_outlined),
                   ),
                 ),
                 TextField(
@@ -97,6 +122,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   autofillHints: const [],
                   decoration: InputDecoration(
                     labelText: 'API key',
+                    prefixIcon: const Icon(Icons.key_outlined),
                     suffixIcon: IconButton(
                       icon: Icon(
                         _obscureKey ? Icons.visibility : Icons.visibility_off,

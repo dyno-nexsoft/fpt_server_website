@@ -41,6 +41,11 @@ class RouterNotifier extends ChangeNotifier {
   /// screen's own provider shows its own error) instead of evicting a
   /// still-valid session.
   String? redirect(BuildContext context, GoRouterState state) {
+    // There is no GoRoute for '/' itself — a user landing here directly
+    // (typed URL, bookmark, or a hash-stripped bare origin) would otherwise
+    // hit go_router's "no route found" error page instead of the app.
+    if (state.matchedLocation == '/') return '/dashboard';
+
     final creds = _ref.read(sessionProvider);
     final loggingIn = state.matchedLocation == '/login';
     final needsKey = state.matchedLocation.startsWith('/actions/');
