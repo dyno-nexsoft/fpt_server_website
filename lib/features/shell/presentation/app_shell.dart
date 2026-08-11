@@ -6,13 +6,16 @@ import '../../../core/models/action_schema.dart';
 import '../../../core/models/job.dart';
 import '../../../core/providers/catalogue_providers.dart';
 import '../../../core/providers/connection_provider.dart';
+import '../../../core/providers/session_provider.dart';
 import '../../../core/providers/status_provider.dart';
 import '../../../shared/utils/format.dart';
 import '../../../shared/widgets/job_state_chip.dart';
 
-/// Persistent layout for every screen once connected: top nav generated from
-/// the `/actions` catalogue, a queue sidebar fed by polled `GET /status`,
-/// and the routed screen filling the remaining space.
+/// Persistent layout for every screen: top nav generated from the
+/// `/actions` catalogue, a queue sidebar fed by polled `GET /status`, and
+/// the routed screen filling the remaining space. Read is public — this
+/// renders the same with or without a stored key, only the top-right
+/// Connect/Sign-out control changes.
 class AppShell extends ConsumerWidget {
   const AppShell({super.key, required this.child});
 
@@ -23,6 +26,7 @@ class AppShell extends ConsumerWidget {
     final location = GoRouterState.of(context).matchedLocation;
     final actions = ref.watch(actionsProvider);
     final myKey = ref.watch(myKeyInfoProvider);
+    final hasKey = ref.watch(sessionProvider).hasKey;
 
     return Scaffold(
       appBar: AppBar(
@@ -58,12 +62,19 @@ class AppShell extends ConsumerWidget {
             icon: const Icon(Icons.settings),
             onPressed: () => context.go('/settings'),
           ),
-          IconButton(
-            tooltip: 'Sign out',
-            icon: const Icon(Icons.logout),
-            onPressed: () =>
-                ref.read(connectionControllerProvider.notifier).logout(),
-          ),
+          if (hasKey)
+            IconButton(
+              tooltip: 'Sign out',
+              icon: const Icon(Icons.logout),
+              onPressed: () =>
+                  ref.read(connectionControllerProvider.notifier).logout(),
+            )
+          else
+            TextButton.icon(
+              onPressed: () => context.go('/login'),
+              icon: const Icon(Icons.login),
+              label: const Text('Connect'),
+            ),
         ],
       ),
       body: Row(

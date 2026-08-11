@@ -24,22 +24,34 @@ class RouterNotifier extends ChangeNotifier {
 
   final Ref _ref;
 
-  /// The *only* thing that forces a logged-in user back to `/login` is the
-  /// stored key going away — which `ConnectionController` does itself, and
-  /// only on a 401. A 503/network error while revalidating a persisted
-  /// session leaves `creds.hasKey` true and this redirect a no-op, so a
-  /// transient outage degrades in place (each screen's own provider shows
-  /// its own error) instead of evicting a still-valid session.
+  /// Read is public, act requires a key — matching the server (see
+  /// `ApiRouter._isPublic`). The dashboard, builds list, job detail, and
+  /// artifact browser all work with no stored key at all; only
+  /// `/actions/:name` (submitting a build/action form) forces `/login`,
+  /// since that screen exists to POST something the server won't accept
+  /// without one. Cancel/Promote/Retry buttons guard themselves the same
+  /// way per-click (`runAuthedJobAction`) rather than through routing,
+  /// since they live on an otherwise-public job detail page.
+  ///
+  /// The stored key going away — which `ConnectionController` does itself,
+  /// and only on a 401 — is the only thing that forces a logged-in user off
+  /// an action screen back to `/login` after the fact. A 503/network error
+  /// while revalidating a persisted session leaves `creds.hasKey` true and
+  /// this redirect a no-op, so a transient outage degrades in place (each
+  /// screen's own provider shows its own error) instead of evicting a
+  /// still-valid session.
   String? redirect(BuildContext context, GoRouterState state) {
     final creds = _ref.read(sessionProvider);
     final loggingIn = state.matchedLocation == '/login';
+    final needsKey = state.matchedLocation.startsWith('/actions/');
 
-    if (!creds.hasKey) {
-      return loggingIn ? null : '/login';
-    }
+    if (needsKey && !creds.hasKey) return '/login';
 
     final connection = _ref.read(connectionControllerProvider);
-    if (loggingIn && connection.hasValue && connection.value != null) {
+    if (loggingIn &&
+        creds.hasKey &&
+        connection.hasValue &&
+        connection.value != null) {
       return '/dashboard';
     }
     return null;

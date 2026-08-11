@@ -2,12 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../core/api/api_exception.dart';
 import '../../../core/api/jobs_api.dart';
 import '../../../core/models/job.dart';
 import '../../../core/providers/core_providers.dart';
 import '../../../core/providers/status_provider.dart';
-import '../../../shared/toast/app_toast.dart';
+import '../../../shared/auth_guard.dart';
 import '../../../shared/utils/format.dart';
 import '../../../shared/widgets/job_state_chip.dart';
 import '../application/jobs_providers.dart';
@@ -176,7 +175,8 @@ class _RowActions extends ConsumerWidget {
           IconButton(
             tooltip: 'Promote',
             icon: const Icon(Icons.upgrade),
-            onPressed: () => _run(
+            onPressed: () => _act(
+              context,
               ref,
               'Promoted',
               () => promoteJob(ref.read(apiClientProvider), job.id),
@@ -186,7 +186,8 @@ class _RowActions extends ConsumerWidget {
           IconButton(
             tooltip: 'Cancel — deletes artifacts on the build server',
             icon: const Icon(Icons.cancel_outlined),
-            onPressed: () => _run(
+            onPressed: () => _act(
+              context,
               ref,
               null,
               () => cancelJob(ref.read(apiClientProvider), job.id),
@@ -196,7 +197,8 @@ class _RowActions extends ConsumerWidget {
           IconButton(
             tooltip: 'Retry',
             icon: const Icon(Icons.replay),
-            onPressed: () => _run(
+            onPressed: () => _act(
+              context,
               ref,
               'Retried',
               () => retryJob(ref.read(apiClientProvider), job.id),
@@ -206,20 +208,21 @@ class _RowActions extends ConsumerWidget {
     );
   }
 
-  Future<void> _run(
+  Future<void> _act(
+    BuildContext context,
     WidgetRef ref,
     String? fallbackMessage,
     Future<Job> Function() action,
   ) async {
-    try {
-      final result = await action();
-      ref
-          .read(appToastProvider.notifier)
-          .show(result.message ?? fallbackMessage ?? 'Done');
+    final result = await runAuthedJobAction(
+      context,
+      ref,
+      fallbackMessage: fallbackMessage,
+      action: action,
+    );
+    if (result != null) {
       ref.invalidate(jobsListProvider);
       ref.read(statusControllerProvider.notifier).refreshNow();
-    } on ApiException catch (e) {
-      ref.read(appToastProvider.notifier).show(e.message, isError: true);
     }
   }
 }

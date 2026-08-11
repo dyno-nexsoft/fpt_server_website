@@ -2,13 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../core/api/api_exception.dart';
 import '../../../core/api/jobs_api.dart';
 import '../../../core/browser/browser_utils.dart';
 import '../../../core/models/job.dart';
 import '../../../core/providers/core_providers.dart';
+import '../../../core/providers/session_provider.dart';
 import '../../../core/providers/status_provider.dart';
-import '../../../shared/toast/app_toast.dart';
+import '../../../shared/auth_guard.dart';
 
 /// Right-hand sidebar of the job detail screen: params, artifact/log links,
 /// and the Promote / Cancel / Retry controls.
@@ -23,6 +23,8 @@ class JobDetailPanel extends ConsumerWidget {
         job.state == JobState.queued || job.state == JobState.running;
     final canPromote = job.state == JobState.queued && !job.promoted;
     final canRetry = job.isTerminal;
+    final hasKey = ref.watch(sessionProvider).hasKey;
+    final showsAnyAction = canPromote || canCancel || canRetry;
 
     return ListView(
       padding: const EdgeInsets.all(16),
@@ -51,7 +53,8 @@ class JobDetailPanel extends ConsumerWidget {
         const SizedBox(height: 16),
         if (canPromote)
           FilledButton.tonalIcon(
-            onPressed: () => _run(
+            onPressed: () => _act(
+              context,
               ref,
               'Promoted',
               () => promoteJob(ref.read(apiClientProvider), job.id),
@@ -61,7 +64,8 @@ class JobDetailPanel extends ConsumerWidget {
           ),
         if (canCancel) ...[
           FilledButton.icon(
-            onPressed: () => _run(
+            onPressed: () => _act(
+              context,
               ref,
               null,
               () => cancelJob(ref.read(apiClientProvider), job.id),
@@ -73,7 +77,8 @@ class JobDetailPanel extends ConsumerWidget {
         ],
         if (canRetry)
           FilledButton.icon(
-            onPressed: () => _run(
+            onPressed: () => _act(
+              context,
               ref,
               'Retried',
               () => retryJob(ref.read(apiClientProvider), job.id),
@@ -81,23 +86,26 @@ class JobDetailPanel extends ConsumerWidget {
             icon: const Icon(Icons.replay),
             label: const Text('Retry'),
           ),
+        if (showsAnyAction && !hasKey)
+          const Text('Connect with an API key to manage this build.'),
       ],
     );
   }
 
-  Future<void> _run(
+  Future<void> _act(
+    BuildContext context,
     WidgetRef ref,
     String? fallbackMessage,
     Future<Job> Function() action,
   ) async {
-    try {
-      final result = await action();
-      ref
-          .read(appToastProvider.notifier)
-          .show(result.message ?? fallbackMessage ?? 'Done');
+    final result = await runAuthedJobAction(
+      context,
+      ref,
+      fallbackMessage: fallbackMessage,
+      action: action,
+    );
+    if (result != null) {
       ref.read(statusControllerProvider.notifier).refreshNow();
-    } on ApiException catch (e) {
-      ref.read(appToastProvider.notifier).show(e.message, isError: true);
     }
   }
 }

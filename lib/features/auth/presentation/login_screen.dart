@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/api/api_exception.dart';
 import '../../../core/providers/catalogue_providers.dart';
@@ -68,6 +69,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   textAlign: TextAlign.center,
                   style: textTheme.headlineSmall,
                 ),
+                const Text(
+                  'A key is only needed to start, cancel, or retry a '
+                  'build — browsing status, logs, and artifacts works '
+                  'without one.',
+                  textAlign: TextAlign.center,
+                ),
                 TextField(
                   controller: _serverController,
                   keyboardType: TextInputType.url,
@@ -108,6 +115,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
                       : const Text('Connect'),
+                ),
+                TextButton(
+                  onPressed: () => context.go('/dashboard'),
+                  child: const Text('Continue browsing without a key'),
                 ),
               ],
             ),

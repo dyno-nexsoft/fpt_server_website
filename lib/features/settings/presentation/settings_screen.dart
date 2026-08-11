@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/providers/catalogue_providers.dart';
 import '../../../core/providers/connection_provider.dart';
@@ -74,22 +75,37 @@ class _ConnectionCard extends ConsumerWidget {
                 error: (error, _) => Text('Unreachable: $error'),
               ),
             ),
-            myKey.when(
-              data: (info) => ListTile(
+            if (creds.hasKey)
+              myKey.when(
+                data: (info) => ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.vpn_key_outlined),
+                  title: Text(info?.name ?? 'Unnamed key'),
+                  subtitle: Text(info?.scopes.join(' · ') ?? 'scopes unknown'),
+                ),
+                loading: () => const LinearProgressIndicator(),
+                error: (_, _) => const SizedBox.shrink(),
+              )
+            else
+              const ListTile(
                 contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.vpn_key_outlined),
-                title: Text(info?.name ?? 'Unnamed key'),
-                subtitle: Text(info?.scopes.join(' · ') ?? 'scopes unknown'),
+                leading: Icon(Icons.vpn_key_off_outlined),
+                title: Text('Not connected'),
+                subtitle: Text('Browsing read-only — no key stored.'),
               ),
-              loading: () => const LinearProgressIndicator(),
-              error: (_, _) => const SizedBox.shrink(),
-            ),
-            FilledButton.tonalIcon(
-              onPressed: () =>
-                  ref.read(connectionControllerProvider.notifier).logout(),
-              icon: const Icon(Icons.logout),
-              label: const Text('Sign out'),
-            ),
+            if (creds.hasKey)
+              FilledButton.tonalIcon(
+                onPressed: () =>
+                    ref.read(connectionControllerProvider.notifier).logout(),
+                icon: const Icon(Icons.logout),
+                label: const Text('Sign out'),
+              )
+            else
+              FilledButton.icon(
+                onPressed: () => context.go('/login'),
+                icon: const Icon(Icons.login),
+                label: const Text('Connect'),
+              ),
           ],
         ),
       ),

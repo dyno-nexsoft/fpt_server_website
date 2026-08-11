@@ -66,12 +66,18 @@ final healthCheckProvider = FutureProvider.family<Health, String>((
 /// Resolves the connected key's own name/scopes by matching its truncated
 /// SHA-256 hash against `admin.apiKeys.list` — the endpoint has no
 /// "who am I" shortcut, and `admin.apiKeys.list` itself requires `invoke`.
+///
+/// `/actions` is public and unfiltered (see `ApiRouter._isPublic`), so
+/// `findAction` finding this action proves nothing about whether *this*
+/// session can call it — an anonymous visitor has no key to resolve at all.
 final myKeyInfoProvider = FutureProvider<ApiKeyInfo?>((ref) async {
+  final creds = ref.watch(sessionProvider);
+  if (!creds.hasKey) return null;
+
   final actions = await ref.watch(actionsProvider.future);
   if (findAction(actions, 'admin.apiKeys.list') == null) return null;
 
   final api = ref.watch(apiClientProvider);
-  final creds = ref.watch(sessionProvider);
   final body = await api.postJson('/actions/admin.apiKeys.list');
   final keys = (body['keys'] as List<dynamic>? ?? [])
       .map((e) => ApiKeyInfo.fromJson(e as Map<String, dynamic>))
