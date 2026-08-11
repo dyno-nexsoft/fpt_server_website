@@ -6,6 +6,7 @@ import '../../../core/providers/connection_provider.dart';
 import '../../../core/providers/session_provider.dart';
 import 'api_keys_section.dart';
 import 'logs_section.dart';
+import 'system_panel.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -23,6 +24,7 @@ class SettingsScreen extends ConsumerWidget {
           const _ConnectionCard(),
           const ApiKeysSection(),
           const LogsSection(),
+          const SystemPanel(),
         ],
       ),
     );
