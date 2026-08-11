@@ -1,0 +1,171 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../../core/api/api_exception.dart';
+import '../../../core/providers/catalogue_providers.dart';
+import '../../../core/providers/connection_provider.dart';
+import '../../../core/providers/session_provider.dart';
+
+/// `GET /health` is unauthenticated, so a pasted API key *is* the session —
+/// see docs/web-ui-wireframe.md "Auth flow" for the full error-code table
+/// this screen mirrors.
+class LoginScreen extends ConsumerStatefulWidget {
+  const LoginScreen({super.key});
+
+  @override
+  ConsumerState<LoginScreen> createState() => _LoginScreenState();
+}
+
+class _LoginScreenState extends ConsumerState<LoginScreen> {
+  late final TextEditingController _serverController;
+  late final TextEditingController _keyController;
+  bool _obscureKey = true;
+
+  @override
+  void initState() {
+    super.initState();
+    final creds = ref.read(sessionProvider);
+    _serverController = TextEditingController(text: creds.serverUrl);
+    _keyController = TextEditingController(text: creds.apiKey);
+  }
+
+  @override
+  void dispose() {
+    _serverController.dispose();
+    _keyController.dispose();
+    super.dispose();
+  }
+
+  void _connect() {
+    final serverUrl = _serverController.text.trim();
+    final apiKey = _keyController.text.trim();
+    if (serverUrl.isEmpty || apiKey.isEmpty) return;
+    ref
+        .read(connectionControllerProvider.notifier)
+        .connect(serverUrl: serverUrl, apiKey: apiKey);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final textTheme = theme.textTheme;
+    final connection = ref.watch(connectionControllerProvider);
+    final isLoading = connection.isLoading && !connection.hasValue;
+
+    return Scaffold(
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 420),
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              spacing: 16,
+              children: [
+                Text(
+                  'CI/CD Dashboard',
+                  textAlign: TextAlign.center,
+                  style: textTheme.headlineSmall,
+                ),
+                TextField(
+                  controller: _serverController,
+                  keyboardType: TextInputType.url,
+                  decoration: const InputDecoration(
+                    labelText: 'Server URL',
+                    hintText: 'https://...trycloudflare.com',
+                  ),
+                ),
+                TextField(
+                  controller: _keyController,
+                  obscureText: _obscureKey,
+                  autocorrect: false,
+                  enableSuggestions: false,
+                  autofillHints: const [],
+                  decoration: InputDecoration(
+                    labelText: 'API key',
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        _obscureKey ? Icons.visibility : Icons.visibility_off,
+                      ),
+                      onPressed: () =>
+                          setState(() => _obscureKey = !_obscureKey),
+                    ),
+                  ),
+                  onSubmitted: (_) => _connect(),
+                ),
+                if (connection.hasError)
+                  _ConnectError(
+                    error: connection.error,
+                    serverUrl: _serverController.text.trim(),
+                  ),
+                FilledButton(
+                  onPressed: isLoading ? null : _connect,
+                  child: isLoading
+                      ? const SizedBox(
+                          height: 16,
+                          width: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Text('Connect'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ConnectError extends ConsumerWidget {
+  const _ConnectError({required this.error, required this.serverUrl});
+
+  final Object? error;
+  final String serverUrl;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final err = error;
+    final String message;
+    final bool offerRetry;
+    if (err is ApiException) {
+      if (err.isUnauthorized) {
+        message = 'Key not recognised.';
+        offerRetry = false;
+      } else if (err.isServerNotConfigured) {
+        message =
+            'Server has no API key configured yet. '
+            'Run /admin api-key-add in Discord.';
+        offerRetry = false;
+      } else if (err.isNetworkError) {
+        message = 'Cannot reach server at $serverUrl.';
+        offerRetry = true;
+      } else {
+        message = err.message;
+        offerRetry = false;
+      }
+    } else {
+      message = 'Unexpected error: $err';
+      offerRetry = false;
+    }
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Row(
+          spacing: 12,
+          children: [
+            const Icon(Icons.error_outline),
+            Expanded(child: Text(message)),
+            if (offerRetry)
+              TextButton(
+                onPressed: () => ref.invalidate(healthCheckProvider(serverUrl)),
+                child: const Text('Retry'),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
