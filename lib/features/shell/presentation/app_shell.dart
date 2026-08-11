@@ -276,7 +276,10 @@ class _QueueSidebar extends ConsumerWidget {
                 ],
               ),
               const Divider(),
-              for (final job in jobs) _QueueJobTile(job: job),
+              if (jobs.isEmpty)
+                const ListTile(dense: true, title: Text('—'))
+              else
+                for (final job in jobs) _QueueJobTile(job: job),
               const Divider(),
               ListTile(
                 leading: const Icon(Icons.dns),

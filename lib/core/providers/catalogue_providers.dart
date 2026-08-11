@@ -63,6 +63,22 @@ final healthCheckProvider = FutureProvider.family<Health, String>((
   }
 });
 
+/// `GET /autocomplete/branches?repo=&query=` — key-gated (like
+/// `stream-token`), so an anonymous visitor just gets no suggestions rather
+/// than an error; the plain text field underneath still works either way.
+final branchAutocompleteProvider = FutureProvider.autoDispose
+    .family<List<String>, (String repo, String query)>((ref, args) async {
+      if (!ref.watch(sessionProvider).hasKey) return const [];
+      final (repo, query) = args;
+      final api = ref.watch(apiClientProvider);
+      final list = await api.getJsonList(
+        '/autocomplete/branches',
+        query: {'repo': repo, 'query': query},
+        listKey: 'branches',
+      );
+      return list.cast<String>();
+    });
+
 /// Resolves the connected key's own name/scopes by matching its truncated
 /// SHA-256 hash against `admin.apiKeys.list` — the endpoint has no
 /// "who am I" shortcut, and `admin.apiKeys.list` itself requires `invoke`.

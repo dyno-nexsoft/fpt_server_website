@@ -1,19 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/api/api_exception.dart';
 import '../../../core/providers/catalogue_providers.dart';
+import '../../../core/providers/core_providers.dart';
+import '../../../shared/toast/app_toast.dart';
 
-const _unavailableActions = [
-  'system.restart',
-  'system.hotReload',
-  'system.shutdown',
-];
-
-/// `system.restart`/`hotReload`/`shutdown` are deliberately not exposed over
-/// REST (RCE risk on a public port) — see docs/rest-api.md "Not exposed".
-/// This lists them as unavailable instead of letting an admin click into a
-/// generated form that would just 404, and only shows for an admin key since
-/// nobody else could reach these even if REST allowed it.
+/// `system.restart` and `system.hotReload` are `admin`-only but, like
+/// `admin.logs.tail`, are exposed over REST — see `SystemAction`'s doc
+/// comment for why that residual risk is accepted. Only `system.shutdown`
+/// is actually withheld from REST entirely (`Action.exposedOverRest` is
+/// false there — an unattended `exit(0)` has no automatic recovery), so it's
+/// the only one still listed as unavailable rather than actionable.
+/// Admin-only display: nobody else's key could call these even if shown.
 class SystemPanel extends ConsumerWidget {
   const SystemPanel({super.key});
 
@@ -30,16 +29,94 @@ class SystemPanel extends ConsumerWidget {
           spacing: 8,
           children: [
             Text('System', style: Theme.of(context).textTheme.titleMedium),
-            for (final name in _unavailableActions)
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.block),
-                title: Text(name),
-                subtitle: const Text('Unavailable in browser — use Discord.'),
-              ),
+            _ActionTile(
+              icon: Icons.refresh,
+              name: 'system.hotReload',
+              description: 'Pull the latest code and hot reload — no restart.',
+              confirmTitle: 'Hot reload?',
+              confirmBody: 'Pulls the latest code and hot reloads the bot.',
+            ),
+            _ActionTile(
+              icon: Icons.restart_alt,
+              name: 'system.restart',
+              description:
+                  'Pull code, install dependencies, and restart — briefly '
+                  'offline.',
+              confirmTitle: 'Restart the server?',
+              confirmBody:
+                  'Pulls code, installs dependencies, and restarts the bot. '
+                  'It will be briefly unreachable.',
+            ),
+            const ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: Icon(Icons.block),
+              title: Text('system.shutdown'),
+              subtitle: Text('Unavailable in browser — use Discord.'),
+            ),
           ],
         ),
       ),
     );
+  }
+}
+
+class _ActionTile extends ConsumerWidget {
+  const _ActionTile({
+    required this.icon,
+    required this.name,
+    required this.description,
+    required this.confirmTitle,
+    required this.confirmBody,
+  });
+
+  final IconData icon;
+  final String name;
+  final String description;
+  final String confirmTitle;
+  final String confirmBody;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return ListTile(
+      contentPadding: EdgeInsets.zero,
+      leading: Icon(icon),
+      title: Text(name),
+      subtitle: Text(description),
+      trailing: FilledButton.tonal(
+        onPressed: () => _confirmAndRun(context, ref),
+        child: const Text('Run'),
+      ),
+    );
+  }
+
+  Future<void> _confirmAndRun(BuildContext context, WidgetRef ref) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(confirmTitle),
+        content: Text(confirmBody),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Run'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    try {
+      final api = ref.read(apiClientProvider);
+      final body = await api.postJson('/actions/$name');
+      ref
+          .read(appToastProvider.notifier)
+          .show(body['message'] as String? ?? 'Done');
+    } on ApiException catch (e) {
+      ref.read(appToastProvider.notifier).show(e.message, isError: true);
+    }
   }
 }

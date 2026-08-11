@@ -7,7 +7,6 @@ import '../../../core/providers/connection_provider.dart';
 import '../../../core/providers/session_provider.dart';
 import 'api_keys_section.dart';
 import 'appearance_section.dart';
-import 'logs_section.dart';
 import 'system_panel.dart';
 
 class SettingsScreen extends ConsumerWidget {
@@ -32,7 +31,15 @@ class SettingsScreen extends ConsumerWidget {
           const AppearanceSection(),
           const _ConnectionCard(),
           const ApiKeysSection(),
-          const LogsSection(),
+          Card(
+            child: ListTile(
+              leading: const Icon(Icons.article_outlined),
+              title: const Text('Server Logs'),
+              subtitle: const Text('View the tail of server.log'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => context.go('/settings/logs'),
+            ),
+          ),
           const SystemPanel(),
         ],
       ),

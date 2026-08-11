@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/models/action_schema.dart';
+import 'branch_autocomplete_field.dart';
 
 /// One form control generated from an [ActionParam] — the shape of the
 /// field (dropdown, switch, text) is entirely derived from `param.type`.
@@ -59,6 +60,13 @@ class ActionParamField extends StatelessWidget {
           validator: (value) => _validateText(value),
         );
       case ActionParamType.string:
+        if (param.isBranchRef) {
+          return BranchAutocompleteField(
+            param: param,
+            controller: controller!,
+            label: _label,
+          );
+        }
         return TextFormField(
           controller: controller,
           decoration: InputDecoration(
