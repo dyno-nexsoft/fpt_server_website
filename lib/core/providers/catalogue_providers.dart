@@ -10,6 +10,11 @@ import '../models/health.dart';
 import 'core_providers.dart';
 import 'session_provider.dart';
 
+/// Action name prefixes this dashboard never exposes — `attendance.*` is a
+/// personal/HR workflow and `gitlab.*` is a code-review workflow; neither
+/// belongs on a CI/CD build dashboard, even though the API serves them.
+const _hiddenActionPrefixes = ['attendance.', 'gitlab.'];
+
 /// The action catalogue drives navigation and every generated form — see
 /// `docs/web-ui-wireframe.md`. It is refetched whenever the session changes.
 final actionsProvider = FutureProvider<List<ActionSchema>>((ref) async {
@@ -17,6 +22,7 @@ final actionsProvider = FutureProvider<List<ActionSchema>>((ref) async {
   final list = await api.getJsonList('/actions', listKey: 'actions');
   return list
       .map((e) => ActionSchema.fromJson(e as Map<String, dynamic>))
+      .where((action) => !_hiddenActionPrefixes.any(action.name.startsWith))
       .toList();
 });
 
