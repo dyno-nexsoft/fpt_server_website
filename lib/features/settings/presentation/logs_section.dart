@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../theme/app_theme.dart';
+import '../../../core/theme/app_theme.dart';
 import '../application/settings_providers.dart';
 
 /// `admin.logs.tail` — read-only, admin-only debugging view of `server.log`.

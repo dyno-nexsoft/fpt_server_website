@@ -5,7 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/models/job.dart';
 import '../../../shared/utils/format.dart';
 import '../../../shared/widgets/job_state_chip.dart';
-import '../../../theme/app_theme.dart';
+import '../../../core/theme/app_theme.dart';
 import '../application/job_log_controller.dart';
 import 'job_detail_panel.dart';
 

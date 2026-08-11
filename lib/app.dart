@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/router/app_router.dart';
 import 'shared/toast/app_toast.dart';
-import 'theme/app_theme.dart';
+import 'core/theme/app_theme.dart';
 
 final rootMessengerKey = GlobalKey<ScaffoldMessengerState>();
 
