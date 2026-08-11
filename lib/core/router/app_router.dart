@@ -23,6 +23,12 @@ class RouterNotifier extends ChangeNotifier {
 
   final Ref _ref;
 
+  /// The *only* thing that forces a logged-in user back to `/login` is the
+  /// stored key going away — which `ConnectionController` does itself, and
+  /// only on a 401. A 503/network error while revalidating a persisted
+  /// session leaves `creds.hasKey` true and this redirect a no-op, so a
+  /// transient outage degrades in place (each screen's own provider shows
+  /// its own error) instead of evicting a still-valid session.
   String? redirect(BuildContext context, GoRouterState state) {
     final creds = _ref.read(sessionProvider);
     final loggingIn = state.matchedLocation == '/login';
@@ -32,11 +38,9 @@ class RouterNotifier extends ChangeNotifier {
     }
 
     final connection = _ref.read(connectionControllerProvider);
-    if (connection.isLoading) return null;
-    if (connection.hasError) {
-      return loggingIn ? null : '/login';
+    if (loggingIn && connection.hasValue && connection.value != null) {
+      return '/dashboard';
     }
-    if (loggingIn) return '/dashboard';
     return null;
   }
 }

@@ -25,7 +25,7 @@ class ConnectionController extends AsyncNotifier<ConnectionResult?> {
   FutureOr<ConnectionResult?> build() {
     final creds = ref.read(sessionProvider);
     if (!creds.hasKey) return null;
-    return _check();
+    return _checkAndHandleAuth();
   }
 
   Future<ConnectionResult> _check() async {
@@ -42,6 +42,24 @@ class ConnectionController extends AsyncNotifier<ConnectionResult?> {
     }
   }
 
+  /// Wraps [_check] so a 401 clears the stored key regardless of whether the
+  /// check ran from the login screen's Connect button or the silent
+  /// background revalidation on app boot — "force logout only on 401, never
+  /// on 403" from docs/web-ui-wireframe.md applies either way. Every other
+  /// error (503, network) leaves the stored key alone: it may still be
+  /// valid, so [RouterNotifier] must not bounce the user to the login screen
+  /// over what could be a transient outage.
+  Future<ConnectionResult> _checkAndHandleAuth() async {
+    try {
+      return await _check();
+    } on ApiException catch (e) {
+      if (e.isUnauthorized) {
+        await ref.read(sessionProvider.notifier).clear();
+      }
+      rethrow;
+    }
+  }
+
   Future<void> connect({
     required String serverUrl,
     required String apiKey,
@@ -50,11 +68,7 @@ class ConnectionController extends AsyncNotifier<ConnectionResult?> {
         .read(sessionProvider.notifier)
         .setCredentials(serverUrl: serverUrl, apiKey: apiKey);
     state = const AsyncLoading();
-    state = await AsyncValue.guard(_check);
-    final error = state.error;
-    if (error is ApiException && error.isUnauthorized) {
-      await ref.read(sessionProvider.notifier).clear();
-    }
+    state = await AsyncValue.guard(_checkAndHandleAuth);
   }
 
   Future<void> logout() async {
