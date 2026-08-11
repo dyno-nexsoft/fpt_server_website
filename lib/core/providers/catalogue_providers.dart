@@ -10,10 +10,16 @@ import '../models/health.dart';
 import 'core_providers.dart';
 import 'session_provider.dart';
 
-/// Action name prefixes this dashboard never exposes — `attendance.*` is a
-/// personal/HR workflow and `gitlab.*` is a code-review workflow; neither
-/// belongs on a CI/CD build dashboard, even though the API serves them.
-const _hiddenActionPrefixes = ['attendance.', 'gitlab.'];
+/// Action name prefixes this dashboard never exposes: `attendance.*`
+/// (personal/HR), `gitlab.*` (code review), `zentao.*` (daily reports), and
+/// `admin.owners.*` (Discord bot ownership) are all real API capabilities
+/// but none belong on a CI/CD build dashboard.
+const _hiddenActionPrefixes = [
+  'attendance.',
+  'gitlab.',
+  'zentao.',
+  'admin.owners.',
+];
 
 /// The action catalogue drives navigation and every generated form — see
 /// `docs/web-ui-wireframe.md`. It is refetched whenever the session changes.
@@ -32,6 +38,15 @@ ActionSchema? findAction(List<ActionSchema> actions, String name) {
   }
   return null;
 }
+
+/// The "New build" nav menu is for CI actions only — `ci.*` and the one
+/// other job/mutation action the wireframe explicitly calls out
+/// (`cron.run`). `admin.apiKeys.add/remove` are job/mutation-kind too but
+/// already have dedicated controls in Settings; listing them here as well
+/// would let a menu meant for builds trigger key or (if ever un-hidden)
+/// owner management instead.
+bool isBuildMenuAction(ActionSchema action) =>
+    action.name.startsWith('ci.') || action.name == 'cron.run';
 
 /// One-off, unauthenticated health check against an arbitrary base URL —
 /// used both to validate a server URL on the login screen and to refresh

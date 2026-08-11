@@ -104,9 +104,7 @@ class _ActionsMenu extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final invokable = actions
-        .where((a) => a.kind == ActionKind.job || a.kind == ActionKind.mutation)
-        .toList();
+    final invokable = actions.where(isBuildMenuAction).toList();
     if (invokable.isEmpty) return const SizedBox.shrink();
 
     return MenuAnchor(
