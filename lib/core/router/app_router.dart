@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../features/artifacts/presentation/artifacts_screen.dart';
 import '../../features/auth/presentation/login_screen.dart';
 import '../../features/action_form/presentation/action_form_screen.dart';
 import '../../features/builds/presentation/builds_screen.dart';
@@ -78,6 +79,15 @@ final routerProvider = Provider<GoRouter>((ref) {
             builder: (context, state) {
               final name = state.pathParameters['name']!;
               return ActionFormScreen(key: ValueKey(name), actionName: name);
+            },
+          ),
+          // The file server redirects `/<artifactKey>/` here — see
+          // `ftp_handler.dart`'s `_redirectToArtifactBrowser`.
+          GoRoute(
+            path: '/artifacts/:key',
+            builder: (context, state) {
+              final key = state.pathParameters['key']!;
+              return ArtifactsScreen(key: ValueKey(key), artifactKey: key);
             },
           ),
           GoRoute(

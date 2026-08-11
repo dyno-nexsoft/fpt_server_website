@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/api/api_exception.dart';
 import '../../../core/api/jobs_api.dart';
 import '../../../core/browser/browser_utils.dart';
 import '../../../core/models/job.dart';
 import '../../../core/providers/core_providers.dart';
-import '../../../core/providers/session_provider.dart';
 import '../../../core/providers/status_provider.dart';
 import '../../../shared/toast/app_toast.dart';
 
@@ -23,8 +23,6 @@ class JobDetailPanel extends ConsumerWidget {
         job.state == JobState.queued || job.state == JobState.running;
     final canPromote = job.state == JobState.queued && !job.promoted;
     final canRetry = job.isTerminal;
-    final artifactsUrl =
-        '${Uri.parse(ref.watch(sessionProvider).normalizedServerUrl).origin}/${job.artifactKey}/';
 
     return ListView(
       padding: const EdgeInsets.all(16),
@@ -41,12 +39,12 @@ class JobDetailPanel extends ConsumerWidget {
         const Divider(height: 32),
         if (job.logUrl != null)
           OutlinedButton.icon(
-            onPressed: () => openInNewTab(job.logUrl!),
+            onPressed: () => openInNewTab('${job.logUrl!}?raw=1'),
             icon: const Icon(Icons.description_outlined),
-            label: const Text('Open logs'),
+            label: const Text('Open raw log'),
           ),
         OutlinedButton.icon(
-          onPressed: () => openInNewTab(artifactsUrl),
+          onPressed: () => context.go('/artifacts/${job.artifactKey}'),
           icon: const Icon(Icons.folder_outlined),
           label: const Text('Artifacts'),
         ),
