@@ -112,8 +112,9 @@ class _ArtifactTile extends StatelessWidget {
 
   /// Apple's over-the-air install handoff: the device fetches a manifest
   /// (served by `ftp_handler`'s `manifest.plist?ipa=` route) which points back
-  /// at the `.ipa`. Only works from an iOS device, and only over HTTPS —
-  /// [origin] is the tunnel URL in the deployment that matters, so it is.
+  /// at the `.ipa`. Requires an iOS device *and* HTTPS — the server is
+  /// LAN-only now, so this only works over a VPN/tunnel that terminates TLS
+  /// in front of it; a bare `http://` [origin] will not trigger the install.
   String get _installUrl {
     final ipaPath = Uri.encodeComponent('$listingKey/${file.name}');
     final manifestUrl = '$origin/manifest.plist?ipa=$ipaPath';

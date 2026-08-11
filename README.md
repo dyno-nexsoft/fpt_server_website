@@ -18,10 +18,10 @@ stored in `localStorage` — there is no server-side session.
 ## Configure a default server URL at build time
 
 Useful when this app is deployed separately from the API (e.g. served
-statically while the API lives behind a `trycloudflare.com` tunnel):
+statically while the API lives on the build machine's LAN address):
 
 ```bash
-flutter build web --dart-define=API_BASE_URL=https://your-host.trycloudflare.com
+flutter build web --dart-define=API_BASE_URL=http://localhost:8080
 ```
 
 For local development only, `API_KEY_TEST` prefills the API key field too
@@ -30,7 +30,7 @@ For local development only, `API_KEY_TEST` prefills the API key field too
 
 ```bash
 flutter run -d chrome \
-  --dart-define=API_BASE_URL=https://your-host.trycloudflare.com \
+  --dart-define=API_BASE_URL=http://localhost:8080 \
   --dart-define=API_KEY_TEST=<a disposable test key>
 ```
 

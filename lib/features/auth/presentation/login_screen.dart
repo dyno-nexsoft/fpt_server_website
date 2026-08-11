@@ -80,7 +80,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   keyboardType: TextInputType.url,
                   decoration: const InputDecoration(
                     labelText: 'Server URL',
-                    hintText: 'https://...trycloudflare.com',
+                    hintText: 'http://localhost:8080',
                   ),
                 ),
                 TextField(
