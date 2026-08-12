@@ -265,16 +265,22 @@ class _QueueSidebar extends ConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Wrap(
-                spacing: 8,
+                spacing: 12,
                 runSpacing: 8,
                 children: [
-                  Chip(
-                    avatar: const Icon(Icons.autorenew),
-                    label: Text('Running ${data.running.length}'),
+                  Badge.count(
+                    count: data.running.length,
+                    child: const Chip(
+                      avatar: Icon(Icons.autorenew),
+                      label: Text('Running'),
+                    ),
                   ),
-                  Chip(
-                    avatar: const Icon(Icons.schedule),
-                    label: Text('Queued ${data.queued.length}'),
+                  Badge.count(
+                    count: data.queued.length,
+                    child: const Chip(
+                      avatar: Icon(Icons.schedule),
+                      label: Text('Queued'),
+                    ),
                   ),
                 ],
               ),
