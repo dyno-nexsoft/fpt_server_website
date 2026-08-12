@@ -10,6 +10,7 @@ import '../../../core/providers/session_provider.dart';
 import '../../../core/providers/status_provider.dart';
 import '../../../shared/utils/format.dart';
 import '../../../shared/utils/responsive.dart';
+import '../../../shared/widgets/error_view.dart';
 import '../../../shared/widgets/job_state_chip.dart';
 
 /// Persistent layout for every screen: top nav generated from the
@@ -318,15 +319,11 @@ class _QueueSidebar extends ConsumerWidget {
           );
         },
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, _) => ListTile(
-          leading: const Icon(Icons.error_outline),
-          title: const Text('Status unavailable'),
-          subtitle: Text('$error'),
-          trailing: IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: () =>
-                ref.read(statusControllerProvider.notifier).refreshNow(),
-          ),
+        error: (error, _) => ErrorListTile(
+          error: error,
+          title: 'Status unavailable',
+          onRetry: () =>
+              ref.read(statusControllerProvider.notifier).refreshNow(),
         ),
       ),
     );

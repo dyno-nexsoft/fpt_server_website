@@ -7,6 +7,7 @@ import '../../../core/browser/browser_utils.dart';
 import '../../../core/models/artifact_file.dart';
 import '../../../core/providers/session_provider.dart';
 import '../../../shared/utils/format.dart';
+import '../../../shared/widgets/error_view.dart';
 import '../application/artifacts_provider.dart';
 
 /// Browses one job's output directory (`build/<artifactKey>/`).
@@ -48,11 +49,10 @@ class ArtifactsScreen extends ConsumerWidget {
             child: listing.when(
               data: (data) => _ArtifactList(listing: data),
               loading: () => const Center(child: CircularProgressIndicator()),
-              error: (error, _) => Center(
-                child: error is ApiException && error.statusCode == 404
-                    ? const _ArtifactsGone()
-                    : Text('$error'),
-              ),
+              error: (error, _) =>
+                  error is ApiException && error.statusCode == 404
+                  ? const Center(child: _ArtifactsGone())
+                  : ErrorView(error: error),
             ),
           ),
         ],

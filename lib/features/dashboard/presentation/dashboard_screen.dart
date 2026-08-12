@@ -6,6 +6,7 @@ import '../../../core/models/job.dart';
 import '../../../core/models/system_status.dart';
 import '../../../core/providers/status_provider.dart';
 import '../../../shared/utils/format.dart';
+import '../../../shared/widgets/error_view.dart';
 import '../../../shared/widgets/job_state_chip.dart';
 import '../../builds/application/jobs_providers.dart';
 
@@ -42,7 +43,7 @@ class DashboardScreen extends ConsumerWidget {
           status.when(
             data: (data) => _ActiveJobsCard(status: data),
             loading: () => const LinearProgressIndicator(),
-            error: (error, _) => _ErrorTile(error: error),
+            error: (error, _) => ErrorListTile(error: error),
           ),
           Row(
             spacing: 8,
@@ -61,7 +62,7 @@ class DashboardScreen extends ConsumerWidget {
           recent.when(
             data: (jobs) => _RecentBuildsCard(jobs: jobs),
             loading: () => const LinearProgressIndicator(),
-            error: (error, _) => _ErrorTile(error: error),
+            error: (error, _) => ErrorListTile(error: error),
           ),
         ],
       ),
@@ -117,10 +118,7 @@ class _ActiveJobTile extends StatelessWidget {
       leading: JobStateIcon(state: job.state),
       title: Text(job.actionName ?? job.command),
       subtitle: Text(subtitle),
-      trailing: FilledButton.tonal(
-        onPressed: () => context.go('/builds/${job.id}'),
-        child: const Text('Log'),
-      ),
+      onTap: () => context.go('/builds/${job.id}'),
     );
   }
 }
@@ -166,21 +164,6 @@ class _RecentJobTile extends StatelessWidget {
       subtitle: Text(formatRelativeTimestamp(job.createdAt)),
       trailing: duration != null ? Text(duration) : null,
       onTap: () => context.go('/builds/${job.id}'),
-    );
-  }
-}
-
-class _ErrorTile extends StatelessWidget {
-  const _ErrorTile({required this.error});
-
-  final Object error;
-
-  @override
-  Widget build(BuildContext context) {
-    return ListTile(
-      leading: const Icon(Icons.error_outline),
-      title: const Text('Could not load'),
-      subtitle: Text('$error'),
     );
   }
 }

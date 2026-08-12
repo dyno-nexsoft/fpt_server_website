@@ -13,6 +13,7 @@ import '../../../core/storage/action_template_store.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../shared/toast/app_toast.dart';
 import '../../../shared/utils/responsive.dart';
+import '../../../shared/widgets/error_view.dart';
 import 'action_param_field.dart';
 
 /// A flat form generated from `GET /actions/{name}`'s schema — one field per
@@ -196,7 +197,7 @@ class _ActionFormScreenState extends ConsumerState<ActionFormScreen> {
         return _buildForm(context, action);
       },
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (error, _) => Center(child: Text('$error')),
+      error: (error, _) => ErrorView(error: error),
     );
   }
 
@@ -240,9 +241,9 @@ class _ActionFormScreenState extends ConsumerState<ActionFormScreen> {
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(child: header),
+                  Expanded(flex: 2, child: header),
                   const SizedBox(width: 16),
-                  SizedBox(width: 320, child: templatesBar),
+                  Expanded(child: templatesBar),
                 ],
               )
             else ...[
@@ -251,10 +252,6 @@ class _ActionFormScreenState extends ConsumerState<ActionFormScreen> {
                 const SizedBox(height: 16),
                 templatesBar,
               ],
-            ],
-            if (action.isDangerous) ...[
-              const SizedBox(height: 16),
-              const _DangerCallout(),
             ],
             const SizedBox(height: 16),
             for (final param in action.params)
@@ -274,30 +271,36 @@ class _ActionFormScreenState extends ConsumerState<ActionFormScreen> {
             if (_problems.isNotEmpty) _ProblemsCard(problems: _problems),
             const SizedBox(height: 8),
             Row(
+              spacing: 12,
               children: [
                 if (hasTemplates)
-                  OutlinedButton.icon(
-                    onPressed: () => _saveAsTemplate(action),
-                    icon: const Icon(Icons.bookmark_add_outlined),
-                    label: const Text('Save current as template'),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () => _saveAsTemplate(action),
+                      icon: const Icon(Icons.bookmark_add_outlined),
+                      label: const Text('Save current as template'),
+                    ),
                   ),
-                const Spacer(),
-                FilledButton(
-                  style: action.isDangerous
-                      ? AppTheme.destructiveButtonStyle(
-                          Theme.of(context).colorScheme,
-                        )
-                      : null,
-                  onPressed: _submitting ? null : () => _submit(action),
-                  child: _submitting
-                      ? const SizedBox(
-                          height: 16,
-                          width: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : Text(
-                          action.kind == ActionKind.job ? 'Start build' : 'Run',
-                        ),
+                Expanded(
+                  child: FilledButton(
+                    style: action.isDangerous
+                        ? AppTheme.destructiveButtonStyle(
+                            Theme.of(context).colorScheme,
+                          )
+                        : null,
+                    onPressed: _submitting ? null : () => _submit(action),
+                    child: _submitting
+                        ? const SizedBox(
+                            height: 16,
+                            width: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : Text(
+                            action.kind == ActionKind.job
+                                ? 'Start build'
+                                : 'Run',
+                          ),
+                  ),
                 ),
               ],
             ),
@@ -410,21 +413,6 @@ class _NameTemplateDialogState extends State<_NameTemplateDialog> {
         ),
         FilledButton(onPressed: _submit, child: const Text('Save')),
       ],
-    );
-  }
-}
-
-class _DangerCallout extends StatelessWidget {
-  const _DangerCallout();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Card(
-      child: ListTile(
-        leading: Icon(Icons.warning_amber),
-        title: Text('Requires elevated permission.'),
-        subtitle: Text('This action can affect the build host directly.'),
-      ),
     );
   }
 }

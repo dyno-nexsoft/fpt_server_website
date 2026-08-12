@@ -10,6 +10,8 @@ import '../../../core/theme/app_theme.dart';
 import '../../../shared/auth_guard.dart';
 import '../../../shared/utils/format.dart';
 import '../../../shared/utils/responsive.dart';
+import '../../../shared/widgets/ellipsis_text.dart';
+import '../../../shared/widgets/error_view.dart';
 import '../../../shared/widgets/job_state_chip.dart';
 import '../application/jobs_providers.dart';
 
@@ -96,7 +98,7 @@ class _BuildsScreenState extends ConsumerState<BuildsScreen> {
             child: jobs.when(
               data: (list) => _JobsTable(jobs: _applySearch(list)),
               loading: () => const Center(child: CircularProgressIndicator()),
-              error: (error, _) => Center(child: Text('$error')),
+              error: (error, _) => ErrorView(error: error),
             ),
           ),
         ],
@@ -196,7 +198,7 @@ class _JobsTable extends ConsumerWidget {
       onSelectChanged: (_) => context.go('/builds/${job.id}'),
       cells: [
         DataCell(Text(job.id)),
-        DataCell(_EllipsisText(job.actionName ?? job.command, maxWidth: 200)),
+        DataCell(EllipsisText(job.actionName ?? job.command, maxWidth: 200)),
         DataCell(Text(job.createdBy ?? '—')),
         DataCell(_ParamsCell(params: job.actionParams, maxWidth: 260)),
         DataCell(JobStateChip(state: job.state)),
@@ -238,7 +240,7 @@ class _JobsTable extends ConsumerWidget {
       ),
       children: [
         cell(Text(job.id)),
-        cell(_EllipsisText(job.actionName ?? job.command)),
+        cell(EllipsisText(job.actionName ?? job.command)),
         cell(Text(job.createdBy ?? '—')),
         cell(_ParamsCell(params: job.actionParams)),
         cell(JobStateChip(state: job.state)),
@@ -255,26 +257,6 @@ class _JobsTable extends ConsumerWidget {
           child: _RowActions(job: job),
         ),
       ],
-    );
-  }
-}
-
-/// One line, ellipsized, full text on hover — for a cell whose content can
-/// run arbitrarily long (a retry that fell back to the raw shell command
-/// instead of a short action name easily runs to 200+ characters) and would
-/// otherwise wrap the whole row's height to fit it.
-class _EllipsisText extends StatelessWidget {
-  const _EllipsisText(this.text, {this.maxWidth});
-
-  final String text;
-  final double? maxWidth;
-
-  @override
-  Widget build(BuildContext context) {
-    final child = Text(text, overflow: TextOverflow.ellipsis, maxLines: 1);
-    return Tooltip(
-      message: text,
-      child: maxWidth != null ? SizedBox(width: maxWidth, child: child) : child,
     );
   }
 }
@@ -302,14 +284,10 @@ class _ParamsCell extends StatelessWidget {
   Widget build(BuildContext context) {
     final entries = _entries.toList();
     if (entries.isEmpty) return const Text('—');
-    final text = Text(
+    return EllipsisText(
       entries.join(', '),
-      overflow: TextOverflow.ellipsis,
-      maxLines: 1,
-    );
-    return Tooltip(
-      message: entries.join('\n'),
-      child: maxWidth != null ? SizedBox(width: maxWidth, child: text) : text,
+      tooltip: entries.join('\n'),
+      maxWidth: maxWidth,
     );
   }
 }
