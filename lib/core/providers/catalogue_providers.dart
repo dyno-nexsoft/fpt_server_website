@@ -48,6 +48,23 @@ ActionSchema? findAction(List<ActionSchema> actions, String name) {
 bool isBuildMenuAction(ActionSchema action) =>
     action.name.startsWith('ci.') || action.name == 'cron.run';
 
+/// [isBuildMenuAction] entries the connected key can actually call.
+///
+/// `myKey == null` (no key, or resolution still loading/failed) shows
+/// everything rather than nothing — an anonymous visitor was always going to
+/// hit a 401 on submit regardless, and hiding the whole menu for them would
+/// be a regression, not a permission fix. Once a key resolves, an action
+/// whose permission the key's scopes don't cover (e.g. `ci.clean` needs
+/// `invokeDangerous`, an `invoke`-only key doesn't have it) never gets a
+/// chance to show its "requires elevated permission" warning after the fact.
+List<ActionSchema> visibleBuildMenuActions(
+  List<ActionSchema> actions,
+  ApiKeyInfo? myKey,
+) => actions
+    .where(isBuildMenuAction)
+    .where((action) => myKey == null || myKey.can(action.permission))
+    .toList();
+
 /// One-off, unauthenticated health check against an arbitrary base URL —
 /// used both to validate a server URL on the login screen and to refresh
 /// the "Connection" card in Settings.

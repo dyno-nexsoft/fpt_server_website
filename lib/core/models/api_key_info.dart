@@ -24,4 +24,10 @@ class ApiKeyInfo {
   final String? discordUserId;
 
   bool get isAdmin => scopes.contains('admin');
+
+  /// Mirrors the server's `Principal.can` — `admin` implies every other
+  /// permission, otherwise the key needs [permission] in its scopes exactly.
+  /// Scopes do not stack hierarchically: an `invoke`-only key cannot call an
+  /// `invokeDangerous` action even though the names suggest an ordering.
+  bool can(String permission) => isAdmin || scopes.contains(permission);
 }

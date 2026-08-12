@@ -12,6 +12,7 @@ import '../../../core/providers/status_provider.dart';
 import '../../../core/storage/action_template_store.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../shared/toast/app_toast.dart';
+import '../../../shared/utils/responsive.dart';
 import 'action_param_field.dart';
 
 /// A flat form generated from `GET /actions/{name}`'s schema — one field per
@@ -202,30 +203,58 @@ class _ActionFormScreenState extends ConsumerState<ActionFormScreen> {
   Widget _buildForm(BuildContext context, ActionSchema action) {
     final textTheme = Theme.of(context).textTheme;
     final title = action.name == 'ci.build' ? 'New build' : action.name;
+    final hasTemplates = action.params.isNotEmpty;
+
+    final header = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(title, style: textTheme.headlineSmall),
+        Text('(${action.name})', style: textTheme.bodySmall),
+        const SizedBox(height: 8),
+        if (action.description.isNotEmpty) Text(action.description),
+      ],
+    );
+
+    // Not `ref.watch` — this Provider never itself changes; the list only
+    // changes via `setState` after save/delete, which already forces
+    // `_buildForm` to re-run.
+    final templatesBar = hasTemplates
+        ? _TemplatesBar(
+            templates: ref.read(actionTemplateStoreProvider).list(action.name),
+            onApply: (template) => _applyTemplate(action, template),
+            onDelete: (name) => _deleteTemplate(action, name),
+          )
+        : null;
+
     return Padding(
       padding: const EdgeInsets.all(16),
       child: Form(
         key: _formKey,
         child: ListView(
           children: [
-            Text(title, style: textTheme.headlineSmall),
-            Text('(${action.name})', style: textTheme.bodySmall),
-            const SizedBox(height: 8),
-            if (action.description.isNotEmpty) Text(action.description),
-            if (action.isDangerous) const _DangerCallout(),
-            if (action.params.isNotEmpty) ...[
+            // Side by side on desktop — matches where the template card used
+            // to sit as its own full-width block below the header, which
+            // pushed every field down for no benefit. Stacked on mobile:
+            // there is no spare horizontal room to share.
+            if (templatesBar != null && !isMobileWidth(context))
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(child: header),
+                  const SizedBox(width: 16),
+                  SizedBox(width: 320, child: templatesBar),
+                ],
+              )
+            else ...[
+              header,
+              if (templatesBar != null) ...[
+                const SizedBox(height: 16),
+                templatesBar,
+              ],
+            ],
+            if (action.isDangerous) ...[
               const SizedBox(height: 16),
-              _TemplatesBar(
-                // Not `ref.watch` — this Provider never itself changes; the
-                // list only changes via `setState` after save/delete, which
-                // already forces this whole method to re-run.
-                templates: ref
-                    .read(actionTemplateStoreProvider)
-                    .list(action.name),
-                onApply: (template) => _applyTemplate(action, template),
-                onDelete: (name) => _deleteTemplate(action, name),
-                onSave: () => _saveAsTemplate(action),
-              ),
+              const _DangerCallout(),
             ],
             const SizedBox(height: 16),
             for (final param in action.params)
@@ -244,20 +273,33 @@ class _ActionFormScreenState extends ConsumerState<ActionFormScreen> {
               ),
             if (_problems.isNotEmpty) _ProblemsCard(problems: _problems),
             const SizedBox(height: 8),
-            FilledButton(
-              style: action.isDangerous
-                  ? AppTheme.destructiveButtonStyle(
-                      Theme.of(context).colorScheme,
-                    )
-                  : null,
-              onPressed: _submitting ? null : () => _submit(action),
-              child: _submitting
-                  ? const SizedBox(
-                      height: 16,
-                      width: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : Text(action.kind == ActionKind.job ? 'Start build' : 'Run'),
+            Row(
+              children: [
+                if (hasTemplates)
+                  OutlinedButton.icon(
+                    onPressed: () => _saveAsTemplate(action),
+                    icon: const Icon(Icons.bookmark_add_outlined),
+                    label: const Text('Save current as template'),
+                  ),
+                const Spacer(),
+                FilledButton(
+                  style: action.isDangerous
+                      ? AppTheme.destructiveButtonStyle(
+                          Theme.of(context).colorScheme,
+                        )
+                      : null,
+                  onPressed: _submitting ? null : () => _submit(action),
+                  child: _submitting
+                      ? const SizedBox(
+                          height: 16,
+                          width: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : Text(
+                          action.kind == ActionKind.job ? 'Start build' : 'Run',
+                        ),
+                ),
+              ],
             ),
           ],
         ),
@@ -267,21 +309,19 @@ class _ActionFormScreenState extends ConsumerState<ActionFormScreen> {
 }
 
 /// Saved form presets for one action — tap a chip to refill the form with
-/// it, or save the values currently in the form as a new one. Lets a
-/// recurring build (same tbchat/database/modules every time) skip retyping
-/// the whole form.
+/// it. Saving a new one happens from the button next to Start build at the
+/// bottom of the form, not here: this card sits beside the header, where
+/// there's room for a chip list but not for a save button too.
 class _TemplatesBar extends StatelessWidget {
   const _TemplatesBar({
     required this.templates,
     required this.onApply,
     required this.onDelete,
-    required this.onSave,
   });
 
   final List<ActionTemplate> templates;
   final ValueChanged<ActionTemplate> onApply;
   final ValueChanged<String> onDelete;
-  final VoidCallback onSave;
 
   @override
   Widget build(BuildContext context) {
@@ -299,12 +339,6 @@ class _TemplatesBar extends StatelessWidget {
                 Text(
                   'Templates',
                   style: Theme.of(context).textTheme.labelLarge,
-                ),
-                const Spacer(),
-                TextButton.icon(
-                  onPressed: onSave,
-                  icon: const Icon(Icons.bookmark_add_outlined),
-                  label: const Text('Save current as template'),
                 ),
               ],
             ),

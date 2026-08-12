@@ -115,14 +115,15 @@ class AppShell extends ConsumerWidget {
 /// Mobile-only replacement for the app bar's nav row — the same
 /// Dashboard/Builds/New build controls, laid out as a list instead of
 /// buttons that would otherwise overflow a phone-width app bar.
-class _NavDrawer extends StatelessWidget {
+class _NavDrawer extends ConsumerWidget {
   const _NavDrawer({required this.location, required this.actions});
 
   final String location;
   final AsyncValue<List<ActionSchema>> actions;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final myKey = ref.watch(myKeyInfoProvider).value;
     return Drawer(
       child: SafeArea(
         child: ListView(
@@ -148,7 +149,7 @@ class _NavDrawer extends StatelessWidget {
             const Divider(),
             actions.when(
               data: (data) {
-                final invokable = data.where(isBuildMenuAction).toList();
+                final invokable = visibleBuildMenuActions(data, myKey);
                 return Column(
                   children: [
                     for (final action in invokable)
@@ -208,14 +209,15 @@ class _NavButton extends StatelessWidget {
   }
 }
 
-class _ActionsMenu extends StatelessWidget {
+class _ActionsMenu extends ConsumerWidget {
   const _ActionsMenu({required this.actions});
 
   final List<ActionSchema> actions;
 
   @override
-  Widget build(BuildContext context) {
-    final invokable = actions.where(isBuildMenuAction).toList();
+  Widget build(BuildContext context, WidgetRef ref) {
+    final myKey = ref.watch(myKeyInfoProvider).value;
+    final invokable = visibleBuildMenuActions(actions, myKey);
     if (invokable.isEmpty) return const SizedBox.shrink();
 
     return MenuAnchor(
