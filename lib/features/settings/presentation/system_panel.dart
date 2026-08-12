@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/api/api_exception.dart';
 import '../../../core/providers/catalogue_providers.dart';
 import '../../../core/providers/core_providers.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../../shared/toast/app_toast.dart';
 import '../../builds/application/jobs_providers.dart';
 
@@ -65,6 +66,7 @@ class SystemPanel extends ConsumerWidget {
                   'Permanently deletes every finished job from history. '
                   'This cannot be undone.',
               onSuccess: () => ref.invalidate(jobsListProvider),
+              isDangerous: true,
             ),
           ],
         ),
@@ -81,6 +83,7 @@ class _ActionTile extends ConsumerWidget {
     required this.confirmTitle,
     required this.confirmBody,
     this.onSuccess,
+    this.isDangerous = false,
   });
 
   final IconData icon;
@@ -94,6 +97,11 @@ class _ActionTile extends ConsumerWidget {
   /// tile needing to know about that provider.
   final VoidCallback? onSuccess;
 
+  /// Deletes something with no undo (clearing history) rather than just
+  /// restarting/reloading — gets the same visual weight as Cancel elsewhere
+  /// in the app instead of the same tonal button every other tile here uses.
+  final bool isDangerous;
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return ListTile(
@@ -101,10 +109,18 @@ class _ActionTile extends ConsumerWidget {
       leading: Icon(icon),
       title: Text(name),
       subtitle: Text(description),
-      trailing: FilledButton.tonal(
-        onPressed: () => _confirmAndRun(context, ref),
-        child: const Text('Run'),
-      ),
+      trailing: isDangerous
+          ? FilledButton(
+              style: AppTheme.destructiveButtonStyle(
+                Theme.of(context).colorScheme,
+              ),
+              onPressed: () => _confirmAndRun(context, ref),
+              child: const Text('Run'),
+            )
+          : FilledButton.tonal(
+              onPressed: () => _confirmAndRun(context, ref),
+              child: const Text('Run'),
+            ),
     );
   }
 

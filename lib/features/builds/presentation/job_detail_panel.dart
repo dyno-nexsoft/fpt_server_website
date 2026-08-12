@@ -8,6 +8,7 @@ import '../../../core/models/job.dart';
 import '../../../core/providers/core_providers.dart';
 import '../../../core/providers/session_provider.dart';
 import '../../../core/providers/status_provider.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../../shared/auth_guard.dart';
 
 /// Right-hand sidebar of the job detail screen: params, artifact/log links,
@@ -77,6 +78,9 @@ class JobDetailPanel extends ConsumerWidget {
             ),
           if (canCancel) ...[
             FilledButton.icon(
+              style: AppTheme.destructiveButtonStyle(
+                Theme.of(context).colorScheme,
+              ),
               onPressed: () => _act(
                 context,
                 ref,

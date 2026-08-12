@@ -10,6 +10,7 @@ import '../../../core/providers/core_providers.dart';
 import '../../../core/providers/job_seed_provider.dart';
 import '../../../core/providers/status_provider.dart';
 import '../../../core/storage/action_template_store.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../../shared/toast/app_toast.dart';
 import 'action_param_field.dart';
 
@@ -244,6 +245,11 @@ class _ActionFormScreenState extends ConsumerState<ActionFormScreen> {
             if (_problems.isNotEmpty) _ProblemsCard(problems: _problems),
             const SizedBox(height: 8),
             FilledButton(
+              style: action.isDangerous
+                  ? AppTheme.destructiveButtonStyle(
+                      Theme.of(context).colorScheme,
+                    )
+                  : null,
               onPressed: _submitting ? null : () => _submit(action),
               child: _submitting
                   ? const SizedBox(

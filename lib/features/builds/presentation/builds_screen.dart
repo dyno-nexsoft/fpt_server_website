@@ -6,6 +6,7 @@ import '../../../core/api/jobs_api.dart';
 import '../../../core/models/job.dart';
 import '../../../core/providers/core_providers.dart';
 import '../../../core/providers/status_provider.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../../shared/auth_guard.dart';
 import '../../../shared/utils/format.dart';
 import '../../../shared/utils/responsive.dart';
@@ -15,6 +16,7 @@ import '../application/jobs_providers.dart';
 const _columnLabels = [
   'Job',
   'Action',
+  'Author',
   'Params',
   'State',
   'Started',
@@ -150,11 +152,12 @@ class _JobsTable extends ConsumerWidget {
         columnWidths: const {
           0: FixedColumnWidth(160),
           1: FixedColumnWidth(110),
-          2: FlexColumnWidth(),
-          3: FixedColumnWidth(150),
-          4: FixedColumnWidth(90),
+          2: FixedColumnWidth(120),
+          3: FlexColumnWidth(),
+          4: FixedColumnWidth(150),
           5: FixedColumnWidth(90),
-          6: FixedColumnWidth(140),
+          6: FixedColumnWidth(90),
+          7: FixedColumnWidth(140),
         },
         children: [
           TableRow(
@@ -194,6 +197,7 @@ class _JobsTable extends ConsumerWidget {
       cells: [
         DataCell(Text(job.id)),
         DataCell(Text(job.actionName ?? job.command)),
+        DataCell(Text(job.createdBy ?? '—')),
         DataCell(_ParamsCell(params: job.actionParams, maxWidth: 260)),
         DataCell(JobStateChip(state: job.state)),
         DataCell(
@@ -235,6 +239,7 @@ class _JobsTable extends ConsumerWidget {
       children: [
         cell(Text(job.id)),
         cell(Text(job.actionName ?? job.command)),
+        cell(Text(job.createdBy ?? '—')),
         cell(_ParamsCell(params: job.actionParams)),
         cell(JobStateChip(state: job.state)),
         cell(
@@ -317,6 +322,9 @@ class _RowActions extends ConsumerWidget {
           ),
         if (canCancel)
           IconButton(
+            style: AppTheme.destructiveIconButtonStyle(
+              Theme.of(context).colorScheme,
+            ),
             tooltip: 'Cancel — deletes artifacts on the build server',
             icon: const Icon(Icons.cancel_outlined),
             onPressed: () => _act(

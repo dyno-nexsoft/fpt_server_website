@@ -7,6 +7,24 @@ abstract final class AppTheme {
   /// a monospace font and Material has no dedicated text-theme slot for it.
   static const monospaceTextStyle = TextStyle(fontFamily: 'monospace');
 
+  /// The other legitimate override: a filled action button (Cancel a build,
+  /// Clear history, `ci.clean`) that deletes something. Every other button
+  /// in the app stays on Material's plain primary-color default — this
+  /// exists so the handful of genuinely irreversible-ish actions read as
+  /// visually distinct from routine ones, not as decoration.
+  static ButtonStyle destructiveButtonStyle(ColorScheme colorScheme) =>
+      FilledButton.styleFrom(
+        backgroundColor: colorScheme.error,
+        foregroundColor: colorScheme.onError,
+      );
+
+  /// Icon-only counterpart, for a bare [IconButton] sitting beside other
+  /// (non-destructive) icon actions in the same row — tints just the icon
+  /// rather than filling a background, so it doesn't visually outweigh its
+  /// neighbors the way a filled button would in that context.
+  static ButtonStyle destructiveIconButtonStyle(ColorScheme colorScheme) =>
+      IconButton.styleFrom(foregroundColor: colorScheme.error);
+
   /// Filled, fully-rounded fields (a "pill" search bar, and every other
   /// TextField in the app along with it) instead of Material's default
   /// underline — set once here rather than per-field.
