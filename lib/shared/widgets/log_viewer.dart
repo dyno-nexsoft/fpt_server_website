@@ -8,19 +8,29 @@ import '../../core/theme/app_theme.dart';
 ///
 /// Takes a [lines] list rather than a joined string: the caller (typically
 /// [JobLogController]) already owns discrete, `\n`-normalized lines as they
-/// stream in, so this widget never re-splits a growing blob of text on every
-/// rebuild. Each line is its own [Text] widget, built from the same `for`
-/// loop as the gutter number next to it — not two giant blocks of
-/// newline-joined text whose row counts have to be trusted to match. A
-/// single [SelectableText] blob relies on `split('\n')` producing exactly as
-/// many visual rows as the gutter counted, which silently breaks the moment
-/// anything (an accidental soft-wrap, a stray control character) inserts a
-/// visual line the count didn't see — the gutter then drifts out of sync
-/// with the text underneath it for the rest of the log. Building line-by-line
-/// with `softWrap: false` makes that structurally impossible: there are
-/// always exactly as many content widgets as gutter widgets, and no line can
-/// ever wrap into an extra row. [SelectionArea] wraps the whole tree so
-/// selection still spans every line despite each being a separate widget.
+/// stream in, so this widget never re-splits a growing blob of text.
+///
+/// Rendered with [ListView.builder] — one row per line, each holding its
+/// gutter number and content side by side in a single [Row] — instead of
+/// two independent columns of hundreds/thousands of eagerly-built [Text]
+/// widgets. Two benefits over the old blob-of-text approach:
+///
+/// * **Lazy building.** Only the rows actually on screen get built, so a
+///   log with thousands of lines stays as cheap to render as one with a
+///   dozen.
+/// * **Structural alignment.** A gutter number and its line used to live in
+///   two separate columns, each sized to its own intrinsic height — a line
+///   with a glyph that needs a taller fallback font (an emoji, CJK text)
+///   could grow taller than its neighbour's plain-ASCII gutter number and
+///   push every row below it out of sync for the rest of the log. Putting
+///   both in the same [Row] means they're laid out together: whatever
+///   height that row ends up being, both children share it, every time.
+///
+/// [SelectionArea] wraps the whole list so dragging across lines still
+/// selects continuously, but each gutter number is wrapped in
+/// [SelectionContainer.disabled] — copying a selection only ever yields the
+/// log text itself, the way a real code editor's gutter is never part of
+/// what you copy.
 class LogViewer extends StatefulWidget {
   const LogViewer({
     super.key,
@@ -49,7 +59,14 @@ class LogViewer extends StatefulWidget {
 }
 
 class _LogViewerState extends State<LogViewer> {
-  final _scrollController = ScrollController();
+  final _verticalController = ScrollController();
+  final _horizontalController = ScrollController();
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.reverse) _jumpToEnd();
+  }
 
   @override
   void didUpdateWidget(covariant LogViewer oldWidget) {
@@ -59,17 +76,20 @@ class _LogViewerState extends State<LogViewer> {
         widget.lines.isNotEmpty &&
         oldWidget.lines.isNotEmpty &&
         oldWidget.lines.last != widget.lines.last;
-    if (widget.autoScrollToEnd && (grew || lastLineChanged)) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!_scrollController.hasClients) return;
-        _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
-      });
-    }
+    if (widget.autoScrollToEnd && (grew || lastLineChanged)) _jumpToEnd();
+  }
+
+  void _jumpToEnd() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!_verticalController.hasClients) return;
+      _verticalController.jumpTo(_verticalController.position.maxScrollExtent);
+    });
   }
 
   @override
   void dispose() {
-    _scrollController.dispose();
+    _verticalController.dispose();
+    _horizontalController.dispose();
     super.dispose();
   }
 
@@ -92,73 +112,92 @@ class _LogViewerState extends State<LogViewer> {
       color: (lineStyle.color ?? Theme.of(context).colorScheme.onSurface)
           .withValues(alpha: 0.45),
     );
-    // `textAlign: right` only has visible effect once the gutter has a width
-    // wider than its own text — an intrinsically-sized Text has no extra
-    // space to align *within*. Approximated from digit count rather than
-    // measured, since every character is the same width in a monospace font.
-    final gutterWidth = '${lines.length}'.length * 8.0 + 4;
-    // A gutter number and its own log line are two separate Text widgets in
-    // two separate Columns, each sized to its own intrinsic height — that
-    // breaks the moment a single line's glyphs (an emoji, a CJK character,
-    // anything needing a fallback font) measure taller than plain ASCII
-    // digits do. One row's Text growing a few px taller than its gutter
-    // number's Text shifts every line below it out of alignment for the
-    // rest of the log. A strut forces every line — gutter and content alike
-    // — to the same fixed height regardless of what glyphs it actually
-    // contains, so no single line can ever push the rest out of step.
+    // Forces every row to the same height regardless of what glyphs its own
+    // line happens to contain — see the class doc for why that matters once
+    // gutter and content share a Row instead of two parallel columns.
     final strutStyle = lineStyle == null
         ? null
         : StrutStyle.fromTextStyle(lineStyle, forceStrutHeight: true);
+    // `textAlign: right` only has visible effect once the gutter has a width
+    // wider than its own text. Approximated from digit count rather than
+    // measured, since every character is the same width in a monospace font.
+    final gutterWidth = '${lines.length}'.length * 8.0 + 4;
+    final contentWidth = _widestLineWidth(lines, lineStyle, strutStyle);
+    final dividerColor = Theme.of(context).dividerColor;
 
     return Scrollbar(
-      controller: _scrollController,
+      controller: _horizontalController,
       child: SingleChildScrollView(
-        controller: _scrollController,
-        reverse: widget.reverse,
-        child: SelectionArea(
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                padding: const EdgeInsets.only(right: 8),
-                decoration: BoxDecoration(
-                  border: Border(
-                    right: BorderSide(color: Theme.of(context).dividerColor),
-                  ),
-                ),
-                child: SizedBox(
-                  width: gutterWidth,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      for (var i = 1; i <= lines.length; i++)
-                        Text('$i', style: gutterStyle, strutStyle: strutStyle),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      for (final line in lines)
-                        Text(
-                          line,
-                          style: lineStyle,
-                          softWrap: false,
+        controller: _horizontalController,
+        scrollDirection: Axis.horizontal,
+        child: SizedBox(
+          width: gutterWidth + 8 + contentWidth,
+          child: Scrollbar(
+            controller: _verticalController,
+            child: SelectionArea(
+              child: ListView.builder(
+                controller: _verticalController,
+                itemCount: lines.length,
+                itemBuilder: (context, index) => Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SelectionContainer.disabled(
+                      child: Container(
+                        width: gutterWidth,
+                        padding: const EdgeInsets.only(right: 8),
+                        decoration: BoxDecoration(
+                          border: Border(
+                            right: BorderSide(color: dividerColor),
+                          ),
+                        ),
+                        child: Text(
+                          '${index + 1}',
+                          textAlign: TextAlign.right,
+                          style: gutterStyle,
                           strutStyle: strutStyle,
                         ),
-                    ],
-                  ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    SizedBox(
+                      width: contentWidth,
+                      child: Text(
+                        lines[index],
+                        style: lineStyle,
+                        softWrap: false,
+                        strutStyle: strutStyle,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ],
+            ),
           ),
         ),
       ),
     );
+  }
+
+  /// The widest line's rendered width, so every row can share one fixed
+  /// content column and scroll horizontally as a single unit. Only the
+  /// longest-by-character-count line needs an actual [TextPainter] layout —
+  /// safe to assume it's also the widest, since every character in a
+  /// monospace font is the same width.
+  double _widestLineWidth(
+    List<String> lines,
+    TextStyle? style,
+    StrutStyle? strutStyle,
+  ) {
+    var widest = '';
+    for (final line in lines) {
+      if (line.length > widest.length) widest = line;
+    }
+    if (widest.isEmpty) return 0;
+    final painter = TextPainter(
+      text: TextSpan(text: widest, style: style),
+      strutStyle: strutStyle,
+      textDirection: TextDirection.ltr,
+    )..layout();
+    return painter.width;
   }
 }
