@@ -49,14 +49,7 @@ class DashboardScreen extends ConsumerWidget {
             spacing: 8,
             children: [
               const Icon(Icons.history),
-              Expanded(
-                child: Text('Recent builds', style: textTheme.titleMedium),
-              ),
-              IconButton(
-                tooltip: 'Refresh',
-                icon: const Icon(Icons.refresh),
-                onPressed: () => ref.invalidate(recentJobsProvider),
-              ),
+              Text('Recent builds', style: textTheme.titleMedium),
             ],
           ),
           recent.when(
