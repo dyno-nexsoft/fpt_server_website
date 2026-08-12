@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../api/api_client.dart';
+import '../storage/action_template_store.dart';
 import '../storage/session_prefs.dart';
 import 'session_provider.dart';
 
@@ -13,6 +14,10 @@ final sharedPreferencesProvider = Provider<SharedPreferences>(
 
 final sessionPrefsProvider = Provider<SessionPrefs>(
   (ref) => SessionPrefs(ref.watch(sharedPreferencesProvider)),
+);
+
+final actionTemplateStoreProvider = Provider<ActionTemplateStore>(
+  (ref) => ActionTemplateStore(ref.watch(sharedPreferencesProvider)),
 );
 
 final apiClientProvider = Provider<ApiClient>((ref) {

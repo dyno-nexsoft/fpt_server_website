@@ -9,6 +9,7 @@ import '../../../core/providers/catalogue_providers.dart';
 import '../../../core/providers/core_providers.dart';
 import '../../../core/providers/job_seed_provider.dart';
 import '../../../core/providers/status_provider.dart';
+import '../../../core/storage/action_template_store.dart';
 import '../../../shared/toast/app_toast.dart';
 import 'action_param_field.dart';
 
@@ -62,29 +63,94 @@ class _ActionFormScreenState extends ConsumerState<ActionFormScreen> {
     _initialized = true;
   }
 
+  /// Reads the form's current values into a plain params map — shared by
+  /// [_submit] (which sends it as the request body) and [_saveAsTemplate]
+  /// (which persists it verbatim, without the int/double parsing `_submit`
+  /// needs for the wire format — a template only ever feeds back into these
+  /// same text fields).
+  Map<String, Object?> _collectParams(ActionSchema action) {
+    final params = <String, Object?>{};
+    for (final param in action.params) {
+      switch (param.type) {
+        case ActionParamType.enumeration:
+          final value = _enumValues[param.name];
+          if (value != null) params[param.name] = value;
+        case ActionParamType.boolean:
+          params[param.name] = _boolValues[param.name];
+        case ActionParamType.integer:
+        case ActionParamType.number:
+        case ActionParamType.string:
+          final text = _controllers[param.name]!.text.trim();
+          if (text.isNotEmpty) params[param.name] = text;
+      }
+    }
+    return params;
+  }
+
+  void _applyTemplate(ActionSchema action, ActionTemplate template) {
+    setState(() {
+      for (final param in action.params) {
+        final value = template.params[param.name];
+        switch (param.type) {
+          case ActionParamType.enumeration:
+            if (value is String) _enumValues[param.name] = value;
+          case ActionParamType.boolean:
+            _boolValues[param.name] = value as bool? ?? false;
+          case ActionParamType.integer:
+          case ActionParamType.number:
+          case ActionParamType.string:
+            _controllers[param.name]!.text = value?.toString() ?? '';
+        }
+      }
+    });
+  }
+
+  Future<void> _saveAsTemplate(ActionSchema action) async {
+    final name = await showDialog<String>(
+      context: context,
+      builder: (context) => _NameTemplateDialog(
+        existingNames: ref
+            .read(actionTemplateStoreProvider)
+            .list(action.name)
+            .map((t) => t.name)
+            .toSet(),
+      ),
+    );
+    if (name == null || name.isEmpty) return;
+    await ref
+        .read(actionTemplateStoreProvider)
+        .save(
+          action.name,
+          ActionTemplate(name: name, params: _collectParams(action)),
+        );
+    if (mounted) setState(() {});
+  }
+
+  Future<void> _deleteTemplate(ActionSchema action, String name) async {
+    await ref.read(actionTemplateStoreProvider).delete(action.name, name);
+    if (mounted) setState(() {});
+  }
+
   Future<void> _submit(ActionSchema action) async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
     setState(() {
       _submitting = true;
       _problems = const [];
     });
+    final rawParams = _collectParams(action);
     final body = <String, dynamic>{};
     for (final param in action.params) {
+      final value = rawParams[param.name];
       switch (param.type) {
         case ActionParamType.enumeration:
-          final value = _enumValues[param.name];
-          if (value != null) body[param.name] = value;
         case ActionParamType.boolean:
-          body[param.name] = _boolValues[param.name];
+          if (value != null) body[param.name] = value;
         case ActionParamType.integer:
-          final text = _controllers[param.name]!.text.trim();
-          if (text.isNotEmpty) body[param.name] = int.parse(text);
+          if (value != null) body[param.name] = int.parse(value as String);
         case ActionParamType.number:
-          final text = _controllers[param.name]!.text.trim();
-          if (text.isNotEmpty) body[param.name] = double.parse(text);
+          if (value != null) body[param.name] = double.parse(value as String);
         case ActionParamType.string:
-          final text = _controllers[param.name]!.text.trim();
-          if (text.isNotEmpty) body[param.name] = text;
+          if (value != null) body[param.name] = value;
       }
     }
 
@@ -146,6 +212,20 @@ class _ActionFormScreenState extends ConsumerState<ActionFormScreen> {
             const SizedBox(height: 8),
             if (action.description.isNotEmpty) Text(action.description),
             if (action.isDangerous) const _DangerCallout(),
+            if (action.params.isNotEmpty) ...[
+              const SizedBox(height: 16),
+              _TemplatesBar(
+                // Not `ref.watch` — this Provider never itself changes; the
+                // list only changes via `setState` after save/delete, which
+                // already forces this whole method to re-run.
+                templates: ref
+                    .read(actionTemplateStoreProvider)
+                    .list(action.name),
+                onApply: (template) => _applyTemplate(action, template),
+                onDelete: (name) => _deleteTemplate(action, name),
+                onSave: () => _saveAsTemplate(action),
+              ),
+            ],
             const SizedBox(height: 16),
             for (final param in action.params)
               Padding(
@@ -176,6 +256,120 @@ class _ActionFormScreenState extends ConsumerState<ActionFormScreen> {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Saved form presets for one action — tap a chip to refill the form with
+/// it, or save the values currently in the form as a new one. Lets a
+/// recurring build (same tbchat/database/modules every time) skip retyping
+/// the whole form.
+class _TemplatesBar extends StatelessWidget {
+  const _TemplatesBar({
+    required this.templates,
+    required this.onApply,
+    required this.onDelete,
+    required this.onSave,
+  });
+
+  final List<ActionTemplate> templates;
+  final ValueChanged<ActionTemplate> onApply;
+  final ValueChanged<String> onDelete;
+  final VoidCallback onSave;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          spacing: 8,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.bookmark_border, size: 18),
+                const SizedBox(width: 8),
+                Text(
+                  'Templates',
+                  style: Theme.of(context).textTheme.labelLarge,
+                ),
+                const Spacer(),
+                TextButton.icon(
+                  onPressed: onSave,
+                  icon: const Icon(Icons.bookmark_add_outlined),
+                  label: const Text('Save current as template'),
+                ),
+              ],
+            ),
+            if (templates.isEmpty)
+              const Text('No saved templates yet for this action.')
+            else
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  for (final template in templates)
+                    InputChip(
+                      label: Text(template.name),
+                      onPressed: () => onApply(template),
+                      onDeleted: () => onDelete(template.name),
+                    ),
+                ],
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _NameTemplateDialog extends StatefulWidget {
+  const _NameTemplateDialog({required this.existingNames});
+
+  final Set<String> existingNames;
+
+  @override
+  State<_NameTemplateDialog> createState() => _NameTemplateDialogState();
+}
+
+class _NameTemplateDialogState extends State<_NameTemplateDialog> {
+  final _controller = TextEditingController();
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    final name = _controller.text.trim();
+    if (name.isEmpty) return;
+    Navigator.pop(context, name);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final overwrites = widget.existingNames.contains(_controller.text.trim());
+    return AlertDialog(
+      title: const Text('Save as template'),
+      content: TextField(
+        controller: _controller,
+        autofocus: true,
+        decoration: InputDecoration(
+          labelText: 'Template name',
+          helperText: overwrites ? 'Replaces the existing template.' : null,
+        ),
+        onSubmitted: (_) => _submit(),
+        onChanged: (_) => setState(() {}),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(onPressed: _submit, child: const Text('Save')),
+      ],
     );
   }
 }
