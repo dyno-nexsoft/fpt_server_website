@@ -205,6 +205,7 @@ class _StatusChipsBar extends ConsumerWidget {
           children: [
             Badge.count(
               count: data.running.length,
+              isLabelVisible: data.running.isNotEmpty,
               child: ActionChip(
                 avatar: const Icon(Icons.autorenew),
                 label: const Text('Running'),
@@ -213,6 +214,7 @@ class _StatusChipsBar extends ConsumerWidget {
             ),
             Badge.count(
               count: data.queued.length,
+              isLabelVisible: data.queued.isNotEmpty,
               child: ActionChip(
                 avatar: const Icon(Icons.schedule),
                 label: const Text('Queued'),
