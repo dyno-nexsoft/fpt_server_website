@@ -45,8 +45,10 @@ class _AppShellState extends ConsumerState<AppShell> {
         ? IconButton(
             tooltip: 'Sign out',
             icon: const Icon(Icons.logout),
-            onPressed: () =>
-                ref.read(connectionControllerProvider.notifier).logout(),
+            onPressed: () async {
+              await ref.read(connectionControllerProvider.notifier).logout();
+              if (context.mounted) context.go('/login');
+            },
           )
         : IconButton(
             tooltip: 'Connect',
@@ -83,7 +85,7 @@ class _AppShellState extends ConsumerState<AppShell> {
       ),
       floatingActionButton: mobile
           ? actions.when(
-              data: (data) => _NewBuildFab(actions: data),
+              data: (data) => _BuildFab(actions: data),
               loading: () => null,
               error: (_, _) => null,
             )
@@ -122,7 +124,10 @@ class _AppShellState extends ConsumerState<AppShell> {
       children: [
         NavigationRail(
           leading: actions.when(
-            data: (data) => _NewBuildFab(actions: data),
+            data: (data) => Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: _BuildFab(actions: data, isExtended: _railExtended),
+            ),
             loading: () => const SizedBox(height: 56),
             error: (_, _) => const SizedBox(height: 56),
           ),
@@ -153,13 +158,16 @@ class _AppShellState extends ConsumerState<AppShell> {
   }
 }
 
-/// Opens the catalogue of runnable build actions — a [MenuAnchor] rather than
-/// a fixed nav destination, since which actions exist (and which this key
-/// may run) is dynamic, not a fixed route.
-class _NewBuildFab extends ConsumerWidget {
-  const _NewBuildFab({required this.actions});
+/// Jumps to [NewBuildScreen] to pick which action to run — hidden entirely
+/// when this key has nothing it's allowed to invoke, since which actions
+/// exist (and which this key may run) is dynamic, not a fixed route. Used
+/// both as the desktop rail's leading widget and mobile's standard
+/// [Scaffold.floatingActionButton].
+class _BuildFab extends ConsumerWidget {
+  const _BuildFab({required this.actions, this.isExtended = true});
 
   final List<ActionSchema> actions;
+  final bool isExtended;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -167,23 +175,12 @@ class _NewBuildFab extends ConsumerWidget {
     final invokable = visibleBuildMenuActions(actions, myKey);
     if (invokable.isEmpty) return const SizedBox.shrink();
 
-    return MenuAnchor(
-      builder: (context, controller, child) => FloatingActionButton(
-        tooltip: 'New build',
-        onPressed: () =>
-            controller.isOpen ? controller.close() : controller.open(),
-        child: const Icon(Icons.add),
-      ),
-      menuChildren: [
-        for (final action in invokable)
-          MenuItemButton(
-            leadingIcon: Icon(
-              action.isDangerous ? Icons.warning_amber : Icons.bolt,
-            ),
-            onPressed: () => context.go('/actions/${action.name}'),
-            child: Text(action.name),
-          ),
-      ],
+    return FloatingActionButton.extended(
+      isExtended: isExtended,
+      tooltip: 'New build',
+      onPressed: () => context.go('/builds/new'),
+      icon: const Icon(Icons.add),
+      label: Text('New build'),
     );
   }
 }

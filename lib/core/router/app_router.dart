@@ -7,6 +7,7 @@ import '../../features/auth/presentation/login_screen.dart';
 import '../../features/action_form/presentation/action_form_screen.dart';
 import '../../features/builds/presentation/builds_screen.dart';
 import '../../features/builds/presentation/job_detail_screen.dart';
+import '../../features/builds/presentation/new_build_screen.dart';
 import '../../features/dashboard/presentation/dashboard_screen.dart';
 import '../../features/settings/presentation/server_logs_screen.dart';
 import '../../features/settings/presentation/settings_screen.dart';
@@ -91,6 +92,11 @@ final routerProvider = Provider<GoRouter>((ref) {
             pageBuilder: (context, state) =>
                 NoTransitionPage(child: const BuildsScreen()),
             routes: [
+              GoRoute(
+                path: 'new',
+                pageBuilder: (context, state) =>
+                    const NoTransitionPage(child: NewBuildScreen()),
+              ),
               // A specific build/job — nested so its URL reads as "the
               // thing under Builds it is", not a sibling of unrelated top
               // level sections.
