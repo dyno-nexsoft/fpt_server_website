@@ -140,34 +140,15 @@ class _ParamRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        spacing: 8,
-        children: [
-          Icon(
-            icon ?? Icons.circle_outlined,
-            size: 14,
-            color: theme.colorScheme.outline,
-          ),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  name,
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    color: theme.colorScheme.outline,
-                  ),
-                ),
-                Text(value, style: theme.textTheme.bodyMedium),
-              ],
-            ),
-          ),
-        ],
-      ),
+    // ListTile centers `leading` against the title+subtitle block on its
+    // own — the previous hand-built Row (icon + a Column of two Text
+    // widgets) always sat the icon a few pixels too high instead.
+    return ListTile(
+      dense: true,
+      contentPadding: EdgeInsets.zero,
+      leading: Icon(icon ?? Icons.circle_outlined),
+      title: Text(name),
+      subtitle: Text(value),
     );
   }
 }
