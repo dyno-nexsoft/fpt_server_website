@@ -98,9 +98,9 @@ class _JobHeader extends StatelessWidget {
         spacing: 12,
         children: [
           Text(job.id, style: textTheme.titleMedium),
-          Text('·  ${job.actionName ?? job.command}'),
+          Chip(label: Text(job.actionName ?? job.command)),
           JobStateChip(state: job.state),
-          if (duration != null) Text(formatDuration(duration)),
+          if (duration != null) Chip(label: Text(formatDuration(duration))),
           Chip(label: Text(_modeLabel)),
           if (job.resumedFrom != null)
             Chip(label: Text('resumed from ${job.resumedFrom}')),
