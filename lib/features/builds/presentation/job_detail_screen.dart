@@ -6,7 +6,7 @@ import '../../../core/models/job.dart';
 import '../../../shared/utils/format.dart';
 import '../../../shared/utils/responsive.dart';
 import '../../../shared/widgets/job_state_chip.dart';
-import '../../../core/theme/app_theme.dart';
+import '../../../shared/widgets/log_viewer.dart';
 import '../application/job_log_controller.dart';
 import 'job_detail_panel.dart';
 
@@ -44,7 +44,16 @@ class JobDetailScreen extends ConsumerWidget {
             direction: mobile ? Axis.vertical : Axis.horizontal,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Expanded(flex: 3, child: _LogPane(text: logState.logText)),
+              Expanded(
+                flex: 3,
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: LogViewer(
+                    text: logState.logText,
+                    autoScrollToEnd: true,
+                  ),
+                ),
+              ),
               mobile
                   ? const Divider(height: 1)
                   : const VerticalDivider(width: 1),
@@ -95,55 +104,6 @@ class _JobHeader extends StatelessWidget {
           if (job.resumedFrom != null)
             Chip(label: Text('resumed from ${job.resumedFrom}')),
         ],
-      ),
-    );
-  }
-}
-
-class _LogPane extends StatefulWidget {
-  const _LogPane({required this.text});
-
-  final String text;
-
-  @override
-  State<_LogPane> createState() => _LogPaneState();
-}
-
-class _LogPaneState extends State<_LogPane> {
-  final _scrollController = ScrollController();
-
-  @override
-  void didUpdateWidget(covariant _LogPane oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.text.length != widget.text.length) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!_scrollController.hasClients) return;
-        _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
-      });
-    }
-  }
-
-  @override
-  void dispose() {
-    _scrollController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      child: Scrollbar(
-        controller: _scrollController,
-        child: SingleChildScrollView(
-          controller: _scrollController,
-          child: SelectableText(
-            widget.text.isEmpty ? '(no output yet)' : widget.text,
-            style: Theme.of(
-              context,
-            ).textTheme.bodySmall?.merge(AppTheme.monospaceTextStyle),
-          ),
-        ),
       ),
     );
   }

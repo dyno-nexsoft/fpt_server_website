@@ -5,6 +5,7 @@ import '../../../core/api/api_exception.dart';
 import '../../../core/providers/catalogue_providers.dart';
 import '../../../core/providers/core_providers.dart';
 import '../../../shared/toast/app_toast.dart';
+import '../../builds/application/jobs_providers.dart';
 
 /// `system.restart` and `system.hotReload` are `admin`-only but, like
 /// `admin.logs.tail`, are exposed over REST — see `SystemAction`'s doc
@@ -53,6 +54,18 @@ class SystemPanel extends ConsumerWidget {
               title: Text('system.shutdown'),
               subtitle: Text('Unavailable in browser — use Discord.'),
             ),
+            _ActionTile(
+              icon: Icons.delete_sweep_outlined,
+              name: 'system.clearHistory',
+              description:
+                  'Delete all finished build history. Running/queued jobs '
+                  'are untouched.',
+              confirmTitle: 'Clear all build history?',
+              confirmBody:
+                  'Permanently deletes every finished job from history. '
+                  'This cannot be undone.',
+              onSuccess: () => ref.invalidate(jobsListProvider),
+            ),
           ],
         ),
       ),
@@ -67,6 +80,7 @@ class _ActionTile extends ConsumerWidget {
     required this.description,
     required this.confirmTitle,
     required this.confirmBody,
+    this.onSuccess,
   });
 
   final IconData icon;
@@ -74,6 +88,11 @@ class _ActionTile extends ConsumerWidget {
   final String description;
   final String confirmTitle;
   final String confirmBody;
+
+  /// Called after the action succeeds — lets a caller refresh whatever it
+  /// just changed (e.g. the builds list after clearing history) without every
+  /// tile needing to know about that provider.
+  final VoidCallback? onSuccess;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -115,6 +134,7 @@ class _ActionTile extends ConsumerWidget {
       ref
           .read(appToastProvider.notifier)
           .show(body['message'] as String? ?? 'Done');
+      onSuccess?.call();
     } on ApiException catch (e) {
       ref.read(appToastProvider.notifier).show(e.message, isError: true);
     }

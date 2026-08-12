@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/api/api_exception.dart';
 import '../../../core/browser/browser_utils.dart';
 import '../../../core/models/artifact_file.dart';
 import '../../../core/providers/session_provider.dart';
@@ -47,11 +48,47 @@ class ArtifactsScreen extends ConsumerWidget {
             child: listing.when(
               data: (data) => _ArtifactList(listing: data),
               loading: () => const Center(child: CircularProgressIndicator()),
-              error: (error, _) => Center(child: Text('$error')),
+              error: (error, _) => Center(
+                child: error is ApiException && error.statusCode == 404
+                    ? const _ArtifactsGone()
+                    : Text('$error'),
+              ),
             ),
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Shown when `GET /artifacts/{key}` 404s — the job record can outlive its
+/// files: `assets/clean.sh` prunes `build/<artifactKey>/` by age on its own
+/// schedule, independent of how long the job stays in history, so this is an
+/// expected, recoverable state rather than an error to surface raw.
+class _ArtifactsGone extends StatelessWidget {
+  const _ArtifactsGone();
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      spacing: 8,
+      children: [
+        const Icon(Icons.folder_off_outlined, size: 48),
+        Text('These artifacts are gone', style: textTheme.titleMedium),
+        Text(
+          'Cleaned up by disk housekeeping — the build record is still '
+          'kept, but its files are no longer on disk.',
+          style: textTheme.bodySmall,
+          textAlign: TextAlign.center,
+        ),
+        TextButton.icon(
+          onPressed: () => context.go('/builds'),
+          icon: const Icon(Icons.list_alt_outlined),
+          label: const Text('Back to Builds'),
+        ),
+      ],
     );
   }
 }

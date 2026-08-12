@@ -26,77 +26,83 @@ class JobDetailPanel extends ConsumerWidget {
     final hasKey = ref.watch(sessionProvider).hasKey;
     final showsAnyAction = canPromote || canCancel || canRetry;
 
-    return ListView(
+    return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
-      children: [
-        Text('Build', style: Theme.of(context).textTheme.titleMedium),
-        const SizedBox(height: 8),
-        for (final entry in job.actionParams.entries)
-          if (entry.value != null)
-            _ParamRow(name: entry.key, value: '${entry.value}'),
-        if (job.warnings.isNotEmpty) ...[
-          const SizedBox(height: 8),
-          for (final warning in job.warnings)
-            _ParamRow(
-              name: 'Warning',
-              value: warning,
-              icon: Icons.warning_amber,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        spacing: 12,
+        children: [
+          Text('Build', style: Theme.of(context).textTheme.titleMedium),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            spacing: 4,
+            children: [
+              for (final entry in job.actionParams.entries)
+                if (entry.value != null)
+                  _ParamRow(name: entry.key, value: '${entry.value}'),
+              for (final warning in job.warnings)
+                _ParamRow(
+                  name: 'Warning',
+                  value: warning,
+                  icon: Icons.warning_amber,
+                ),
+            ],
+          ),
+          const Divider(),
+          if (job.logUrl != null)
+            OutlinedButton.icon(
+              onPressed: () => openInNewTab('${job.logUrl!}?raw=1'),
+              icon: const Icon(Icons.description_outlined),
+              label: const Text('Open raw log'),
             ),
-        ],
-        const Divider(height: 32),
-        if (job.logUrl != null)
           OutlinedButton.icon(
-            onPressed: () => openInNewTab('${job.logUrl!}?raw=1'),
-            icon: const Icon(Icons.description_outlined),
-            label: const Text('Open raw log'),
+            onPressed: () =>
+                context.go('/builds/artifacts/${job.artifactKey}'),
+            icon: const Icon(Icons.folder_outlined),
+            label: const Text('Artifacts'),
           ),
-        OutlinedButton.icon(
-          onPressed: () => context.go('/builds/artifacts/${job.artifactKey}'),
-          icon: const Icon(Icons.folder_outlined),
-          label: const Text('Artifacts'),
-        ),
-        const SizedBox(height: 16),
-        if (canPromote)
-          FilledButton.tonalIcon(
-            onPressed: () => _act(
-              context,
-              ref,
-              'Promoted',
-              () => promoteJob(ref.read(apiClientProvider), job.id),
+          if (canPromote)
+            FilledButton.tonalIcon(
+              onPressed: () => _act(
+                context,
+                ref,
+                'Promoted',
+                () => promoteJob(ref.read(apiClientProvider), job.id),
+              ),
+              icon: const Icon(Icons.upgrade),
+              label: const Text('Promote'),
             ),
-            icon: const Icon(Icons.upgrade),
-            label: const Text('Promote'),
-          ),
-        if (canCancel) ...[
-          FilledButton.icon(
-            onPressed: () => _act(
-              context,
-              ref,
-              null,
-              () => cancelJob(ref.read(apiClientProvider), job.id),
+          if (canCancel) ...[
+            FilledButton.icon(
+              onPressed: () => _act(
+                context,
+                ref,
+                null,
+                () => cancelJob(ref.read(apiClientProvider), job.id),
+              ),
+              icon: const Icon(Icons.cancel_outlined),
+              label: const Text('Cancel'),
             ),
-            icon: const Icon(Icons.cancel_outlined),
-            label: const Text('Cancel'),
-          ),
-          const Text('This deletes artifacts on the build server.'),
+            const Text('This deletes artifacts on the build server.'),
+          ],
+          if (canRetry)
+            FilledButton.icon(
+              onPressed: () => _act(
+                context,
+                ref,
+                'Retried',
+                () => retryJob(ref.read(apiClientProvider), job.id),
+              ),
+              icon: const Icon(Icons.replay),
+              label: const Text('Retry'),
+            ),
+          if (showsAnyAction && !hasKey)
+            const Text(
+              'Connect with an API key to manage this build — run '
+              '/admin api-key-add in Discord to get one.',
+            ),
         ],
-        if (canRetry)
-          FilledButton.icon(
-            onPressed: () => _act(
-              context,
-              ref,
-              'Retried',
-              () => retryJob(ref.read(apiClientProvider), job.id),
-            ),
-            icon: const Icon(Icons.replay),
-            label: const Text('Retry'),
-          ),
-        if (showsAnyAction && !hasKey)
-          const Text(
-            'Connect with an API key to manage this build — run '
-            '/admin api-key-add in Discord to get one.',
-          ),
-      ],
+      ),
     );
   }
 

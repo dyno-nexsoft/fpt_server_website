@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/theme/app_theme.dart';
+import '../../../shared/widgets/log_viewer.dart';
 import '../application/settings_providers.dart';
 
 /// `admin.logs.tail` — a full-page log viewer, styled like the build job
@@ -44,15 +44,7 @@ class ServerLogsScreen extends ConsumerWidget {
               }
               return Padding(
                 padding: const EdgeInsets.all(12),
-                child: SingleChildScrollView(
-                  reverse: true,
-                  child: SelectableText(
-                    lines.join('\n'),
-                    style: textTheme.bodySmall?.merge(
-                      AppTheme.monospaceTextStyle,
-                    ),
-                  ),
-                ),
+                child: LogViewer(text: lines.join('\n'), reverse: true),
               );
             },
             loading: () => const Center(child: CircularProgressIndicator()),
