@@ -20,17 +20,12 @@ abstract final class AppTheme {
   );
 
   static final ThemeData light = ThemeData(
-    useMaterial3: true,
-    colorScheme: ColorScheme.fromSeed(seedColor: Colors.indigo),
+    colorScheme: ColorScheme.light(),
     inputDecorationTheme: _inputDecorationTheme,
   );
 
   static final ThemeData dark = ThemeData(
-    useMaterial3: true,
-    colorScheme: ColorScheme.fromSeed(
-      seedColor: Colors.indigo,
-      brightness: Brightness.dark,
-    ),
+    colorScheme: ColorScheme.dark(),
     inputDecorationTheme: _inputDecorationTheme,
   );
 }
