@@ -18,11 +18,13 @@ import '../../../shared/widgets/job_state_chip.dart';
 /// renders the same with or without a stored key, only the top-right
 /// Connect/Sign-out control changes.
 ///
-/// Below [kMobileBreakpoint] the nav row (which would otherwise overflow the
-/// app bar) moves into a leading [Drawer], and the fixed 300px queue column
-/// (which would otherwise leave no room for the routed screen) moves into a
-/// [Scaffold.endDrawer] opened from an app bar icon instead of staying
-/// permanently on screen.
+/// Below [kMobileBreakpoint] the fixed 300px queue column (which would
+/// otherwise leave no room for the routed screen) moves into a leading
+/// [Drawer], opened by Scaffold's automatic hamburger button — matching where
+/// it sits as the permanent left sidebar on desktop. The nav row (which would
+/// otherwise overflow the app bar) moves into a [Scaffold.endDrawer] on the
+/// right instead, matching where its buttons sit in the app bar's trailing
+/// `actions` on desktop.
 class AppShell extends ConsumerWidget {
   const AppShell({super.key, required this.child});
 
@@ -90,22 +92,22 @@ class AppShell extends ConsumerWidget {
           connectControl,
           // Last action, at the trailing corner — matching where Scaffold
           // would put its own auto-generated endDrawer button, had one not
-          // been supplied explicitly here. On desktop the queue is already
-          // the permanent left sidebar below, so this (and the endDrawer it
-          // opens) would just show the exact same content a second time.
+          // been supplied explicitly here. On desktop the nav row is already
+          // in this same trailing position, so this (and the endDrawer it
+          // opens) sits where a desktop user would expect it.
           if (mobile)
             Builder(
               builder: (context) => IconButton(
-                tooltip: 'Queue',
-                icon: const Icon(Icons.list_alt),
+                tooltip: 'Menu',
+                icon: const Icon(Icons.apps),
                 onPressed: () => Scaffold.of(context).openEndDrawer(),
               ),
             ),
         ],
       ),
-      drawer: mobile ? _NavDrawer(location: location, actions: actions) : null,
+      drawer: mobile ? const Drawer(width: 300, child: _QueueSidebar()) : null,
       endDrawer: mobile
-          ? const Drawer(width: 300, child: _QueueSidebar())
+          ? _NavDrawer(location: location, actions: actions)
           : null,
       body: mobile
           ? child
