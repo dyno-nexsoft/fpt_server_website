@@ -254,36 +254,7 @@ class _ActionFormScreenState extends ConsumerState<ActionFormScreen> {
               ],
             ],
             const SizedBox(height: 16),
-            // GridView, not a plain vertical list — SliverGridDelegateWith
-            // MaxCrossAxisExtent fits as many ~420px-wide columns as the
-            // form is wide enough for (two on a normal desktop window, one
-            // once it isn't), instead of a fixed sequence of full-width
-            // fields stretched edge to edge. shrinkWrap + no physics of its
-            // own: this grid sizes to its content and lets the outer
-            // ListView own the actual scrolling.
-            GridView(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                maxCrossAxisExtent: 420,
-                mainAxisExtent: 60,
-                mainAxisSpacing: 12,
-                crossAxisSpacing: 16,
-              ),
-              children: [
-                for (final param in action.params)
-                  ActionParamField(
-                    param: param,
-                    controller: _controllers[param.name],
-                    enumValue: _enumValues[param.name],
-                    boolValue: _boolValues[param.name] ?? false,
-                    onEnumChanged: (value) =>
-                        setState(() => _enumValues[param.name] = value),
-                    onBoolChanged: (value) =>
-                        setState(() => _boolValues[param.name] = value),
-                  ),
-              ],
-            ),
+            _buildFields(action),
             if (_problems.isNotEmpty) _ProblemsCard(problems: _problems),
             const SizedBox(height: 8),
             Row(
@@ -323,6 +294,47 @@ class _ActionFormScreenState extends ConsumerState<ActionFormScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  List<Widget> _fieldWidgets(ActionSchema action) => [
+    for (final param in action.params)
+      ActionParamField(
+        param: param,
+        controller: _controllers[param.name],
+        enumValue: _enumValues[param.name],
+        boolValue: _boolValues[param.name] ?? false,
+        onEnumChanged: (value) =>
+            setState(() => _enumValues[param.name] = value),
+        onBoolChanged: (value) =>
+            setState(() => _boolValues[param.name] = value),
+      ),
+  ];
+
+  /// A two-column grid once there are enough fields to make one worthwhile,
+  /// a single full-width column otherwise — two fields spread across a
+  /// SliverGridDelegateWithMaxCrossAxisExtent grid (`ci.replace`'s `url` +
+  /// `tbchat`) just leaves one column stretched and the rest of the row (and
+  /// most of the space below it) empty, which reads worse than the plain
+  /// full-width list this is meant to improve on.
+  Widget _buildFields(ActionSchema action) {
+    if (action.params.length <= 2) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        spacing: 12,
+        children: _fieldWidgets(action),
+      );
+    }
+    return GridView(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+        maxCrossAxisExtent: 420,
+        mainAxisExtent: 60,
+        mainAxisSpacing: 12,
+        crossAxisSpacing: 16,
+      ),
+      children: _fieldWidgets(action),
     );
   }
 }
