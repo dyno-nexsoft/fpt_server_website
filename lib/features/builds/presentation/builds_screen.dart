@@ -151,6 +151,7 @@ class _JobsTable extends ConsumerWidget {
     }
     return SingleChildScrollView(
       child: Table(
+        defaultVerticalAlignment: TableCellVerticalAlignment.middle,
         columnWidths: const {
           0: FixedColumnWidth(160),
           1: FixedColumnWidth(110),
