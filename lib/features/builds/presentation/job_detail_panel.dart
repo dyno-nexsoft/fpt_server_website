@@ -8,8 +8,11 @@ import '../../../core/models/job.dart';
 import '../../../core/providers/core_providers.dart';
 import '../../../core/providers/session_provider.dart';
 import '../../../core/providers/status_provider.dart';
+import '../../../core/storage/action_template_store.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../shared/auth_guard.dart';
+import '../../../shared/toast/app_toast.dart';
+import '../../../shared/widgets/name_template_dialog.dart';
 
 /// Right-hand sidebar of the job detail screen: params, artifact/log links,
 /// and the Promote / Cancel / Retry controls.
@@ -65,6 +68,15 @@ class JobDetailPanel extends ConsumerWidget {
             icon: const Icon(Icons.folder_outlined),
             label: const Text('Artifacts'),
           ),
+          // `actionName` is null for a job predating action-tracking (or one
+          // evicted from the registry) — there is no schema to key a
+          // template by, so there's nothing to offer saving here.
+          if (job.actionName != null)
+            OutlinedButton.icon(
+              onPressed: () => _saveAsTemplate(context, ref, job.actionName!),
+              icon: const Icon(Icons.bookmark_add_outlined),
+              label: const Text('Save as template'),
+            ),
           if (canPromote)
             FilledButton.tonalIcon(
               onPressed: () => _act(
@@ -111,6 +123,26 @@ class JobDetailPanel extends ConsumerWidget {
         ],
       ),
     );
+  }
+
+  Future<void> _saveAsTemplate(
+    BuildContext context,
+    WidgetRef ref,
+    String actionName,
+  ) async {
+    final store = ref.read(actionTemplateStoreProvider);
+    final name = await showDialog<String>(
+      context: context,
+      builder: (context) => NameTemplateDialog(
+        existingNames: store.list(actionName).map((t) => t.name).toSet(),
+      ),
+    );
+    if (name == null || name.isEmpty) return;
+    await store.save(
+      actionName,
+      ActionTemplate(name: name, params: job.actionParams),
+    );
+    ref.read(appToastProvider.notifier).show('Saved as "$name"');
   }
 
   Future<void> _act(

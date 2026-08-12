@@ -14,6 +14,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../shared/toast/app_toast.dart';
 import '../../../shared/utils/responsive.dart';
 import '../../../shared/widgets/error_view.dart';
+import '../../../shared/widgets/name_template_dialog.dart';
 import 'action_param_field.dart';
 
 /// A flat form generated from `GET /actions/{name}`'s schema — one field per
@@ -111,7 +112,7 @@ class _ActionFormScreenState extends ConsumerState<ActionFormScreen> {
   Future<void> _saveAsTemplate(ActionSchema action) async {
     final name = await showDialog<String>(
       context: context,
-      builder: (context) => _NameTemplateDialog(
+      builder: (context) => NameTemplateDialog(
         existingNames: ref
             .read(actionTemplateStoreProvider)
             .list(action.name)
@@ -391,56 +392,6 @@ class _TemplatesBar extends StatelessWidget {
           ],
         ),
       ),
-    );
-  }
-}
-
-class _NameTemplateDialog extends StatefulWidget {
-  const _NameTemplateDialog({required this.existingNames});
-
-  final Set<String> existingNames;
-
-  @override
-  State<_NameTemplateDialog> createState() => _NameTemplateDialogState();
-}
-
-class _NameTemplateDialogState extends State<_NameTemplateDialog> {
-  final _controller = TextEditingController();
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  void _submit() {
-    final name = _controller.text.trim();
-    if (name.isEmpty) return;
-    Navigator.pop(context, name);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final overwrites = widget.existingNames.contains(_controller.text.trim());
-    return AlertDialog(
-      title: const Text('Save as template'),
-      content: TextField(
-        controller: _controller,
-        autofocus: true,
-        decoration: InputDecoration(
-          labelText: 'Template name',
-          helperText: overwrites ? 'Replaces the existing template.' : null,
-        ),
-        onSubmitted: (_) => _submit(),
-        onChanged: (_) => setState(() {}),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Cancel'),
-        ),
-        FilledButton(onPressed: _submit, child: const Text('Save')),
-      ],
     );
   }
 }
