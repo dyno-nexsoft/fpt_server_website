@@ -6,10 +6,13 @@ import '../../core/theme/app_theme.dart';
 /// editor's — shared by the job log pane and the server logs screen so both
 /// look and scroll the same way instead of drifting apart.
 ///
-/// The gutter is plain padded text inside one [SelectableText.rich], not a
-/// separate widget column: a real table layout would force per-line
-/// selection, whereas this keeps the whole log selectable and copyable as
-/// one block.
+/// Two separate [SelectableText] blocks (gutter, content) sharing one
+/// vertical scroll, with a border between them, rather than one blob with
+/// numbers prefixed inline — that read as plain padded text, not a fixed
+/// gutter column. Content gets its own horizontal scroll and never wraps: a
+/// wrapped continuation line has no number of its own, which would desync
+/// the gutter from the text — the same reason a real code editor scrolls
+/// long lines sideways instead of wrapping them.
 class LogViewer extends StatefulWidget {
   const LogViewer({
     super.key,
@@ -42,8 +45,7 @@ class _LogViewerState extends State<LogViewer> {
   @override
   void didUpdateWidget(covariant LogViewer oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.autoScrollToEnd &&
-        oldWidget.text.length != widget.text.length) {
+    if (widget.autoScrollToEnd && oldWidget.text.length != widget.text.length) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!_scrollController.hasClients) return;
         _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
@@ -67,30 +69,57 @@ class _LogViewerState extends State<LogViewer> {
     }
 
     final lines = widget.text.split('\n');
-    final gutterDigits = '${lines.length}'.length;
     final lineStyle = textTheme.bodySmall?.merge(AppTheme.monospaceTextStyle);
+    // A named theme color (e.g. `colorScheme.outline`) can end up close
+    // enough to body text in a given seed/brightness to read as "the same
+    // color" — fading the actual text color guarantees a visible difference
+    // regardless of theme.
     final gutterStyle = lineStyle?.copyWith(
-      color: Theme.of(context).colorScheme.outline,
+      color: (lineStyle.color ?? Theme.of(context).colorScheme.onSurface)
+          .withValues(alpha: 0.45),
     );
+    final gutterText = [
+      for (var i = 1; i <= lines.length; i++) '$i',
+    ].join('\n');
+    // `textAlign: right` only has visible effect once the gutter has a width
+    // wider than its own text — an intrinsically-sized SelectableText has no
+    // extra space to align *within*. Approximated from digit count rather
+    // than measured, since every character is the same width in a monospace
+    // font.
+    final gutterWidth = '${lines.length}'.length * 8.0 + 4;
 
     return Scrollbar(
       controller: _scrollController,
       child: SingleChildScrollView(
         controller: _scrollController,
         reverse: widget.reverse,
-        child: SelectableText.rich(
-          TextSpan(
-            children: [
-              for (var i = 0; i < lines.length; i++) ...[
-                if (i > 0) const TextSpan(text: '\n'),
-                TextSpan(
-                  text: '${i + 1}'.padLeft(gutterDigits),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              padding: const EdgeInsets.only(right: 8),
+              decoration: BoxDecoration(
+                border: Border(
+                  right: BorderSide(color: Theme.of(context).dividerColor),
+                ),
+              ),
+              child: SizedBox(
+                width: gutterWidth,
+                child: SelectableText(
+                  gutterText,
+                  textAlign: TextAlign.right,
                   style: gutterStyle,
                 ),
-                TextSpan(text: '  ${lines[i]}', style: lineStyle),
-              ],
-            ],
-          ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: SelectableText(widget.text, style: lineStyle),
+              ),
+            ),
+          ],
         ),
       ),
     );
