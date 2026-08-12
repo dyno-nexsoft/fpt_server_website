@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/api/jobs_api.dart';
 import '../../../core/models/job.dart';
 import '../../../core/providers/core_providers.dart';
+import '../../../core/providers/status_provider.dart';
 
 class JobsQuery {
   const JobsQuery({this.state, this.limit = 50});
@@ -19,14 +20,23 @@ class JobsQuery {
 }
 
 /// `GET /jobs?limit=20` for the dashboard's "Recent builds" list.
+///
+/// Watches [statusControllerProvider] purely to re-run on every job-registry
+/// change it pushes over `/status/events` — a build queued/started/finished
+/// from Discord (or any other client) refetches this list too, not just the
+/// sidebar counts.
 final recentJobsProvider = FutureProvider.autoDispose<List<Job>>((ref) async {
+  ref.watch(statusControllerProvider);
   final api = ref.watch(apiClientProvider);
   return fetchJobs(api, limit: 5);
 });
 
 /// `GET /jobs?state=&limit=` backing the filterable Builds list.
+///
+/// Same live-refetch-on-status-change rationale as [recentJobsProvider].
 final jobsListProvider = FutureProvider.autoDispose
     .family<List<Job>, JobsQuery>((ref, query) async {
+      ref.watch(statusControllerProvider);
       final api = ref.watch(apiClientProvider);
       return fetchJobs(api, state: query.state, limit: query.limit);
     });
