@@ -254,20 +254,45 @@ class _ActionFormScreenState extends ConsumerState<ActionFormScreen> {
               ],
             ],
             const SizedBox(height: 16),
-            for (final param in action.params)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: ActionParamField(
-                  param: param,
-                  controller: _controllers[param.name],
-                  enumValue: _enumValues[param.name],
-                  boolValue: _boolValues[param.name] ?? false,
-                  onEnumChanged: (value) =>
-                      setState(() => _enumValues[param.name] = value),
-                  onBoolChanged: (value) =>
-                      setState(() => _boolValues[param.name] = value),
-                ),
-              ),
+            // Wrap inside a LayoutBuilder, not a plain vertical list — each
+            // field gets a computed width and flows into a second column
+            // once the form is wide enough (a fixed sequence of full-width
+            // fields stretched edge to edge on a wide desktop window
+            // otherwise), falling back to one column when it isn't.
+            // Computed from the actual available width rather than a fixed
+            // pixel size so a field never overflows a narrow window.
+            LayoutBuilder(
+              builder: (context, constraints) {
+                const spacing = 16.0;
+                const minColumnWidth = 360.0;
+                final columns =
+                    constraints.maxWidth >= minColumnWidth * 2 + spacing
+                    ? 2
+                    : 1;
+                final itemWidth =
+                    (constraints.maxWidth - (columns - 1) * spacing) / columns;
+                return Wrap(
+                  spacing: spacing,
+                  runSpacing: 12,
+                  children: [
+                    for (final param in action.params)
+                      SizedBox(
+                        width: itemWidth,
+                        child: ActionParamField(
+                          param: param,
+                          controller: _controllers[param.name],
+                          enumValue: _enumValues[param.name],
+                          boolValue: _boolValues[param.name] ?? false,
+                          onEnumChanged: (value) =>
+                              setState(() => _enumValues[param.name] = value),
+                          onBoolChanged: (value) =>
+                              setState(() => _boolValues[param.name] = value),
+                        ),
+                      ),
+                  ],
+                );
+              },
+            ),
             if (_problems.isNotEmpty) _ProblemsCard(problems: _problems),
             const SizedBox(height: 8),
             Row(

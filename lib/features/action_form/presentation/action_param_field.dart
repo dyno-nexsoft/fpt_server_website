@@ -23,7 +23,14 @@ class ActionParamField extends StatelessWidget {
   final ValueChanged<String?> onEnumChanged;
   final ValueChanged<bool> onBoolChanged;
 
-  String get _label => param.required ? '${param.name} *' : param.name;
+  // The description ("Branch repo tbchat") reads better as the prominent
+  // label than the raw param name ("tbchat") — the name moves to the helper
+  // slot instead of disappearing, for anyone matching this field back to a
+  // REST/CLI flag.
+  String get _label {
+    final base = param.description.isEmpty ? param.name : param.description;
+    return param.required ? '$base *' : base;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -33,7 +40,7 @@ class ActionParamField extends StatelessWidget {
           initialValue: enumValue,
           decoration: InputDecoration(
             labelText: _label,
-            helperText: param.description,
+            helperText: param.name,
           ),
           items: [
             for (final choice in param.choices)
@@ -44,7 +51,7 @@ class ActionParamField extends StatelessWidget {
       case ActionParamType.boolean:
         return SwitchListTile(
           title: Text(_label),
-          subtitle: param.description.isEmpty ? null : Text(param.description),
+          subtitle: Text(param.name),
           value: boolValue,
           onChanged: onBoolChanged,
         );
@@ -55,7 +62,7 @@ class ActionParamField extends StatelessWidget {
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
           decoration: InputDecoration(
             labelText: _label,
-            helperText: param.description,
+            helperText: param.name,
           ),
           validator: (value) => _validateText(value),
         );
@@ -71,7 +78,7 @@ class ActionParamField extends StatelessWidget {
           controller: controller,
           decoration: InputDecoration(
             labelText: _label,
-            helperText: param.description,
+            helperText: param.name,
           ),
           validator: (value) => _validateText(value),
         );
