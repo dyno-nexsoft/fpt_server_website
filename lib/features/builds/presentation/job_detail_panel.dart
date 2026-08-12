@@ -29,7 +29,11 @@ class JobDetailPanel extends ConsumerWidget {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        // Stretch, not start — the buttons below (Open raw log / Artifacts /
+        // Promote / Cancel / Retry) used to fill the panel's width as a
+        // ListView's default block-layout side effect; an explicit
+        // crossAxisAlignment on a Column doesn't do that unless asked.
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         spacing: 12,
         children: [
           Text('Build', style: Theme.of(context).textTheme.titleMedium),
@@ -56,8 +60,7 @@ class JobDetailPanel extends ConsumerWidget {
               label: const Text('Open raw log'),
             ),
           OutlinedButton.icon(
-            onPressed: () =>
-                context.go('/builds/artifacts/${job.artifactKey}'),
+            onPressed: () => context.go('/builds/artifacts/${job.artifactKey}'),
             icon: const Icon(Icons.folder_outlined),
             label: const Text('Artifacts'),
           ),
