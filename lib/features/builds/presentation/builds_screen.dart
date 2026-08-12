@@ -45,12 +45,34 @@ class BuildsScreen extends ConsumerStatefulWidget {
   ConsumerState<BuildsScreen> createState() => _BuildsScreenState();
 }
 
+/// Distinguishes "no `?state=` seen yet" from "saw `?state=` and it was
+/// absent" — both are represented by `null` otherwise, which would make the
+/// very first build indistinguishable from a later navigation that
+/// explicitly clears the filter.
+const _unsetRouteState = Object();
+
 class _BuildsScreenState extends ConsumerState<BuildsScreen> {
   String? _stateFilter;
   String _search = '';
 
+  /// The last `?state=` value this screen synced [_stateFilter] from — not
+  /// the same as [BuildsScreen]'s own widget/State lifetime, since go_router
+  /// reuses this State across query-only navigations to the same `/builds`
+  /// path. Comparing against the *previous* route value (rather than syncing
+  /// on every build) is what lets a chip elsewhere re-filter this screen on
+  /// a fresh navigation without also stomping a filter chip tapped locally,
+  /// which changes `_stateFilter` without ever touching the URL.
+  Object? _lastRouteState = _unsetRouteState;
+
   @override
   Widget build(BuildContext context) {
+    final routeState = GoRouterState.of(context).uri.queryParameters['state'];
+    if (routeState != _lastRouteState) {
+      _lastRouteState = routeState;
+      _stateFilter = _filters.any((f) => f.$2 == routeState)
+          ? routeState
+          : null;
+    }
     final textTheme = Theme.of(context).textTheme;
     final jobs = ref.watch(
       jobsListProvider(JobsQuery(state: _stateFilter, limit: 100)),
