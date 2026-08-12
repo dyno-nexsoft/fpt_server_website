@@ -97,6 +97,18 @@ class _LogViewerState extends State<LogViewer> {
     // space to align *within*. Approximated from digit count rather than
     // measured, since every character is the same width in a monospace font.
     final gutterWidth = '${lines.length}'.length * 8.0 + 4;
+    // A gutter number and its own log line are two separate Text widgets in
+    // two separate Columns, each sized to its own intrinsic height — that
+    // breaks the moment a single line's glyphs (an emoji, a CJK character,
+    // anything needing a fallback font) measure taller than plain ASCII
+    // digits do. One row's Text growing a few px taller than its gutter
+    // number's Text shifts every line below it out of alignment for the
+    // rest of the log. A strut forces every line — gutter and content alike
+    // — to the same fixed height regardless of what glyphs it actually
+    // contains, so no single line can ever push the rest out of step.
+    final strutStyle = lineStyle == null
+        ? null
+        : StrutStyle.fromTextStyle(lineStyle, forceStrutHeight: true);
 
     return Scrollbar(
       controller: _scrollController,
@@ -120,7 +132,7 @@ class _LogViewerState extends State<LogViewer> {
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
                       for (var i = 1; i <= lines.length; i++)
-                        Text('$i', style: gutterStyle),
+                        Text('$i', style: gutterStyle, strutStyle: strutStyle),
                     ],
                   ),
                 ),
@@ -133,7 +145,12 @@ class _LogViewerState extends State<LogViewer> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       for (final line in lines)
-                        Text(line, style: lineStyle, softWrap: false),
+                        Text(
+                          line,
+                          style: lineStyle,
+                          softWrap: false,
+                          strutStyle: strutStyle,
+                        ),
                     ],
                   ),
                 ),
