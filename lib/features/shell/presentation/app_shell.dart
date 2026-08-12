@@ -199,17 +199,21 @@ class _NavButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return selected
-        ? FilledButton.tonalIcon(
-            onPressed: onPressed,
-            icon: Icon(icon),
-            label: Text(label),
-          )
-        : TextButton.icon(
-            onPressed: onPressed,
-            icon: Icon(icon),
-            label: Text(label),
-          );
+    final colorScheme = Theme.of(context).colorScheme;
+    // Always the same button type/padding — only the background color
+    // changes with selection, so toggling never resizes or shifts
+    // neighboring buttons the way swapping TextButton for FilledButton did.
+    return TextButton.icon(
+      style: selected
+          ? TextButton.styleFrom(
+              backgroundColor: colorScheme.secondaryContainer,
+              foregroundColor: colorScheme.onSecondaryContainer,
+            )
+          : null,
+      onPressed: onPressed,
+      icon: Icon(icon),
+      label: Text(label),
+    );
   }
 }
 
@@ -317,12 +321,12 @@ class _QueueJobTile extends StatelessWidget {
     final duration = job.runningDuration;
     return ListTile(
       dense: true,
-      leading: JobStateChip(state: job.state),
+      leading: JobStateIcon(state: job.state),
       title: Text(job.actionName ?? job.command),
       subtitle: duration != null
           ? Text(formatDuration(duration))
           : const Text('queued'),
-      onTap: () => context.go('/jobs/${job.id}'),
+      onTap: () => context.go('/builds/${job.id}'),
     );
   }
 }

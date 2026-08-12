@@ -76,7 +76,7 @@ class _ArtifactList extends ConsumerWidget {
               title: Text(job.actionName ?? job.command),
               subtitle: Text('Job ${job.id}'),
               trailing: FilledButton.tonal(
-                onPressed: () => context.go('/jobs/${job.id}'),
+                onPressed: () => context.go('/builds/${job.id}'),
                 child: const Text('Open build'),
               ),
             ),

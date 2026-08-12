@@ -114,11 +114,11 @@ class _ActiveJobTile extends StatelessWidget {
         positionLabel ??
         (duration != null ? formatDuration(duration) : 'queued');
     return ListTile(
-      leading: JobStateChip(state: job.state),
+      leading: JobStateIcon(state: job.state),
       title: Text(job.actionName ?? job.command),
       subtitle: Text(subtitle),
       trailing: FilledButton.tonal(
-        onPressed: () => context.go('/jobs/${job.id}'),
+        onPressed: () => context.go('/builds/${job.id}'),
         child: const Text('Log'),
       ),
     );
@@ -161,11 +161,11 @@ class _RecentJobTile extends StatelessWidget {
         ? formatDuration(end.difference(start))
         : null;
     return ListTile(
-      leading: JobStateChip(state: job.state),
+      leading: JobStateIcon(state: job.state),
       title: Text(job.actionName ?? job.command),
       subtitle: Text(formatRelativeTimestamp(job.createdAt)),
       trailing: duration != null ? Text(duration) : null,
-      onTap: () => context.go('/jobs/${job.id}'),
+      onTap: () => context.go('/builds/${job.id}'),
     );
   }
 }

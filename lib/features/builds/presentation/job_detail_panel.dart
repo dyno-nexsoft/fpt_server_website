@@ -32,11 +32,16 @@ class JobDetailPanel extends ConsumerWidget {
         Text('Build', style: Theme.of(context).textTheme.titleMedium),
         const SizedBox(height: 8),
         for (final entry in job.actionParams.entries)
-          _ParamRow(name: entry.key, value: '${entry.value}'),
+          if (entry.value != null)
+            _ParamRow(name: entry.key, value: '${entry.value}'),
         if (job.warnings.isNotEmpty) ...[
           const SizedBox(height: 8),
           for (final warning in job.warnings)
-            _ParamRow(name: '⚠', value: warning),
+            _ParamRow(
+              name: 'Warning',
+              value: warning,
+              icon: Icons.warning_amber,
+            ),
         ],
         const Divider(height: 32),
         if (job.logUrl != null)
@@ -46,7 +51,7 @@ class JobDetailPanel extends ConsumerWidget {
             label: const Text('Open raw log'),
           ),
         OutlinedButton.icon(
-          onPressed: () => context.go('/artifacts/${job.artifactKey}'),
+          onPressed: () => context.go('/builds/artifacts/${job.artifactKey}'),
           icon: const Icon(Icons.folder_outlined),
           label: const Text('Artifacts'),
         ),
@@ -114,16 +119,42 @@ class JobDetailPanel extends ConsumerWidget {
 }
 
 class _ParamRow extends StatelessWidget {
-  const _ParamRow({required this.name, required this.value});
+  const _ParamRow({required this.name, required this.value, this.icon});
 
   final String name;
   final String value;
+  final IconData? icon;
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 2),
-      child: Text('$name: $value'),
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        spacing: 8,
+        children: [
+          Icon(
+            icon ?? Icons.circle_outlined,
+            size: 14,
+            color: theme.colorScheme.outline,
+          ),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  name,
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: theme.colorScheme.outline,
+                  ),
+                ),
+                Text(value, style: theme.textTheme.bodyMedium),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

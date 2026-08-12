@@ -90,15 +90,35 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: '/builds',
             pageBuilder: (context, state) =>
                 NoTransitionPage(child: const BuildsScreen()),
-          ),
-          GoRoute(
-            path: '/jobs/:id',
-            pageBuilder: (context, state) {
-              final id = state.pathParameters['id']!;
-              return NoTransitionPage(
-                child: JobDetailScreen(key: ValueKey(id), jobId: id),
-              );
-            },
+            routes: [
+              // A specific build/job — nested so its URL reads as "the
+              // thing under Builds it is", not a sibling of unrelated top
+              // level sections.
+              GoRoute(
+                path: ':id',
+                pageBuilder: (context, state) {
+                  final id = state.pathParameters['id']!;
+                  return NoTransitionPage(
+                    child: JobDetailScreen(key: ValueKey(id), jobId: id),
+                  );
+                },
+              ),
+              // The file server redirects `/<artifactKey>/` here — see
+              // `ftp_handler.dart`'s `_redirectToArtifactBrowser`, and
+              // `BuildButton._outputDirectoryButton`'s Discord link.
+              GoRoute(
+                path: 'artifacts/:key',
+                pageBuilder: (context, state) {
+                  final key = state.pathParameters['key']!;
+                  return NoTransitionPage(
+                    child: ArtifactsScreen(
+                      key: ValueKey(key),
+                      artifactKey: key,
+                    ),
+                  );
+                },
+              ),
+            ],
           ),
           GoRoute(
             path: '/actions/:name',
@@ -106,17 +126,6 @@ final routerProvider = Provider<GoRouter>((ref) {
               final name = state.pathParameters['name']!;
               return NoTransitionPage(
                 child: ActionFormScreen(key: ValueKey(name), actionName: name),
-              );
-            },
-          ),
-          // The file server redirects `/<artifactKey>/` here — see
-          // `ftp_handler.dart`'s `_redirectToArtifactBrowser`.
-          GoRoute(
-            path: '/artifacts/:key',
-            pageBuilder: (context, state) {
-              final key = state.pathParameters['key']!;
-              return NoTransitionPage(
-                child: ArtifactsScreen(key: ValueKey(key), artifactKey: key),
               );
             },
           ),

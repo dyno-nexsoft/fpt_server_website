@@ -8,8 +8,19 @@ import '../../../core/providers/core_providers.dart';
 import '../../../core/providers/status_provider.dart';
 import '../../../shared/auth_guard.dart';
 import '../../../shared/utils/format.dart';
+import '../../../shared/utils/responsive.dart';
 import '../../../shared/widgets/job_state_chip.dart';
 import '../application/jobs_providers.dart';
+
+const _columnLabels = [
+  'Job',
+  'Action',
+  'Params',
+  'State',
+  'Started',
+  'Duration',
+  '',
+];
 
 const _filters = <(String label, String? value, IconData icon)>[
   ('All', null, Icons.apps),
@@ -114,25 +125,60 @@ class _JobsTable extends ConsumerWidget {
     if (jobs.isEmpty) {
       return const Center(child: Text('No builds match this filter'));
     }
-    // Two-axis scroll: DataTable has no intrinsic horizontal scrolling of its
-    // own, so on a narrow screen the seven columns need their own scroll
-    // view nested inside the vertical one, or they'd overflow instead of
-    // scrolling.
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: SingleChildScrollView(
-        child: DataTable(
-          columns: const [
-            DataColumn(label: Text('Job')),
-            DataColumn(label: Text('Action')),
-            DataColumn(label: Text('Params')),
-            DataColumn(label: Text('State')),
-            DataColumn(label: Text('Started')),
-            DataColumn(label: Text('Duration')),
-            DataColumn(label: Text('')),
-          ],
-          rows: [for (final job in jobs) _buildRow(context, ref, job)],
+    // DataTable sizes every column to its own content and nothing more —
+    // there is no way to make one column claim leftover space, which is why
+    // Params sat capped at a fixed width with acres of blank table to its
+    // right on a wide screen. A plain Table with FlexColumnWidth actually
+    // stretches, but only works with a bounded parent width, which the
+    // two-axis scroll a narrow screen needs cannot provide — so mobile keeps
+    // the DataTable-based layout and desktop gets the flexible one.
+    if (isMobileWidth(context)) {
+      return SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: SingleChildScrollView(
+          child: DataTable(
+            columns: [
+              for (final label in _columnLabels) DataColumn(label: Text(label)),
+            ],
+            rows: [for (final job in jobs) _buildRow(context, ref, job)],
+          ),
         ),
+      );
+    }
+    return SingleChildScrollView(
+      child: Table(
+        columnWidths: const {
+          0: FixedColumnWidth(160),
+          1: FixedColumnWidth(110),
+          2: FlexColumnWidth(),
+          3: FixedColumnWidth(150),
+          4: FixedColumnWidth(90),
+          5: FixedColumnWidth(90),
+          6: FixedColumnWidth(140),
+        },
+        children: [
+          TableRow(
+            decoration: BoxDecoration(
+              border: Border(
+                bottom: BorderSide(color: Theme.of(context).dividerColor),
+              ),
+            ),
+            children: [
+              for (final label in _columnLabels)
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 12,
+                    horizontal: 8,
+                  ),
+                  child: Text(
+                    label,
+                    style: Theme.of(context).textTheme.titleSmall,
+                  ),
+                ),
+            ],
+          ),
+          for (final job in jobs) _buildFlexRow(context, ref, job),
+        ],
       ),
     );
   }
@@ -144,11 +190,11 @@ class _JobsTable extends ConsumerWidget {
         ? formatDuration((end ?? DateTime.now()).difference(start))
         : null;
     return DataRow(
-      onSelectChanged: (_) => context.go('/jobs/${job.id}'),
+      onSelectChanged: (_) => context.go('/builds/${job.id}'),
       cells: [
         DataCell(Text(job.id)),
         DataCell(Text(job.actionName ?? job.command)),
-        DataCell(_ParamsCell(summary: _paramsSummary(job))),
+        DataCell(_ParamsCell(params: job.actionParams, maxWidth: 260)),
         DataCell(JobStateChip(state: job.state)),
         DataCell(
           Text(
@@ -163,28 +209,82 @@ class _JobsTable extends ConsumerWidget {
     );
   }
 
-  String _paramsSummary(Job job) => job.actionParams.entries
-      .where((entry) => entry.value != null)
-      .map((entry) => '${entry.key}=${entry.value}')
-      .join(', ');
+  TableRow _buildFlexRow(BuildContext context, WidgetRef ref, Job job) {
+    final start = job.startedAt;
+    final end = job.finishedAt;
+    final duration = start != null
+        ? formatDuration((end ?? DateTime.now()).difference(start))
+        : null;
+
+    Widget cell(Widget child) => TableRowInkWell(
+      onTap: () => context.go('/builds/${job.id}'),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+        child: Align(alignment: Alignment.centerLeft, child: child),
+      ),
+    );
+
+    return TableRow(
+      decoration: BoxDecoration(
+        border: Border(
+          bottom: BorderSide(
+            color: Theme.of(context).dividerColor.withValues(alpha: 0.5),
+          ),
+        ),
+      ),
+      children: [
+        cell(Text(job.id)),
+        cell(Text(job.actionName ?? job.command)),
+        cell(_ParamsCell(params: job.actionParams)),
+        cell(JobStateChip(state: job.state)),
+        cell(
+          Text(
+            job.startedAt != null
+                ? formatRelativeTimestamp(job.startedAt!)
+                : '',
+          ),
+        ),
+        cell(Text(duration ?? '')),
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+          child: _RowActions(job: job),
+        ),
+      ],
+    );
+  }
 }
 
-/// A single truncated line instead of the raw `key=value, ...` dump
-/// wrapping across the row — the full value is still one hover away.
+/// A single truncated `key=value, ...` line instead of the raw dump wrapping
+/// across the row — the tooltip breaks the same entries one per line instead
+/// of repeating that comma-joined line, since a hover has room a table cell
+/// doesn't. Takes the raw [params] map rather than a pre-joined string, so
+/// each representation is free to format the entries differently instead of
+/// being stuck sharing one.
+/// [maxWidth] caps it inside DataTable, which otherwise sizes the column to
+/// the full line's length; the flexible desktop Table already bounds the
+/// cell itself, so it's left unset there.
 class _ParamsCell extends StatelessWidget {
-  const _ParamsCell({required this.summary});
+  const _ParamsCell({required this.params, this.maxWidth});
 
-  final String summary;
+  final Map<String, dynamic> params;
+  final double? maxWidth;
+
+  Iterable<String> get _entries => params.entries
+      .where((entry) => entry.value != null)
+      .map((entry) => '${entry.key}=${entry.value}');
 
   @override
   Widget build(BuildContext context) {
-    if (summary.isEmpty) return const Text('—');
+    final entries = _entries.toList();
+    if (entries.isEmpty) return const Text('—');
+    final text = Text(
+      entries.join(', '),
+      overflow: TextOverflow.ellipsis,
+      maxLines: 1,
+    );
     return Tooltip(
-      message: summary,
-      child: SizedBox(
-        width: 260,
-        child: Text(summary, overflow: TextOverflow.ellipsis, maxLines: 1),
-      ),
+      message: entries.join('\n'),
+      child: maxWidth != null ? SizedBox(width: maxWidth, child: text) : text,
     );
   }
 }

@@ -174,7 +174,7 @@ class _ResumedJobBanner extends StatelessWidget {
                 children: [
                   if (resumedJob != null)
                     FilledButton(
-                      onPressed: () => context.go('/jobs/${resumedJob!.id}'),
+                      onPressed: () => context.go('/builds/${resumedJob!.id}'),
                       child: const Text('Open new job'),
                     ),
                   OutlinedButton(

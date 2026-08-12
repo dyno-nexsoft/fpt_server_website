@@ -21,7 +21,7 @@ class JobsQuery {
 /// `GET /jobs?limit=20` for the dashboard's "Recent builds" list.
 final recentJobsProvider = FutureProvider.autoDispose<List<Job>>((ref) async {
   final api = ref.watch(apiClientProvider);
-  return fetchJobs(api, limit: 20);
+  return fetchJobs(api, limit: 10);
 });
 
 /// `GET /jobs?state=&limit=` backing the filterable Builds list.

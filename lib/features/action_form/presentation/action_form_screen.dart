@@ -97,7 +97,7 @@ class _ActionFormScreenState extends ConsumerState<ActionFormScreen> {
         // GET /jobs/{id} won't carry logUrl/warnings — seed them for the
         // detail screen this navigates to next.
         ref.read(pendingJobSeedProvider.notifier).set(job);
-        if (mounted) context.go('/jobs/${job.id}');
+        if (mounted) context.go('/builds/${job.id}');
         return;
       }
       final message = response['message'] as String?;
