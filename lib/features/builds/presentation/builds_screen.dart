@@ -196,7 +196,7 @@ class _JobsTable extends ConsumerWidget {
       onSelectChanged: (_) => context.go('/builds/${job.id}'),
       cells: [
         DataCell(Text(job.id)),
-        DataCell(Text(job.actionName ?? job.command)),
+        DataCell(_EllipsisText(job.actionName ?? job.command, maxWidth: 200)),
         DataCell(Text(job.createdBy ?? '—')),
         DataCell(_ParamsCell(params: job.actionParams, maxWidth: 260)),
         DataCell(JobStateChip(state: job.state)),
@@ -238,7 +238,7 @@ class _JobsTable extends ConsumerWidget {
       ),
       children: [
         cell(Text(job.id)),
-        cell(Text(job.actionName ?? job.command)),
+        cell(_EllipsisText(job.actionName ?? job.command)),
         cell(Text(job.createdBy ?? '—')),
         cell(_ParamsCell(params: job.actionParams)),
         cell(JobStateChip(state: job.state)),
@@ -255,6 +255,26 @@ class _JobsTable extends ConsumerWidget {
           child: _RowActions(job: job),
         ),
       ],
+    );
+  }
+}
+
+/// One line, ellipsized, full text on hover — for a cell whose content can
+/// run arbitrarily long (a retry that fell back to the raw shell command
+/// instead of a short action name easily runs to 200+ characters) and would
+/// otherwise wrap the whole row's height to fit it.
+class _EllipsisText extends StatelessWidget {
+  const _EllipsisText(this.text, {this.maxWidth});
+
+  final String text;
+  final double? maxWidth;
+
+  @override
+  Widget build(BuildContext context) {
+    final child = Text(text, overflow: TextOverflow.ellipsis, maxLines: 1);
+    return Tooltip(
+      message: text,
+      child: maxWidth != null ? SizedBox(width: maxWidth, child: child) : child,
     );
   }
 }
