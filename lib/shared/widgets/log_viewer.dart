@@ -123,6 +123,12 @@ class _LogViewerState extends State<LogViewer> {
     // measured, since every character is the same width in a monospace font.
     final gutterWidth = '${lines.length}'.length * 8.0 + 4;
     final contentWidth = _widestLineWidth(lines, lineStyle, strutStyle);
+    // Every row is forced to this exact height by `strutStyle` above, so
+    // `itemExtent` can hand it to ListView.builder directly — that lets the
+    // list compute scroll offsets/max extent straight from the index
+    // instead of laying out every prior item to find out how tall it is,
+    // which matters once a log runs into the thousands of lines.
+    final rowHeight = _lineHeight(lineStyle, strutStyle);
     final dividerColor = Theme.of(context).dividerColor;
 
     return Scrollbar(
@@ -131,30 +137,38 @@ class _LogViewerState extends State<LogViewer> {
         controller: _horizontalController,
         scrollDirection: Axis.horizontal,
         child: SizedBox(
-          width: gutterWidth + 8 + contentWidth,
+          width: gutterWidth + 16 + contentWidth,
           child: Scrollbar(
             controller: _verticalController,
             child: SelectionArea(
               child: ListView.builder(
                 controller: _verticalController,
+                itemExtent: rowHeight,
                 itemCount: lines.length,
                 itemBuilder: (context, index) => Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     SelectionContainer.disabled(
                       child: Container(
-                        width: gutterWidth,
                         padding: const EdgeInsets.only(right: 8),
                         decoration: BoxDecoration(
                           border: Border(
                             right: BorderSide(color: dividerColor),
                           ),
                         ),
-                        child: Text(
-                          '${index + 1}',
-                          textAlign: TextAlign.right,
-                          style: gutterStyle,
-                          strutStyle: strutStyle,
+                        // The width belongs to this inner SizedBox, not the
+                        // Container itself — a width set directly on the
+                        // Container would get eaten by its own padding,
+                        // leaving the number less space than gutterWidth
+                        // actually reserved for it.
+                        child: SizedBox(
+                          width: gutterWidth,
+                          child: Text(
+                            '${index + 1}',
+                            textAlign: TextAlign.right,
+                            style: gutterStyle,
+                            strutStyle: strutStyle,
+                          ),
                         ),
                       ),
                     ),
@@ -199,5 +213,17 @@ class _LogViewerState extends State<LogViewer> {
       textDirection: TextDirection.ltr,
     )..layout();
     return painter.width;
+  }
+
+  /// The height every row is forced to by `strutStyle`, measured once from
+  /// a single throwaway line rather than assumed — the strut's own metrics
+  /// (leading, font fallback) aren't worth hand-deriving.
+  double _lineHeight(TextStyle? style, StrutStyle? strutStyle) {
+    final painter = TextPainter(
+      text: TextSpan(text: '0', style: style),
+      strutStyle: strutStyle,
+      textDirection: TextDirection.ltr,
+    )..layout();
+    return painter.height;
   }
 }
