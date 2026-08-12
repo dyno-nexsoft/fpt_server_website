@@ -71,7 +71,13 @@ class JobLogController extends Notifier<JobLogState> {
     final pendingSeed = ref.read(pendingJobSeedProvider);
     if (pendingSeed != null && pendingSeed.id == jobId) {
       _seed = pendingSeed;
-      ref.read(pendingJobSeedProvider.notifier).clear();
+      // Not a direct call: Riverpod forbids one provider modifying another
+      // while it is still building, and this runs inside `build()`.
+      // Deferring to a microtask runs it right after this build finishes.
+      Future.microtask(() {
+        if (_disposed) return;
+        ref.read(pendingJobSeedProvider.notifier).clear();
+      });
     }
     unawaited(_start());
     return const JobLogState();
