@@ -260,14 +260,6 @@ class _ActionFormScreenState extends ConsumerState<ActionFormScreen> {
             Row(
               spacing: 12,
               children: [
-                if (hasTemplates)
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: () => _saveAsTemplate(action),
-                      icon: const Icon(Icons.bookmark_add_outlined),
-                      label: const Text('Save current as template'),
-                    ),
-                  ),
                 Expanded(
                   child: FilledButton(
                     style: action.isDangerous
@@ -289,6 +281,14 @@ class _ActionFormScreenState extends ConsumerState<ActionFormScreen> {
                           ),
                   ),
                 ),
+                if (hasTemplates)
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () => _saveAsTemplate(action),
+                      icon: const Icon(Icons.bookmark_add_outlined),
+                      label: const Text('Save current as template'),
+                    ),
+                  ),
               ],
             ),
           ],
