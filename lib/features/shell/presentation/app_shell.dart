@@ -53,6 +53,7 @@ class AppShell extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
+        elevation: 5,
         title: const Text('CI/CD'),
         actions: [
           if (!mobile) ...[

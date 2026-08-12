@@ -49,7 +49,8 @@ class JobDetailScreen extends ConsumerWidget {
                 child: Padding(
                   padding: const EdgeInsets.all(12),
                   child: LogViewer(
-                    lines: logState.displayLines,
+                    lines: logState.lines,
+                    pendingLine: logState.pendingLine,
                     autoScrollToEnd: true,
                   ),
                 ),

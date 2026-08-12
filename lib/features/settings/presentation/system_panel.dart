@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/api/api_exception.dart';
 import '../../../core/providers/catalogue_providers.dart';
 import '../../../core/providers/core_providers.dart';
-import '../../../core/theme/app_theme.dart';
 import '../../../shared/toast/app_toast.dart';
 import '../../builds/application/jobs_providers.dart';
 
@@ -104,23 +103,16 @@ class _ActionTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final colorScheme = Theme.of(context).colorScheme;
     return ListTile(
       contentPadding: EdgeInsets.zero,
-      leading: Icon(icon),
-      title: Text(name),
+      leading: Icon(icon, color: isDangerous ? colorScheme.error : null),
+      title: Text(
+        name,
+        style: isDangerous ? TextStyle(color: colorScheme.error) : null,
+      ),
       subtitle: Text(description),
-      trailing: isDangerous
-          ? FilledButton(
-              style: AppTheme.destructiveButtonStyle(
-                Theme.of(context).colorScheme,
-              ),
-              onPressed: () => _confirmAndRun(context, ref),
-              child: const Text('Run'),
-            )
-          : FilledButton.tonal(
-              onPressed: () => _confirmAndRun(context, ref),
-              child: const Text('Run'),
-            ),
+      onTap: () => _confirmAndRun(context, ref),
     );
   }
 

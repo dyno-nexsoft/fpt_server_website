@@ -39,3 +39,9 @@ public JS bundle of any build that used them, and a value checked into
 `launch.json` sits in git history even after you change it — rotate the key
 via `admin.apiKeys.remove`/`admin.apiKeys.add` instead of just editing the
 file if one ever leaks there.
+
+## Notes on individual screens
+
+- [doc/log-viewer.md](doc/log-viewer.md) — how the build log and server log
+  tail are rendered, and the append-only contract between
+  `JobLogController` and `LogViewer` that keeps a streaming log cheap.

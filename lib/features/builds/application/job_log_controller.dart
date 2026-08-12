@@ -26,24 +26,32 @@ class JobLogState {
   final Job? job;
 
   /// Complete, newline-terminated lines received so far.
+  ///
+  /// **Append-only and mutated in place.** A chatty build emits hundreds of
+  /// chunks; rebuilding this list on each one would copy every line already
+  /// received, making a whole build O(lines × chunks) in list copies for a
+  /// result that is only ever a few lines longer than the last. The
+  /// controller appends to one list instead, and consumers still rebuild
+  /// because [copyWith] hands out a new [JobLogState].
+  ///
+  /// Two consequences: never `select` on this list or compare it for
+  /// equality (it is `identical` to the previous state's), and never mutate
+  /// it from outside the controller. [LogViewer] relies on exactly this
+  /// contract to re-measure only the lines it just gained.
   final List<String> lines;
 
   /// The tail end of the buffer that hasn't seen a `\n` yet — a build tool
   /// can flush mid-line, and holding it back out of [lines] until it's
   /// terminated keeps every committed line final instead of getting
-  /// silently rewritten in place on the next chunk.
+  /// silently rewritten in place on the next chunk. Rendered as a trailing
+  /// row by [LogViewer] so a still-streaming last line stays visible before
+  /// its `\n` arrives, without anyone having to copy [lines] to append it.
   final String pendingLine;
 
   final LogConnectionMode mode;
   final bool jobMissing;
   final Job? resumedJob;
   final String? actionError;
-
-  /// [lines] plus [pendingLine] — what should actually be rendered, since a
-  /// still-streaming last line would otherwise stay invisible until its `\n`
-  /// arrives.
-  List<String> get displayLines =>
-      pendingLine.isEmpty ? lines : [...lines, pendingLine];
 
   JobLogState copyWith({
     Job? job,
@@ -73,27 +81,63 @@ class JobLogController extends Notifier<JobLogState> {
 
   final String jobId;
 
+  /// How long appended output is held before it reaches the UI. Long enough
+  /// to fold a burst of chunks into one rebuild, short enough that a live
+  /// log still reads as live.
+  static const _flushInterval = Duration(milliseconds: 50);
+
   JobEventSource? _sse;
   Timer? _pollTimer;
+  Timer? _flushTimer;
   int _nextOffset = 0;
   bool _disposed = false;
   Job? _seed;
   String _buffer = '';
 
+  /// The one list [JobLogState.lines] ever points at — see the contract
+  /// there. Replaced (not cleared) by [refresh], so the viewer sees a new
+  /// identity and drops what it had measured.
+  var _lines = <String>[];
+
   /// Normalizes `\r` (build tools routinely use a bare `\r` to overwrite a
   /// progress line on a real terminal) to `\n`, then peels off every
   /// complete line into [JobLogState.lines], leaving any unterminated
-  /// remainder in [JobLogState.pendingLine] for the next call to extend.
+  /// remainder in [_buffer] to be published as [JobLogState.pendingLine].
   void _appendRaw(String raw) {
     if (_disposed || raw.isEmpty) return;
     final normalized = raw.replaceAll('\r\n', '\n').replaceAll('\r', '\n');
     final combined = _buffer + normalized;
     final parts = combined.split('\n');
     _buffer = parts.removeLast();
-    state = state.copyWith(
-      lines: parts.isEmpty ? state.lines : [...state.lines, ...parts],
-      pendingLine: _buffer,
-    );
+    _lines.addAll(parts);
+    _scheduleFlush();
+  }
+
+  /// Publishes appended output on the next tick instead of immediately: SSE
+  /// chunks arrive far faster than the screen can paint (a build tool
+  /// flushing progress lines pushes dozens per frame), and each emission
+  /// rebuilds the whole job detail screen. Coalescing them costs at most
+  /// [_flushInterval] of latency and saves most of those rebuilds.
+  void _scheduleFlush() {
+    _flushTimer ??= Timer(_flushInterval, _flush);
+  }
+
+  /// The only writer of [JobLogState.lines] / [JobLogState.pendingLine]. An
+  /// unrelated emission in between (a job or mode change) therefore carries
+  /// the last *published* pending line rather than the newest one — a
+  /// difference of one partial line, corrected by the flush already queued.
+  void _flush() {
+    _flushTimer = null;
+    if (_disposed) return;
+    state = state.copyWith(lines: _lines, pendingLine: _buffer);
+  }
+
+  /// Publishes immediately — for the points where no further chunk is
+  /// coming (the log finished, or was fetched in one shot) and waiting out
+  /// [_flushInterval] would leave the last lines briefly missing.
+  void _flushNow() {
+    _flushTimer?.cancel();
+    _flush();
   }
 
   @override
@@ -102,6 +146,7 @@ class JobLogController extends Notifier<JobLogState> {
       _disposed = true;
       _sse?.close();
       _pollTimer?.cancel();
+      _flushTimer?.cancel();
     });
     final pendingSeed = ref.read(pendingJobSeedProvider);
     if (pendingSeed != null && pendingSeed.id == jobId) {
@@ -115,7 +160,7 @@ class JobLogController extends Notifier<JobLogState> {
       });
     }
     unawaited(_start());
-    return const JobLogState();
+    return JobLogState(lines: _lines);
   }
 
   Future<void> _start() async {
@@ -173,6 +218,7 @@ class JobLogController extends Notifier<JobLogState> {
     final api = ref.read(apiClientProvider);
     final response = await api.getRaw('/jobs/$jobId/log', query: {'offset': 0});
     _appendRaw(response.body);
+    _flushNow();
   }
 
   Future<void> _connectSse() async {
@@ -217,6 +263,7 @@ class JobLogController extends Notifier<JobLogState> {
   void _onFinished(JobStreamEvent event) {
     _sse?.close();
     _sse = null;
+    _flushNow();
     final job = state.job;
     if (job != null) {
       _setJob(
@@ -256,6 +303,7 @@ class JobLogController extends Notifier<JobLogState> {
       final job = await fetchJob(api, jobId);
       _setJob(job);
       if (job.isTerminal) {
+        _flushNow();
         state = state.copyWith(mode: LogConnectionMode.static);
         ref.read(statusControllerProvider.notifier).refreshNow();
         return;
@@ -272,8 +320,14 @@ class JobLogController extends Notifier<JobLogState> {
     _sse?.close();
     _sse = null;
     _pollTimer?.cancel();
+    _flushTimer?.cancel();
+    _flushTimer = null;
     _buffer = '';
-    state = const JobLogState();
+    // A fresh list rather than `_lines.clear()`: the viewer keys its cached
+    // measurements on this list's identity, so reusing the instance would
+    // leave it thinking a shorter log is still as wide as the old one.
+    _lines = <String>[];
+    state = JobLogState(lines: _lines);
     await _start();
   }
 }

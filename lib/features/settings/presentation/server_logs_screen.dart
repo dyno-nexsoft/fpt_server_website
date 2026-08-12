@@ -45,7 +45,7 @@ class ServerLogsScreen extends ConsumerWidget {
               }
               return Padding(
                 padding: const EdgeInsets.all(12),
-                child: LogViewer(lines: lines, reverse: true),
+                child: LogViewer(lines: lines, startAtBottom: true),
               );
             },
             loading: () => const Center(child: CircularProgressIndicator()),
