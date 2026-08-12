@@ -24,6 +24,10 @@ class StreamToken {
 Future<Job> fetchJob(ApiClient api, String id) async =>
     Job.fromJson(await api.getJson('/jobs/$id'));
 
+/// `fields=summary` drops `environments`/`discord`/`announce`/`last_seq`
+/// server-side — none of which any list view here renders, but which can
+/// dominate payload size across a hundred records (a full env var map,
+/// repeated per job). [fetchJob] fetches one job in full instead.
 Future<List<Job>> fetchJobs(
   ApiClient api, {
   String? state,
@@ -31,7 +35,7 @@ Future<List<Job>> fetchJobs(
 }) async {
   final list = await api.getJsonList(
     '/jobs',
-    query: {'state': ?state, 'limit': limit},
+    query: {'state': ?state, 'limit': limit, 'fields': 'summary'},
     listKey: 'jobs',
   );
   return list.map((e) => Job.fromJson(e as Map<String, dynamic>)).toList();
