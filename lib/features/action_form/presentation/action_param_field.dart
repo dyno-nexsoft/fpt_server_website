@@ -24,9 +24,7 @@ class ActionParamField extends StatelessWidget {
   final ValueChanged<bool> onBoolChanged;
 
   // The description ("Branch repo tbchat") reads better as the prominent
-  // label than the raw param name ("tbchat") — the name moves to the helper
-  // slot instead of disappearing, for anyone matching this field back to a
-  // REST/CLI flag.
+  // label than the raw param name ("tbchat").
   String get _label {
     final base = param.description.isEmpty ? param.name : param.description;
     return param.required ? '$base *' : base;
@@ -38,10 +36,7 @@ class ActionParamField extends StatelessWidget {
       case ActionParamType.enumeration:
         return DropdownButtonFormField<String>(
           initialValue: enumValue,
-          decoration: InputDecoration(
-            labelText: _label,
-            helperText: param.name,
-          ),
+          decoration: InputDecoration(labelText: _label),
           items: [
             for (final choice in param.choices)
               DropdownMenuItem(value: choice, child: Text(choice)),
@@ -51,7 +46,6 @@ class ActionParamField extends StatelessWidget {
       case ActionParamType.boolean:
         return SwitchListTile(
           title: Text(_label),
-          subtitle: Text(param.name),
           value: boolValue,
           onChanged: onBoolChanged,
         );
@@ -60,10 +54,7 @@ class ActionParamField extends StatelessWidget {
         return TextFormField(
           controller: controller,
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          decoration: InputDecoration(
-            labelText: _label,
-            helperText: param.name,
-          ),
+          decoration: InputDecoration(labelText: _label),
           validator: (value) => _validateText(value),
         );
       case ActionParamType.string:
@@ -76,10 +67,7 @@ class ActionParamField extends StatelessWidget {
         }
         return TextFormField(
           controller: controller,
-          decoration: InputDecoration(
-            labelText: _label,
-            helperText: param.name,
-          ),
+          decoration: InputDecoration(labelText: _label),
           validator: (value) => _validateText(value),
         );
     }

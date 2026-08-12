@@ -54,10 +54,7 @@ class _BranchAutocompleteFieldState
         return TextFormField(
           controller: controller,
           focusNode: focusNode,
-          decoration: InputDecoration(
-            labelText: widget.label,
-            helperText: widget.param.description,
-          ),
+          decoration: InputDecoration(labelText: widget.label),
           validator: (value) =>
               widget.param.required && (value ?? '').trim().isEmpty
               ? 'Required'
