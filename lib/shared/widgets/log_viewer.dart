@@ -68,7 +68,17 @@ class _LogViewerState extends State<LogViewer> {
       );
     }
 
-    final lines = widget.text.split('\n');
+    // Build tool output routinely uses a bare `\r` to overwrite a progress
+    // line on a real terminal (Flutter's own "Precaching engine artifacts…"
+    // spinner does this). Rendered as text rather than interpreted by a
+    // terminal, `\r` still forces a visual line break — but `split('\n')`
+    // below doesn't see it as one, so the gutter numbering and the actual
+    // wrapped lines drift apart after the first `\r`. Normalizing every line
+    // ending to `\n` up front keeps both in sync.
+    final normalized = widget.text
+        .replaceAll('\r\n', '\n')
+        .replaceAll('\r', '\n');
+    final lines = normalized.split('\n');
     final lineStyle = textTheme.bodySmall?.merge(AppTheme.monospaceTextStyle);
     // A named theme color (e.g. `colorScheme.outline`) can end up close
     // enough to body text in a given seed/brightness to read as "the same
@@ -116,7 +126,7 @@ class _LogViewerState extends State<LogViewer> {
             Expanded(
               child: SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
-                child: SelectableText(widget.text, style: lineStyle),
+                child: SelectableText(normalized, style: lineStyle),
               ),
             ),
           ],
