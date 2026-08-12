@@ -15,7 +15,8 @@ enum LogConnectionMode { connecting, live, polling, static }
 class JobLogState {
   const JobLogState({
     this.job,
-    this.logText = '',
+    this.lines = const [],
+    this.pendingLine = '',
     this.mode = LogConnectionMode.connecting,
     this.jobMissing = false,
     this.resumedJob,
@@ -23,22 +24,39 @@ class JobLogState {
   });
 
   final Job? job;
-  final String logText;
+
+  /// Complete, newline-terminated lines received so far.
+  final List<String> lines;
+
+  /// The tail end of the buffer that hasn't seen a `\n` yet — a build tool
+  /// can flush mid-line, and holding it back out of [lines] until it's
+  /// terminated keeps every committed line final instead of getting
+  /// silently rewritten in place on the next chunk.
+  final String pendingLine;
+
   final LogConnectionMode mode;
   final bool jobMissing;
   final Job? resumedJob;
   final String? actionError;
 
+  /// [lines] plus [pendingLine] — what should actually be rendered, since a
+  /// still-streaming last line would otherwise stay invisible until its `\n`
+  /// arrives.
+  List<String> get displayLines =>
+      pendingLine.isEmpty ? lines : [...lines, pendingLine];
+
   JobLogState copyWith({
     Job? job,
-    String? logText,
+    List<String>? lines,
+    String? pendingLine,
     LogConnectionMode? mode,
     bool? jobMissing,
     Job? resumedJob,
     String? actionError,
   }) => JobLogState(
     job: job ?? this.job,
-    logText: logText ?? this.logText,
+    lines: lines ?? this.lines,
+    pendingLine: pendingLine ?? this.pendingLine,
     mode: mode ?? this.mode,
     jobMissing: jobMissing ?? this.jobMissing,
     resumedJob: resumedJob ?? this.resumedJob,
@@ -48,8 +66,8 @@ class JobLogState {
 
 /// Drives the job detail / log viewer screen: fetches the job, tries the SSE
 /// stream, and falls back to polling `GET /jobs/{id}/log?offset=` on any SSE
-/// error — both paths append to the same [JobLogState.logText] so rendering
-/// never has to know which transport is active.
+/// error — both paths append to the same [JobLogState.lines] via
+/// [_appendRaw] so rendering never has to know which transport is active.
 class JobLogController extends Notifier<JobLogState> {
   JobLogController(this.jobId);
 
@@ -60,6 +78,23 @@ class JobLogController extends Notifier<JobLogState> {
   int _nextOffset = 0;
   bool _disposed = false;
   Job? _seed;
+  String _buffer = '';
+
+  /// Normalizes `\r` (build tools routinely use a bare `\r` to overwrite a
+  /// progress line on a real terminal) to `\n`, then peels off every
+  /// complete line into [JobLogState.lines], leaving any unterminated
+  /// remainder in [JobLogState.pendingLine] for the next call to extend.
+  void _appendRaw(String raw) {
+    if (_disposed || raw.isEmpty) return;
+    final normalized = raw.replaceAll('\r\n', '\n').replaceAll('\r', '\n');
+    final combined = _buffer + normalized;
+    final parts = combined.split('\n');
+    _buffer = parts.removeLast();
+    state = state.copyWith(
+      lines: parts.isEmpty ? state.lines : [...state.lines, ...parts],
+      pendingLine: _buffer,
+    );
+  }
 
   @override
   JobLogState build() {
@@ -137,7 +172,7 @@ class JobLogController extends Notifier<JobLogState> {
   Future<void> _fetchLogOnce() async {
     final api = ref.read(apiClientProvider);
     final response = await api.getRaw('/jobs/$jobId/log', query: {'offset': 0});
-    state = state.copyWith(logText: response.body);
+    _appendRaw(response.body);
   }
 
   Future<void> _connectSse() async {
@@ -162,17 +197,15 @@ class JobLogController extends Notifier<JobLogState> {
     switch (event.type) {
       case 'log':
         if (event.chunk != null) {
-          state = state.copyWith(logText: state.logText + event.chunk!);
+          _appendRaw(event.chunk!);
         }
       case 'status':
         if (event.line != null) {
-          state = state.copyWith(logText: '${state.logText}${event.line}\n');
+          _appendRaw('${event.line}\n');
         }
       case 'error':
         if (event.message != null) {
-          state = state.copyWith(
-            logText: '${state.logText}[error] ${event.message}\n',
-          );
+          _appendRaw('[error] ${event.message}\n');
         }
       case 'finished':
         _onFinished(event);
@@ -215,9 +248,7 @@ class JobLogController extends Notifier<JobLogState> {
         '/jobs/$jobId/log',
         query: {'offset': _nextOffset},
       );
-      if (response.body.isNotEmpty) {
-        state = state.copyWith(logText: state.logText + response.body);
-      }
+      _appendRaw(response.body);
       final nextOffsetHeader = response.headers['x-log-next-offset'];
       if (nextOffsetHeader != null) {
         _nextOffset = int.tryParse(nextOffsetHeader) ?? _nextOffset;
@@ -241,6 +272,7 @@ class JobLogController extends Notifier<JobLogState> {
     _sse?.close();
     _sse = null;
     _pollTimer?.cancel();
+    _buffer = '';
     state = const JobLogState();
     await _start();
   }

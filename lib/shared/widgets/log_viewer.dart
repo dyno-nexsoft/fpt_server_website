@@ -6,26 +6,35 @@ import '../../core/theme/app_theme.dart';
 /// editor's — shared by the job log pane and the server logs screen so both
 /// look and scroll the same way instead of drifting apart.
 ///
-/// Two separate [SelectableText] blocks (gutter, content) sharing one
-/// vertical scroll, with a border between them, rather than one blob with
-/// numbers prefixed inline — that read as plain padded text, not a fixed
-/// gutter column. Content gets its own horizontal scroll and never wraps: a
-/// wrapped continuation line has no number of its own, which would desync
-/// the gutter from the text — the same reason a real code editor scrolls
-/// long lines sideways instead of wrapping them.
+/// Takes a [lines] list rather than a joined string: the caller (typically
+/// [JobLogController]) already owns discrete, `\n`-normalized lines as they
+/// stream in, so this widget never re-splits a growing blob of text on every
+/// rebuild. Each line is its own [Text] widget, built from the same `for`
+/// loop as the gutter number next to it — not two giant blocks of
+/// newline-joined text whose row counts have to be trusted to match. A
+/// single [SelectableText] blob relies on `split('\n')` producing exactly as
+/// many visual rows as the gutter counted, which silently breaks the moment
+/// anything (an accidental soft-wrap, a stray control character) inserts a
+/// visual line the count didn't see — the gutter then drifts out of sync
+/// with the text underneath it for the rest of the log. Building line-by-line
+/// with `softWrap: false` makes that structurally impossible: there are
+/// always exactly as many content widgets as gutter widgets, and no line can
+/// ever wrap into an extra row. [SelectionArea] wraps the whole tree so
+/// selection still spans every line despite each being a separate widget.
 class LogViewer extends StatefulWidget {
   const LogViewer({
     super.key,
-    required this.text,
+    required this.lines,
     this.autoScrollToEnd = false,
     this.reverse = false,
     this.emptyMessage = '(no output yet)',
   });
 
-  final String text;
+  final List<String> lines;
 
-  /// Jumps to the bottom whenever [text] grows — for a live build log that
-  /// streams in place.
+  /// Jumps to the bottom whenever [lines] grows (or its last entry keeps
+  /// changing, for a still-streaming unterminated line) — for a live build
+  /// log that streams in place.
   final bool autoScrollToEnd;
 
   /// Anchors the initial scroll position at the bottom — for a static tail
@@ -45,7 +54,12 @@ class _LogViewerState extends State<LogViewer> {
   @override
   void didUpdateWidget(covariant LogViewer oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.autoScrollToEnd && oldWidget.text.length != widget.text.length) {
+    final grew = oldWidget.lines.length != widget.lines.length;
+    final lastLineChanged =
+        widget.lines.isNotEmpty &&
+        oldWidget.lines.isNotEmpty &&
+        oldWidget.lines.last != widget.lines.last;
+    if (widget.autoScrollToEnd && (grew || lastLineChanged)) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!_scrollController.hasClients) return;
         _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
@@ -62,23 +76,13 @@ class _LogViewerState extends State<LogViewer> {
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
-    if (widget.text.isEmpty) {
+    if (widget.lines.isEmpty) {
       return Center(
         child: Text(widget.emptyMessage, style: textTheme.bodySmall),
       );
     }
 
-    // Build tool output routinely uses a bare `\r` to overwrite a progress
-    // line on a real terminal (Flutter's own "Precaching engine artifacts…"
-    // spinner does this). Rendered as text rather than interpreted by a
-    // terminal, `\r` still forces a visual line break — but `split('\n')`
-    // below doesn't see it as one, so the gutter numbering and the actual
-    // wrapped lines drift apart after the first `\r`. Normalizing every line
-    // ending to `\n` up front keeps both in sync.
-    final normalized = widget.text
-        .replaceAll('\r\n', '\n')
-        .replaceAll('\r', '\n');
-    final lines = normalized.split('\n');
+    final lines = widget.lines;
     final lineStyle = textTheme.bodySmall?.merge(AppTheme.monospaceTextStyle);
     // A named theme color (e.g. `colorScheme.outline`) can end up close
     // enough to body text in a given seed/brightness to read as "the same
@@ -88,14 +92,10 @@ class _LogViewerState extends State<LogViewer> {
       color: (lineStyle.color ?? Theme.of(context).colorScheme.onSurface)
           .withValues(alpha: 0.45),
     );
-    final gutterText = [
-      for (var i = 1; i <= lines.length; i++) '$i',
-    ].join('\n');
     // `textAlign: right` only has visible effect once the gutter has a width
-    // wider than its own text — an intrinsically-sized SelectableText has no
-    // extra space to align *within*. Approximated from digit count rather
-    // than measured, since every character is the same width in a monospace
-    // font.
+    // wider than its own text — an intrinsically-sized Text has no extra
+    // space to align *within*. Approximated from digit count rather than
+    // measured, since every character is the same width in a monospace font.
     final gutterWidth = '${lines.length}'.length * 8.0 + 4;
 
     return Scrollbar(
@@ -103,33 +103,43 @@ class _LogViewerState extends State<LogViewer> {
       child: SingleChildScrollView(
         controller: _scrollController,
         reverse: widget.reverse,
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              padding: const EdgeInsets.only(right: 8),
-              decoration: BoxDecoration(
-                border: Border(
-                  right: BorderSide(color: Theme.of(context).dividerColor),
+        child: SelectionArea(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                padding: const EdgeInsets.only(right: 8),
+                decoration: BoxDecoration(
+                  border: Border(
+                    right: BorderSide(color: Theme.of(context).dividerColor),
+                  ),
+                ),
+                child: SizedBox(
+                  width: gutterWidth,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      for (var i = 1; i <= lines.length; i++)
+                        Text('$i', style: gutterStyle),
+                    ],
+                  ),
                 ),
               ),
-              child: SizedBox(
-                width: gutterWidth,
-                child: SelectableText(
-                  gutterText,
-                  textAlign: TextAlign.right,
-                  style: gutterStyle,
+              const SizedBox(width: 8),
+              Expanded(
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      for (final line in lines)
+                        Text(line, style: lineStyle, softWrap: false),
+                    ],
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: SelectableText(normalized, style: lineStyle),
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
