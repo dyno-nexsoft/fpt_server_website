@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -7,6 +8,12 @@ import '../../../core/providers/catalogue_providers.dart';
 import '../../../core/providers/connection_provider.dart';
 import '../../../core/providers/session_provider.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../shared/toast/app_toast.dart';
+
+/// Discord's `name` argument is optional (falls back to the caller's Discord
+/// display name), so this is the whole command a user needs to paste — no
+/// placeholder argument to fill in themselves.
+const _apiKeyAddCommand = '/admin api-key-add';
 
 /// `GET /health` is unauthenticated, so a pasted API key *is* the session —
 /// see docs/web-ui-wireframe.md "Auth flow" for the full error-code table
@@ -81,7 +88,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   child: Padding(
                     padding: const EdgeInsets.all(12),
                     child: Row(
-                      mainAxisSize: MainAxisSize.min,
                       spacing: 8,
                       children: [
                         const Icon(Icons.info_outline, size: 18),
@@ -95,7 +101,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                   children: [
                                     const TextSpan(text: 'Run '),
                                     TextSpan(
-                                      text: '/admin api-key-add',
+                                      text: _apiKeyAddCommand,
                                       style: textTheme.bodyMedium?.merge(
                                         AppTheme.monospaceTextStyle,
                                       ),
@@ -106,6 +112,19 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               ),
                             ],
                           ),
+                        ),
+                        IconButton(
+                          tooltip: 'Copy command',
+                          icon: const Icon(Icons.copy_outlined, size: 18),
+                          onPressed: () async {
+                            await Clipboard.setData(
+                              const ClipboardData(text: _apiKeyAddCommand),
+                            );
+                            if (!context.mounted) return;
+                            ref
+                                .read(appToastProvider.notifier)
+                                .show('Command copied');
+                          },
                         ),
                       ],
                     ),

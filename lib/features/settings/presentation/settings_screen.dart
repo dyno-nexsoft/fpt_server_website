@@ -15,6 +15,7 @@ class SettingsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final textTheme = Theme.of(context).textTheme;
+    final isAdmin = ref.watch(myKeyInfoProvider).value?.isAdmin ?? false;
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -31,16 +32,17 @@ class SettingsScreen extends ConsumerWidget {
           const AppearanceSection(),
           const _ConnectionCard(),
           const ApiKeysSection(),
-          Card(
-            child: ListTile(
-              leading: const Icon(Icons.article_outlined),
-              title: const Text('Server Logs'),
-              subtitle: const Text('View the tail of server.log'),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () => context.go('/settings/logs'),
+          if (isAdmin)
+            Card(
+              child: ListTile(
+                leading: const Icon(Icons.article_outlined),
+                title: const Text('Server Logs'),
+                subtitle: const Text('View the tail of server.log'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => context.go('/settings/logs'),
+              ),
             ),
-          ),
-          const SystemPanel(),
+          if (isAdmin) const SystemPanel(),
         ],
       ),
     );
@@ -113,8 +115,16 @@ class _ConnectionCard extends ConsumerWidget {
               ),
             if (creds.hasKey)
               FilledButton.tonalIcon(
-                onPressed: () =>
-                    ref.read(connectionControllerProvider.notifier).logout(),
+                onPressed: () async {
+                  await ref
+                      .read(connectionControllerProvider.notifier)
+                      .logout();
+                  // Settings has no stored-key redirect of its own (it's a
+                  // public-ish screen), unlike the background 401 eviction
+                  // RouterNotifier handles — an explicit Sign out click
+                  // needs its own navigation.
+                  if (context.mounted) context.go('/login');
+                },
                 icon: const Icon(Icons.logout),
                 label: const Text('Sign out'),
               )

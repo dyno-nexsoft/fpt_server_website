@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/api/api_exception.dart';
-import '../../../core/providers/catalogue_providers.dart';
 import '../../../core/providers/core_providers.dart';
 import '../../../shared/toast/app_toast.dart';
 import '../../builds/application/jobs_providers.dart';
@@ -19,9 +18,6 @@ class SystemPanel extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final myKey = ref.watch(myKeyInfoProvider).value;
-    if (myKey == null || !myKey.isAdmin) return const SizedBox.shrink();
-
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
