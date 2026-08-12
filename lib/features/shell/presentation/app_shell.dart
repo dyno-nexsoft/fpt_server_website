@@ -34,7 +34,6 @@ class AppShell extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final location = GoRouterState.of(context).matchedLocation;
     final actions = ref.watch(actionsProvider);
-    final myKey = ref.watch(myKeyInfoProvider);
     final hasKey = ref.watch(sessionProvider).hasKey;
     final mobile = isMobileWidth(context);
 
@@ -72,16 +71,6 @@ class AppShell extends ConsumerWidget {
               data: (data) => _ActionsMenu(actions: data),
               loading: () => const SizedBox.shrink(),
               error: (_, _) => const SizedBox.shrink(),
-            ),
-            const SizedBox(width: 8),
-            myKey.maybeWhen(
-              data: (info) => info == null
-                  ? const SizedBox.shrink()
-                  : Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 8),
-                      child: Center(child: Text(info.name)),
-                    ),
-              orElse: () => const SizedBox.shrink(),
             ),
           ],
           IconButton(
@@ -256,6 +245,7 @@ class _QueueSidebar extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final status = ref.watch(statusControllerProvider);
+    final myKey = ref.watch(myKeyInfoProvider);
 
     return Padding(
       padding: const EdgeInsets.all(16),
@@ -265,7 +255,12 @@ class _QueueSidebar extends ConsumerWidget {
             return const Center(child: CircularProgressIndicator());
           }
           final jobs = [...data.running, ...data.queued];
-          return ListView(
+          // Column + Expanded, not one scrolling ListView — the connection
+          // footer (host, connected key) belongs pinned at the bottom of the
+          // sidebar regardless of how many/few job rows are above it, not
+          // sitting wherever the job list happens to end.
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Wrap(
                 spacing: 8,
@@ -282,17 +277,34 @@ class _QueueSidebar extends ConsumerWidget {
                 ],
               ),
               const Divider(),
-              if (jobs.isEmpty)
-                const ListTile(dense: true, title: Text('—'))
-              else
-                for (final job in jobs) _QueueJobTile(job: job),
+              Expanded(
+                child: jobs.isEmpty
+                    ? const ListTile(dense: true, title: Text('—'))
+                    : ListView(
+                        children: [
+                          for (final job in jobs) _QueueJobTile(job: job),
+                        ],
+                      ),
+              ),
               const Divider(),
               ListTile(
+                dense: true,
                 leading: const Icon(Icons.dns),
                 title: Text(data.hostname),
                 subtitle: Text(
                   'up ${data.uptime} · Dart ${formatDartVersion(data.dartVersion)}',
                 ),
+              ),
+              myKey.maybeWhen(
+                data: (info) => info == null
+                    ? const SizedBox.shrink()
+                    : ListTile(
+                        dense: true,
+                        leading: const Icon(Icons.vpn_key_outlined),
+                        title: Text(info.name),
+                        subtitle: const Text('Connected key'),
+                      ),
+                orElse: () => const SizedBox.shrink(),
               ),
             ],
           );
