@@ -6,9 +6,22 @@ import '../../../core/models/system_status.dart';
 import '../../../core/providers/status_provider.dart';
 import '../../../core/router/app_router.dart';
 import '../../../shared/utils/format.dart';
+import '../../../shared/widgets/ellipsis_text.dart';
 import '../../../shared/widgets/error_view.dart';
 import '../../../shared/widgets/job_state_chip.dart';
 import '../../builds/application/jobs_providers.dart';
+
+/// A single truncated `key=value, ...` summary of a job's params, shared by
+/// the active and recent job tiles below — same rendering the builds table
+/// uses for its own params column, just without that column's `maxWidth`
+/// clamp since a `ListTile` subtitle is already width-bound by the tile.
+String? _paramsSummary(Map<String, dynamic> params) {
+  final entries = params.entries
+      .where((entry) => entry.value != null)
+      .map((entry) => '${entry.key}=${entry.value}')
+      .toList();
+  return entries.isEmpty ? null : entries.join(', ');
+}
 
 /// Aggregates `GET /status` (polled) and `GET /jobs?limit=20`.
 class DashboardScreen extends ConsumerWidget {
@@ -83,35 +96,19 @@ class _ActiveJobsCard extends StatelessWidget {
       child: Column(
         children: [
           for (final job in data.running)
-            _ActiveJobTile(job: job, positionLabel: null),
+            _JobTile(
+              job: job,
+              trailingText: job.runningDuration != null
+                  ? formatDuration(job.runningDuration!)
+                  : 'queued',
+            ),
           for (final entry in data.queued.asMap().entries)
-            _ActiveJobTile(
+            _JobTile(
               job: entry.value,
-              positionLabel: '#${entry.key + 1} (queued)',
+              trailingText: '#${entry.key + 1} (queued)',
             ),
         ],
       ),
-    );
-  }
-}
-
-class _ActiveJobTile extends StatelessWidget {
-  const _ActiveJobTile({required this.job, required this.positionLabel});
-
-  final Job job;
-  final String? positionLabel;
-
-  @override
-  Widget build(BuildContext context) {
-    final duration = job.runningDuration;
-    final subtitle =
-        positionLabel ??
-        (duration != null ? formatDuration(duration) : 'queued');
-    return ListTile(
-      leading: JobStateIcon(state: job.state),
-      title: Text(job.actionName ?? job.command),
-      subtitle: Text(subtitle),
-      onTap: () => JobDetailRoute(job.id).go(context),
     );
   }
 }
@@ -133,29 +130,57 @@ class _RecentBuildsCard extends StatelessWidget {
     }
     return Card(
       child: Column(
-        children: [for (final job in jobs) _RecentJobTile(job: job)],
+        children: [
+          for (final job in jobs)
+            _JobTile(
+              job: job,
+              trailingText: [
+                formatRelativeTimestamp(job.createdAt),
+                if (job.startedAt != null && job.finishedAt != null)
+                  formatDuration(
+                    job.finishedAt!.difference(job.startedAt!),
+                  ),
+              ].join(' • '),
+            ),
+        ],
       ),
     );
   }
 }
 
-class _RecentJobTile extends StatelessWidget {
-  const _RecentJobTile({required this.job});
+/// One row shared by both dashboard cards — state chip, action name, then
+/// author/params as a single truncated subtitle line, with [trailingText]
+/// (a running duration, queue position, or — for recent builds — the
+/// relative timestamp and elapsed build time) on the right. Kept as one
+/// widget rather than two near-identical ones so the two lists can never
+/// silently drift apart in layout again.
+class _JobTile extends StatelessWidget {
+  const _JobTile({required this.job, required this.trailingText});
 
   final Job job;
+  final String trailingText;
 
   @override
   Widget build(BuildContext context) {
-    final start = job.startedAt;
-    final end = job.finishedAt;
-    final duration = start != null && end != null
-        ? formatDuration(end.difference(start))
-        : null;
+    final params = _paramsSummary(job.actionParams);
+    final author = job.createdBy;
+    final detailParts = [
+      if (author != null) 'by $author',
+      if (params != null) params,
+    ];
     return ListTile(
-      leading: JobStateIcon(state: job.state),
+      leading: JobStateChip(state: job.state),
       title: Text(job.actionName ?? job.command),
-      subtitle: Text(formatRelativeTimestamp(job.createdAt)),
-      trailing: duration != null ? Text(duration) : null,
+      subtitle: detailParts.isEmpty
+          ? null
+          : EllipsisText(detailParts.join(' • ')),
+      trailing: trailingText.isEmpty
+          ? null
+          : Text(
+              trailingText,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
       onTap: () => JobDetailRoute(job.id).go(context),
     );
   }

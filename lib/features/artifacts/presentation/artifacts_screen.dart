@@ -147,6 +147,32 @@ class _ArtifactTile extends StatelessWidget {
 
   bool get _isIpa => file.name.toLowerCase().endsWith('.ipa');
 
+  /// Glyph by extension so the list reads at a glance instead of every file
+  /// showing the same generic sheet — the handful of types this build
+  /// server actually ever produces (app bundles, logs, archives, images),
+  /// falling back to the generic icon for everything else.
+  IconData get _icon {
+    if (file.isDirectory) return Icons.folder_outlined;
+    final name = file.name.toLowerCase();
+    return switch (name) {
+      _ when name.endsWith('.apk') => Icons.android,
+      _ when _isIpa => Icons.phone_iphone,
+      _ when name.endsWith('.log') || name.endsWith('.txt') =>
+        Icons.description_outlined,
+      _ when name.endsWith('.zip') ||
+          name.endsWith('.tar') ||
+          name.endsWith('.gz') =>
+        Icons.folder_zip_outlined,
+      _ when name.endsWith('.png') ||
+          name.endsWith('.jpg') ||
+          name.endsWith('.jpeg') =>
+        Icons.image_outlined,
+      _ when name.endsWith('.json') || name.endsWith('.plist') =>
+        Icons.data_object_outlined,
+      _ => Icons.insert_drive_file_outlined,
+    };
+  }
+
   /// Apple's over-the-air install handoff: the device fetches a manifest
   /// (served by `ftp_handler`'s `manifest.plist?ipa=` route) which points back
   /// at the `.ipa`. Requires an iOS device *and* HTTPS — the server is
@@ -163,11 +189,7 @@ class _ArtifactTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final size = file.size;
     return ListTile(
-      leading: Icon(
-        file.isDirectory
-            ? Icons.folder_outlined
-            : Icons.insert_drive_file_outlined,
-      ),
+      leading: Icon(_icon),
       title: Text(file.name),
       subtitle: Text(
         '${size == null ? '—' : formatFileSize(size)} · '

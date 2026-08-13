@@ -11,6 +11,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../shared/auth_guard.dart';
 import '../../../shared/utils/format.dart';
 import '../../../shared/utils/responsive.dart';
+import '../../../shared/widgets/confirm_dialog.dart';
 import '../../../shared/widgets/ellipsis_text.dart';
 import '../../../shared/widgets/error_view.dart';
 import '../../../shared/widgets/job_state_chip.dart';
@@ -379,12 +380,7 @@ class _RowActions extends ConsumerWidget {
             ),
             tooltip: 'Cancel — deletes artifacts on the build server',
             icon: const Icon(Icons.cancel_outlined),
-            onPressed: () => _act(
-              context,
-              ref,
-              null,
-              () => cancelJob(ref.read(apiClientProvider), job.id),
-            ),
+            onPressed: () => _confirmCancel(context, ref),
           ),
         if (canRetry)
           IconButton(
@@ -398,6 +394,23 @@ class _RowActions extends ConsumerWidget {
             ),
           ),
       ],
+    );
+  }
+
+  Future<void> _confirmCancel(BuildContext context, WidgetRef ref) async {
+    final confirmed = await ConfirmDialog.show(
+      context,
+      title: 'Cancel this build?',
+      body: 'This deletes artifacts on the build server and cannot be undone.',
+      confirmLabel: 'Cancel build',
+      isDangerous: true,
+    );
+    if (!confirmed) return;
+    await _act(
+      context,
+      ref,
+      null,
+      () => cancelJob(ref.read(apiClientProvider), job.id),
     );
   }
 

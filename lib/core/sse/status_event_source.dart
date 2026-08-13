@@ -24,6 +24,12 @@ class StatusEventSource {
       ((web.Event event) => _handle(event)).toJS,
     );
     source.onerror = ((web.Event event) {
+      // The browser's EventSource retries transient drops on its own
+      // (`readyState` goes back to CONNECTING); `onerror` fires on every one
+      // of those too, not just fatal ones. Only a `CLOSED` state means the
+      // browser has given up — e.g. the response wasn't `text/event-stream`
+      // — and it's actually time to fall back to polling.
+      if (source.readyState != web.EventSource.CLOSED) return;
       if (!_connectionErrors.isClosed) _connectionErrors.add(null);
     }).toJS;
     _source = source;

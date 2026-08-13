@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/api/api_exception.dart';
 import '../../../core/providers/core_providers.dart';
 import '../../../shared/toast/app_toast.dart';
+import '../../../shared/widgets/confirm_dialog.dart';
 import '../../builds/application/jobs_providers.dart';
 
 /// `system.restart` and `system.hotReload` are `admin`-only but, like
@@ -113,24 +114,14 @@ class _ActionTile extends ConsumerWidget {
   }
 
   Future<void> _confirmAndRun(BuildContext context, WidgetRef ref) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(confirmTitle),
-        content: Text(confirmBody),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Run'),
-          ),
-        ],
-      ),
+    final confirmed = await ConfirmDialog.show(
+      context,
+      title: confirmTitle,
+      body: confirmBody,
+      confirmLabel: 'Run',
+      isDangerous: isDangerous,
     );
-    if (confirmed != true) return;
+    if (!confirmed) return;
 
     try {
       final api = ref.read(apiClientProvider);

@@ -12,6 +12,7 @@ import '../../../core/storage/action_template_store.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../shared/auth_guard.dart';
 import '../../../shared/toast/app_toast.dart';
+import '../../../shared/widgets/confirm_dialog.dart';
 import '../../../shared/widgets/name_template_dialog.dart';
 
 /// Right-hand sidebar of the job detail screen: params, artifact/log links,
@@ -98,12 +99,7 @@ class JobDetailPanel extends ConsumerWidget {
             style: AppTheme.destructiveButtonStyle(
               Theme.of(context).colorScheme,
             ),
-            onPressed: () => _act(
-              context,
-              ref,
-              null,
-              () => cancelJob(ref.read(apiClientProvider), job.id),
-            ),
+            onPressed: () => _confirmCancel(context, ref),
             icon: const Icon(Icons.cancel_outlined),
             label: const Text('Cancel'),
           ),
@@ -155,6 +151,23 @@ class JobDetailPanel extends ConsumerWidget {
       ActionTemplate(name: name, params: job.actionParams),
     );
     ref.read(appToastProvider.notifier).show('Saved as "$name"');
+  }
+
+  Future<void> _confirmCancel(BuildContext context, WidgetRef ref) async {
+    final confirmed = await ConfirmDialog.show(
+      context,
+      title: 'Cancel this build?',
+      body: 'This deletes artifacts on the build server and cannot be undone.',
+      confirmLabel: 'Cancel build',
+      isDangerous: true,
+    );
+    if (!confirmed) return;
+    await _act(
+      context,
+      ref,
+      null,
+      () => cancelJob(ref.read(apiClientProvider), job.id),
+    );
   }
 
   Future<void> _act(

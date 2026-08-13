@@ -1,4 +1,6 @@
-/// Compact duration formatting matching the wireframe's `12s` / `4 min` /
+import 'package:intl/intl.dart';
+
+/// Compact duration formatting matching the wireframe's `12s` / `4 min 12s` /
 /// `2h 10m` style.
 String formatDuration(Duration duration) {
   if (duration.inSeconds < 60) return '${duration.inSeconds}s';
@@ -6,27 +8,34 @@ String formatDuration(Duration duration) {
     final seconds = duration.inSeconds % 60;
     return seconds == 0
         ? '${duration.inMinutes} min'
-        : '${duration.inMinutes}.${(seconds / 60 * 10).round()} min';
+        : '${duration.inMinutes} min ${seconds}s';
   }
   final hours = duration.inHours;
   final minutes = duration.inMinutes % 60;
   return minutes == 0 ? '${hours}h' : '${hours}h ${minutes}m';
 }
 
-/// Relative-day timestamp: `10:00:12` for today, `yesterday`, else a date.
+/// Relative timestamp: `just now` / `5m ago` / `3h ago` for anything within
+/// the last day, then `yesterday`, a weekday name for the last week, and a
+/// full date beyond that — the scannable "how stale is this" a dashboard
+/// list needs, rather than an exact clock time nobody's doing math on.
 String formatRelativeTimestamp(DateTime dateTime) {
   final local = dateTime.toLocal();
   final now = DateTime.now();
+  final diff = now.difference(local);
+
+  if (diff.inSeconds < 5) return 'just now';
+  if (diff.inMinutes < 1) return '${diff.inSeconds}s ago';
+  if (diff.inHours < 1) return '${diff.inMinutes}m ago';
+  if (diff.inHours < 24) return '${diff.inHours}h ago';
+
   final today = DateTime(now.year, now.month, now.day);
   final day = DateTime(local.year, local.month, local.day);
   final diffDays = today.difference(day).inDays;
 
-  String two(int n) => n.toString().padLeft(2, '0');
-  final time = '${two(local.hour)}:${two(local.minute)}:${two(local.second)}';
-
-  if (diffDays == 0) return time;
   if (diffDays == 1) return 'yesterday';
-  return '${local.year}-${two(local.month)}-${two(local.day)}';
+  if (diffDays < 7) return DateFormat.EEEE().format(local);
+  return DateFormat('yyyy-MM-dd').format(local);
 }
 
 String formatUptime(int uptimeSeconds) =>
@@ -38,11 +47,15 @@ String formatUptime(int uptimeSeconds) =>
 String formatDartVersion(String platformVersion) =>
     platformVersion.split(' ').first;
 
+final _fileSizeFormat = NumberFormat('0.0');
+
 String formatFileSize(int bytes) {
   if (bytes < 1024) return '$bytes B';
-  if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
-  if (bytes < 1024 * 1024 * 1024) {
-    return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
+  if (bytes < 1024 * 1024) {
+    return '${_fileSizeFormat.format(bytes / 1024)} KB';
   }
-  return '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(1)} GB';
+  if (bytes < 1024 * 1024 * 1024) {
+    return '${_fileSizeFormat.format(bytes / (1024 * 1024))} MB';
+  }
+  return '${_fileSizeFormat.format(bytes / (1024 * 1024 * 1024))} GB';
 }
