@@ -246,6 +246,22 @@ class JobLogController extends Notifier<JobLogState> {
   void _onEvent(JobStreamEvent event) {
     if (_disposed) return;
     switch (event.type) {
+      case 'started':
+        // Without this, a job opened while still `queued` never visibly
+        // moves to `running` — nothing else updates `state` until
+        // `finished`, which jumps straight to succeeded/failed.
+        final job = state.job;
+        if (job != null) {
+          _setJob(
+            job.copyWith(
+              state: JobState.running,
+              startedAt: event.at ?? DateTime.now(),
+            ),
+          );
+        }
+      case 'promoted':
+        final job = state.job;
+        if (job != null) _setJob(job.copyWith(promoted: true));
       case 'log':
         if (event.chunk != null) {
           _appendRaw(event.chunk!);
