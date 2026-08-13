@@ -38,6 +38,11 @@ class _ActionFormScreenState extends ConsumerState<ActionFormScreen> {
   bool _submitting = false;
   List<String> _problems = const [];
 
+  /// The template currently filled into the form, if any — highlighted in
+  /// [_TemplatesBar] and used to pre-fill [_saveAsTemplate]'s dialog so
+  /// saving over it doesn't require retyping its name.
+  String? _selectedTemplateName;
+
   @override
   void dispose() {
     for (final controller in _controllers.values) {
@@ -106,6 +111,7 @@ class _ActionFormScreenState extends ConsumerState<ActionFormScreen> {
             _controllers[param.name]!.text = value?.toString() ?? '';
         }
       }
+      _selectedTemplateName = template.name;
     });
   }
 
@@ -113,6 +119,7 @@ class _ActionFormScreenState extends ConsumerState<ActionFormScreen> {
     final name = await showDialog<String>(
       context: context,
       builder: (context) => NameTemplateDialog(
+        initialName: _selectedTemplateName,
         existingNames: ref
             .read(actionTemplateStoreProvider)
             .list(action.name)
@@ -127,12 +134,16 @@ class _ActionFormScreenState extends ConsumerState<ActionFormScreen> {
           action.name,
           ActionTemplate(name: name, params: _collectParams(action)),
         );
-    if (mounted) setState(() {});
+    if (mounted) setState(() => _selectedTemplateName = name);
   }
 
   Future<void> _deleteTemplate(ActionSchema action, String name) async {
     await ref.read(actionTemplateStoreProvider).delete(action.name, name);
-    if (mounted) setState(() {});
+    if (mounted) {
+      setState(() {
+        if (_selectedTemplateName == name) _selectedTemplateName = null;
+      });
+    }
   }
 
   Future<void> _submit(ActionSchema action) async {
@@ -225,6 +236,7 @@ class _ActionFormScreenState extends ConsumerState<ActionFormScreen> {
     final templatesBar = hasTemplates
         ? _TemplatesBar(
             templates: ref.read(actionTemplateStoreProvider).list(action.name),
+            selectedName: _selectedTemplateName,
             onApply: (template) => _applyTemplate(action, template),
             onDelete: (name) => _deleteTemplate(action, name),
           )
@@ -352,11 +364,16 @@ class _ActionFormScreenState extends ConsumerState<ActionFormScreen> {
 class _TemplatesBar extends StatelessWidget {
   const _TemplatesBar({
     required this.templates,
+    required this.selectedName,
     required this.onApply,
     required this.onDelete,
   });
 
   final List<ActionTemplate> templates;
+
+  /// The template currently filled into the form, if any — shown with a
+  /// checkmark so "Save current as template" has an obvious target.
+  final String? selectedName;
   final ValueChanged<ActionTemplate> onApply;
   final ValueChanged<String> onDelete;
 
@@ -389,6 +406,8 @@ class _TemplatesBar extends StatelessWidget {
                   for (final template in templates)
                     InputChip(
                       label: Text(template.name),
+                      selected: template.name == selectedName,
+                      showCheckmark: true,
                       onPressed: () => onApply(template),
                       onDeleted: () => onDelete(template.name),
                     ),

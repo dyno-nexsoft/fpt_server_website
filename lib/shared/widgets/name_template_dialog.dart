@@ -4,16 +4,25 @@ import 'package:flutter/material.dart';
 /// current as template" and the job detail panel's "Save as template"
 /// (saving a past job's params without reopening its form).
 class NameTemplateDialog extends StatefulWidget {
-  const NameTemplateDialog({super.key, required this.existingNames});
+  const NameTemplateDialog({
+    super.key,
+    required this.existingNames,
+    this.initialName,
+  });
 
   final Set<String> existingNames;
+
+  /// Pre-fills the field with the currently-selected template's name, so
+  /// saving over it is a single Enter/Save instead of retyping the name
+  /// exactly to trigger the overwrite path below.
+  final String? initialName;
 
   @override
   State<NameTemplateDialog> createState() => _NameTemplateDialogState();
 }
 
 class _NameTemplateDialogState extends State<NameTemplateDialog> {
-  final _controller = TextEditingController();
+  late final _controller = TextEditingController(text: widget.initialName);
 
   @override
   void dispose() {
