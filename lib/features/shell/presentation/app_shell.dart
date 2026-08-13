@@ -45,8 +45,7 @@ class _AppShellState extends ConsumerState<AppShell> {
     final actions = ref.watch(actionsProvider);
     final mobile = isMobileWidth(context);
 
-    void onNavSelected(int index) =>
-        AppShell._navRoutes[index].go(context);
+    void onNavSelected(int index) => AppShell._navRoutes[index].go(context);
 
     return Scaffold(
       appBar: AppBar(
@@ -65,6 +64,7 @@ class _AppShellState extends ConsumerState<AppShell> {
           StatusChipsBar(compact: mobile),
           const SizedBox(width: 8),
           ConnectControl(compact: mobile),
+          if (!mobile) const SizedBox(width: 8),
         ],
       ),
       floatingActionButton: mobile

@@ -24,7 +24,7 @@ class StatusChipsBar extends ConsumerWidget {
         if (data == null) return const SizedBox.shrink();
         return Row(
           mainAxisSize: MainAxisSize.min,
-          spacing: compact ? 0 : 12,
+          spacing: compact ? 0 : 8,
           children: [
             Badge.count(
               count: data.running.length,
@@ -44,8 +44,7 @@ class StatusChipsBar extends ConsumerWidget {
                 compact: compact,
                 icon: Icons.schedule,
                 label: 'Queued',
-                onPressed: () =>
-                    const BuildsRoute(state: 'queued').go(context),
+                onPressed: () => const BuildsRoute(state: 'queued').go(context),
               ),
             ),
           ],
