@@ -20,11 +20,16 @@ class AppShell extends ConsumerStatefulWidget {
   final Widget child;
 
   /// `/builds/:id` and the artifact browser nested under it count as
-  /// "Builds" too — there's no third destination for them, and leaving the
-  /// nav unlit on those screens would be worse than crediting the section
-  /// they actually belong to.
-  static int _navIndexOf(String location) =>
-      location.startsWith('/builds') ? 1 : 0;
+  /// "Builds" too, and `/settings/logs` counts as "Settings" — neither has
+  /// its own destination, and leaving the nav unlit on those screens would
+  /// be worse than crediting the section they actually belong to.
+  static int _navIndexOf(String location) {
+    if (location.startsWith('/builds')) return 1;
+    if (location.startsWith('/settings')) return 2;
+    return 0;
+  }
+
+  static const _navRoutes = ['/dashboard', '/builds', '/settings'];
 
   @override
   ConsumerState<AppShell> createState() => _AppShellState();
@@ -56,8 +61,7 @@ class _AppShellState extends ConsumerState<AppShell> {
             onPressed: () => context.go('/login'),
           );
 
-    void onNavSelected(int index) =>
-        context.go(index == 0 ? '/dashboard' : '/builds');
+    void onNavSelected(int index) => context.go(AppShell._navRoutes[index]);
 
     return Scaffold(
       appBar: AppBar(
@@ -73,19 +77,14 @@ class _AppShellState extends ConsumerState<AppShell> {
                 onPressed: () => setState(() => _railExtended = !_railExtended),
               ),
         actions: [
-          const _StatusChipsBar(),
+          _StatusChipsBar(compact: mobile),
           const SizedBox(width: 8),
-          IconButton(
-            tooltip: 'Settings',
-            icon: const Icon(Icons.settings),
-            onPressed: () => context.go('/settings'),
-          ),
           connectControl,
         ],
       ),
       floatingActionButton: mobile
           ? actions.when(
-              data: (data) => _BuildFab(actions: data),
+              data: (data) => _BuildFab(actions: data, isExtended: false),
               loading: () => null,
               error: (_, _) => null,
             )
@@ -104,6 +103,11 @@ class _AppShellState extends ConsumerState<AppShell> {
                   icon: Icon(Icons.list_alt_outlined),
                   selectedIcon: Icon(Icons.list_alt),
                   label: 'Builds',
+                ),
+                NavigationDestination(
+                  icon: Icon(Icons.settings_outlined),
+                  selectedIcon: Icon(Icons.settings),
+                  label: 'Settings',
                 ),
               ],
             )
@@ -149,6 +153,11 @@ class _AppShellState extends ConsumerState<AppShell> {
               selectedIcon: Icon(Icons.list_alt),
               label: Text('Builds'),
             ),
+            NavigationRailDestination(
+              icon: Icon(Icons.settings_outlined),
+              selectedIcon: Icon(Icons.settings),
+              label: Text('Settings'),
+            ),
           ],
         ),
         const VerticalDivider(width: 1),
@@ -191,7 +200,11 @@ class _BuildFab extends ConsumerWidget {
 /// Each chip jumps to the Builds list pre-filtered to its own state — the
 /// count is otherwise just a number with nowhere to go look at it closer.
 class _StatusChipsBar extends ConsumerWidget {
-  const _StatusChipsBar();
+  const _StatusChipsBar({required this.compact});
+
+  /// Icon-only (no label), for a phone-width app bar that has no room to
+  /// spare next to the title and the Sign-out icon.
+  final bool compact;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -201,25 +214,37 @@ class _StatusChipsBar extends ConsumerWidget {
         if (data == null) return const SizedBox.shrink();
         return Row(
           mainAxisSize: MainAxisSize.min,
-          spacing: 12,
+          spacing: compact ? 0 : 12,
           children: [
             Badge.count(
               count: data.running.length,
               isLabelVisible: data.running.isNotEmpty,
-              child: ActionChip(
-                avatar: const Icon(Icons.autorenew),
-                label: const Text('Running'),
-                onPressed: () => context.go('/builds?state=running'),
-              ),
+              child: compact
+                  ? IconButton(
+                      tooltip: 'Running',
+                      icon: const Icon(Icons.autorenew),
+                      onPressed: () => context.go('/builds?state=running'),
+                    )
+                  : ActionChip(
+                      avatar: const Icon(Icons.autorenew),
+                      label: const Text('Running'),
+                      onPressed: () => context.go('/builds?state=running'),
+                    ),
             ),
             Badge.count(
               count: data.queued.length,
               isLabelVisible: data.queued.isNotEmpty,
-              child: ActionChip(
-                avatar: const Icon(Icons.schedule),
-                label: const Text('Queued'),
-                onPressed: () => context.go('/builds?state=queued'),
-              ),
+              child: compact
+                  ? IconButton(
+                      tooltip: 'Queued',
+                      icon: const Icon(Icons.schedule),
+                      onPressed: () => context.go('/builds?state=queued'),
+                    )
+                  : ActionChip(
+                      avatar: const Icon(Icons.schedule),
+                      label: const Text('Queued'),
+                      onPressed: () => context.go('/builds?state=queued'),
+                    ),
             ),
           ],
         );

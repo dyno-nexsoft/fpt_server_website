@@ -74,39 +74,30 @@ final routerProvider = Provider<GoRouter>((ref) {
     refreshListenable: notifier,
     redirect: notifier.redirect,
     routes: [
-      GoRoute(
-        path: '/login',
-        pageBuilder: (context, state) =>
-            NoTransitionPage(child: const LoginScreen()),
-      ),
+      GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
       ShellRoute(
-        builder: (context, state, child) => AppShell(child: child),
+        builder: (_, _, child) => AppShell(child: child),
         routes: [
           GoRoute(
             path: '/dashboard',
-            pageBuilder: (context, state) =>
-                NoTransitionPage(child: const DashboardScreen()),
+            builder: (context, state) => const DashboardScreen(),
           ),
           GoRoute(
             path: '/builds',
-            pageBuilder: (context, state) =>
-                NoTransitionPage(child: const BuildsScreen()),
+            builder: (context, state) => const BuildsScreen(),
             routes: [
               GoRoute(
                 path: 'new',
-                pageBuilder: (context, state) =>
-                    const NoTransitionPage(child: NewBuildScreen()),
+                builder: (context, state) => NewBuildScreen(),
               ),
               // A specific build/job — nested so its URL reads as "the
               // thing under Builds it is", not a sibling of unrelated top
               // level sections.
               GoRoute(
                 path: ':id',
-                pageBuilder: (context, state) {
+                builder: (context, state) {
                   final id = state.pathParameters['id']!;
-                  return NoTransitionPage(
-                    child: JobDetailScreen(key: ValueKey(id), jobId: id),
-                  );
+                  return JobDetailScreen(key: ValueKey(id), jobId: id);
                 },
               ),
               // The file server redirects `/<artifactKey>/` here — see
@@ -114,36 +105,29 @@ final routerProvider = Provider<GoRouter>((ref) {
               // `BuildButton._outputDirectoryButton`'s Discord link.
               GoRoute(
                 path: 'artifacts/:key',
-                pageBuilder: (context, state) {
+                builder: (context, state) {
                   final key = state.pathParameters['key']!;
-                  return NoTransitionPage(
-                    child: ArtifactsScreen(
-                      key: ValueKey(key),
-                      artifactKey: key,
-                    ),
-                  );
+                  return ArtifactsScreen(key: ValueKey(key), artifactKey: key);
                 },
               ),
             ],
           ),
           GoRoute(
             path: '/actions/:name',
-            pageBuilder: (context, state) {
+            builder: (context, state) {
               final name = state.pathParameters['name']!;
-              return NoTransitionPage(
-                child: ActionFormScreen(key: ValueKey(name), actionName: name),
-              );
+              return ActionFormScreen(key: ValueKey(name), actionName: name);
             },
           ),
           GoRoute(
             path: '/settings',
-            pageBuilder: (context, state) =>
-                NoTransitionPage(child: const SettingsScreen()),
-          ),
-          GoRoute(
-            path: '/settings/logs',
-            pageBuilder: (context, state) =>
-                NoTransitionPage(child: const ServerLogsScreen()),
+            builder: (context, state) => const SettingsScreen(),
+            routes: [
+              GoRoute(
+                path: 'logs',
+                builder: (context, state) => const ServerLogsScreen(),
+              ),
+            ],
           ),
         ],
       ),
