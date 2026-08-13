@@ -22,7 +22,18 @@ class JobDetailScreen extends ConsumerWidget {
     final logState = ref.watch(jobLogControllerProvider(jobId));
 
     if (logState.jobMissing) {
-      return _ResumedJobBanner(resumedJob: logState.resumedJob);
+      final resumedJob = logState.resumedJob;
+      if (resumedJob != null) {
+        // Replaces the URL rather than making the reader click "Open new
+        // job" themselves — a resumed build has a definite, known
+        // destination, so landing here is a transient redirect, not a
+        // decision point.
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (context.mounted) context.go('/builds/${resumedJob.id}');
+        });
+        return const _RedirectingBanner();
+      }
+      return const _JobGoneBanner();
     }
 
     final job = logState.job;
@@ -110,10 +121,31 @@ class _JobHeader extends StatelessWidget {
   }
 }
 
-class _ResumedJobBanner extends StatelessWidget {
-  const _ResumedJobBanner({required this.resumedJob});
+class _RedirectingBanner extends StatelessWidget {
+  const _RedirectingBanner();
 
-  final Job? resumedJob;
+  @override
+  Widget build(BuildContext context) {
+    return const Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        spacing: 16,
+        children: [
+          CircularProgressIndicator(),
+          Text('This build was resumed after a restart — opening it…'),
+        ],
+      ),
+    );
+  }
+}
+
+/// Shown only when the server restarted mid-build *and* no job on record
+/// points back here via `resumed_from` — either the re-run itself failed
+/// (see `CommandExecutor._markInterrupted`'s "please start it again" case),
+/// or this page was reopened long enough after the restart that the
+/// resumed job has since been pruned from history too.
+class _JobGoneBanner extends StatelessWidget {
+  const _JobGoneBanner();
 
   @override
   Widget build(BuildContext context) {
@@ -127,22 +159,16 @@ class _ResumedJobBanner extends StatelessWidget {
             children: [
               const Icon(Icons.restart_alt),
               const Text(
-                'This build was resumed as a new job after a restart.',
+                'The server restarted mid-build. This job is gone, and no '
+                'resumed build points back to it — it may have failed to '
+                'restart automatically, or the page was reopened too long '
+                'after the fact. Check Builds or Discord for the latest '
+                'run.',
+                textAlign: TextAlign.center,
               ),
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                spacing: 12,
-                children: [
-                  if (resumedJob != null)
-                    FilledButton(
-                      onPressed: () => context.go('/builds/${resumedJob!.id}'),
-                      child: const Text('Open new job'),
-                    ),
-                  OutlinedButton(
-                    onPressed: () => context.go('/builds'),
-                    child: const Text('View builds'),
-                  ),
-                ],
+              OutlinedButton(
+                onPressed: () => context.go('/builds'),
+                child: const Text('View builds'),
               ),
             ],
           ),

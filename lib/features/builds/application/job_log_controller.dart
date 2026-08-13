@@ -189,16 +189,19 @@ class JobLogController extends Notifier<JobLogState> {
   /// pointer back to this one; matching on `action_name`/`action_params`
   /// instead would risk a false positive whenever the same action legitimately
   /// runs more than once (a cron job, or a manual re-run).
+  ///
+  /// Filtered server-side by `?resumed_from=` rather than fetching the most
+  /// recent jobs and scanning client-side — enough other builds between the
+  /// restart and whoever opens this page would push the resumed job outside
+  /// any fixed-size recent-jobs window, turning a real resume into a dead
+  /// end with no way to reach it.
   Future<void> _handleMissingJob() async {
     final api = ref.read(apiClientProvider);
     state = state.copyWith(jobMissing: true);
     try {
-      final recent = await fetchJobs(api, limit: 20);
-      for (final candidate in recent) {
-        if (candidate.resumedFrom == jobId) {
-          state = state.copyWith(resumedJob: candidate);
-          break;
-        }
+      final matches = await fetchJobs(api, resumedFrom: jobId, limit: 1);
+      if (matches.isNotEmpty) {
+        state = state.copyWith(resumedJob: matches.first);
       }
     } catch (_) {
       // Best-effort only — the missing-job banner still renders without it.

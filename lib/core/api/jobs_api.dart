@@ -31,11 +31,17 @@ Future<Job> fetchJob(ApiClient api, String id) async =>
 Future<List<Job>> fetchJobs(
   ApiClient api, {
   String? state,
+  String? resumedFrom,
   int limit = 20,
 }) async {
   final list = await api.getJsonList(
     '/jobs',
-    query: {'state': ?state, 'limit': limit, 'fields': 'summary'},
+    query: {
+      'state': ?state,
+      'resumed_from': ?resumedFrom,
+      'limit': limit,
+      'fields': 'summary',
+    },
     listKey: 'jobs',
   );
   return list.map((e) => Job.fromJson(e as Map<String, dynamic>)).toList();
