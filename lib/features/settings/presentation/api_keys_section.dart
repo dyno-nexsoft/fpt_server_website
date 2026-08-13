@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/api/api_exception.dart';
+import '../../../core/browser/browser_utils.dart';
 import '../../../core/models/api_key_info.dart';
 import '../../../core/providers/catalogue_providers.dart';
 import '../../../core/providers/core_providers.dart';
@@ -214,8 +214,8 @@ class _SecretDialogState extends State<_SecretDialog> {
                 label: Text(_revealed ? 'Hide' : 'Reveal'),
               ),
               TextButton.icon(
-                onPressed: () async {
-                  await Clipboard.setData(ClipboardData(text: widget.secret));
+                onPressed: () {
+                  copyToClipboard(widget.secret);
                   setState(() => _copied = true);
                 },
                 icon: const Icon(Icons.copy),

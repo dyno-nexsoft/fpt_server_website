@@ -6,8 +6,8 @@ import '../api/api_exception.dart';
 import 'core_providers.dart';
 import 'session_provider.dart';
 
-/// `full` = the key has `read` and `/status` answered directly.
-/// `limited` = `/status` came back `403` (invoke-only key), but `/actions`
+/// `full` = the key has `invoke` and could list its own info directly.
+/// `limited` = that came back `403` (a `read`-only key), but `/actions`
 /// worked, so the key is still usable — just for fewer screens.
 enum ConnectionLevel { full, limited }
 
@@ -28,10 +28,17 @@ class ConnectionController extends AsyncNotifier<ConnectionResult?> {
     return _checkAndHandleAuth();
   }
 
+  /// Probes `admin.apiKeys.list` (see `myKeyInfoProvider`, which reuses this
+  /// same call to resolve the connected key's own name/scopes) rather than
+  /// `GET /status` — `/status` is a public read route (`ApiRouter._isPublic`),
+  /// so it answers 200 for *any* string typed into the API key field,
+  /// including one that was never issued. Anything requiring `invoke` is the
+  /// cheapest call that actually forces the server to check the key against
+  /// its real ones.
   Future<ConnectionResult> _check() async {
     final api = ref.read(apiClientProvider);
     try {
-      await api.getJson('/status');
+      await api.postJson('/actions/admin.apiKeys.list');
       return const ConnectionResult(ConnectionLevel.full);
     } on ApiException catch (e) {
       if (e.isForbidden) {

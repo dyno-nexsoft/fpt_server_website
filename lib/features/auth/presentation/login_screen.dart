@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/api/api_exception.dart';
+import '../../../core/browser/browser_utils.dart';
 import '../../../core/providers/catalogue_providers.dart';
 import '../../../core/providers/connection_provider.dart';
 import '../../../core/providers/session_provider.dart';
@@ -116,11 +116,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         IconButton(
                           tooltip: 'Copy command',
                           icon: const Icon(Icons.copy_outlined, size: 18),
-                          onPressed: () async {
-                            await Clipboard.setData(
-                              const ClipboardData(text: _apiKeyAddCommand),
-                            );
-                            if (!context.mounted) return;
+                          onPressed: () {
+                            copyToClipboard(_apiKeyAddCommand);
                             ref
                                 .read(appToastProvider.notifier)
                                 .show('Command copied');
