@@ -32,6 +32,7 @@ class JobHeader extends StatelessWidget {
       child: Wrap(
         crossAxisAlignment: WrapCrossAlignment.center,
         spacing: 12,
+        runSpacing: 8,
         children: [
           Text(job.id, style: textTheme.titleMedium),
           Chip(label: Text(job.actionName ?? job.command)),
