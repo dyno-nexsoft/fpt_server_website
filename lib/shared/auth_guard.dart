@@ -26,9 +26,19 @@ Future<Job?> runAuthedJobAction(
   }
   try {
     final result = await action();
-    ref
-        .read(appToastProvider.notifier)
-        .show(result.message ?? fallbackMessage ?? 'Done');
+    if (result.warnings.isNotEmpty) {
+      // A warning (e.g. the retry couldn't edit the old Discord message and
+      // posted a new one) means the action still succeeded but not exactly
+      // as expected — surfacing it here is the only place that happens,
+      // since the job list itself has no room for a per-row caveat.
+      ref
+          .read(appToastProvider.notifier)
+          .show(result.warnings.join(' '), isError: true);
+    } else {
+      ref
+          .read(appToastProvider.notifier)
+          .show(result.message ?? fallbackMessage ?? 'Done');
+    }
     return result;
   } on ApiException catch (e) {
     ref.read(appToastProvider.notifier).show(e.message, isError: true);
