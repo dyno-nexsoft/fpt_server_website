@@ -5,8 +5,7 @@ import 'job.dart';
 part 'system_status.freezed.dart';
 part 'system_status.g.dart';
 
-/// `GET /status` — powers the queue sidebar. Field names on this endpoint
-/// are camelCase on the wire, unlike every other action in the API.
+/// `GET /status` — powers the queue sidebar.
 @freezed
 abstract class SystemStatus with _$SystemStatus {
   const SystemStatus._();
