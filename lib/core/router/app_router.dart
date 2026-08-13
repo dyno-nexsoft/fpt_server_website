@@ -29,11 +29,13 @@ class RouterNotifier extends ChangeNotifier {
   /// Read is public, act requires a key — matching the server (see
   /// `ApiRouter._isPublic`). The dashboard, builds list, job detail, and
   /// artifact browser all work with no stored key at all; only
-  /// `/actions/:name` (submitting a build/action form) forces `/login`,
-  /// since that screen exists to POST something the server won't accept
-  /// without one. Cancel/Promote/Retry buttons guard themselves the same
-  /// way per-click (`runAuthedJobAction`) rather than through routing,
-  /// since they live on an otherwise-public job detail page.
+  /// `/builds/actions/:name` (submitting a build/action form) forces
+  /// `/login`, since that screen exists to POST something the server won't
+  /// accept without one. `/builds/actions` itself (picking which one to run)
+  /// stays public — nothing there submits anything yet. Cancel/Promote/Retry
+  /// buttons guard themselves the same way per-click
+  /// (`runAuthedJobAction`) rather than through routing, since they live on
+  /// an otherwise-public job detail page.
   ///
   /// The stored key going away — which `ConnectionController` does itself,
   /// and only on a 401 — is the only thing that forces a logged-in user off
@@ -50,7 +52,7 @@ class RouterNotifier extends ChangeNotifier {
 
     final creds = _ref.read(sessionProvider);
     final loggingIn = state.matchedLocation == '/login';
-    final needsKey = state.matchedLocation.startsWith('/actions/');
+    final needsKey = state.matchedLocation.startsWith('/builds/actions/');
 
     if (needsKey && !creds.hasKey) return '/login';
 
@@ -86,9 +88,25 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: '/builds',
             builder: (context, state) => const BuildsScreen(),
             routes: [
+              // Picking which action to run (`actions`) and filling in its
+              // form (`actions/:name`) are both "starting a build", so they
+              // nest under Builds together instead of the form living as an
+              // unrelated top-level `/actions/:name` sibling.
               GoRoute(
-                path: 'new',
-                builder: (context, state) => NewBuildScreen(),
+                path: 'actions',
+                builder: (context, state) => const NewBuildScreen(),
+                routes: [
+                  GoRoute(
+                    path: ':name',
+                    builder: (context, state) {
+                      final name = state.pathParameters['name']!;
+                      return ActionFormScreen(
+                        key: ValueKey(name),
+                        actionName: name,
+                      );
+                    },
+                  ),
+                ],
               ),
               // A specific build/job — nested so its URL reads as "the
               // thing under Builds it is", not a sibling of unrelated top
@@ -111,13 +129,6 @@ final routerProvider = Provider<GoRouter>((ref) {
                 },
               ),
             ],
-          ),
-          GoRoute(
-            path: '/actions/:name',
-            builder: (context, state) {
-              final name = state.pathParameters['name']!;
-              return ActionFormScreen(key: ValueKey(name), actionName: name);
-            },
           ),
           GoRoute(
             path: '/settings',

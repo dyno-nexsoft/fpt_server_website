@@ -4,10 +4,9 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/models/action_schema.dart';
 import '../../../core/providers/catalogue_providers.dart';
-import '../../../core/providers/connection_provider.dart';
-import '../../../core/providers/session_provider.dart';
-import '../../../core/providers/status_provider.dart';
 import '../../../shared/utils/responsive.dart';
+import 'connect_control.dart';
+import 'status_chips_bar.dart';
 
 /// Persistent layout for every screen — Material 3's adaptive navigation
 /// shape: a [NavigationRail] on desktop, a [NavigationBar] on mobile, a
@@ -43,37 +42,7 @@ class _AppShellState extends ConsumerState<AppShell> {
     final location = GoRouterState.of(context).matchedLocation;
     final navIndex = AppShell._navIndexOf(location);
     final actions = ref.watch(actionsProvider);
-    final hasKey = ref.watch(sessionProvider).hasKey;
     final mobile = isMobileWidth(context);
-
-    Future<void> signOut() async {
-      await ref.read(connectionControllerProvider.notifier).logout();
-      if (context.mounted) context.go('/login');
-    }
-
-    final connectControl = mobile
-        ? (hasKey
-              ? IconButton(
-                  tooltip: 'Sign out',
-                  icon: const Icon(Icons.logout),
-                  onPressed: signOut,
-                )
-              : IconButton(
-                  tooltip: 'Connect',
-                  icon: const Icon(Icons.login),
-                  onPressed: () => context.go('/login'),
-                ))
-        : (hasKey
-              ? ActionChip(
-                  avatar: const Icon(Icons.logout),
-                  label: const Text('Sign out'),
-                  onPressed: signOut,
-                )
-              : ActionChip(
-                  avatar: const Icon(Icons.login),
-                  label: const Text('Connect'),
-                  onPressed: () => context.go('/login'),
-                ));
 
     void onNavSelected(int index) => context.go(AppShell._navRoutes[index]);
 
@@ -91,9 +60,9 @@ class _AppShellState extends ConsumerState<AppShell> {
                 onPressed: () => setState(() => _railExtended = !_railExtended),
               ),
         actions: [
-          _StatusChipsBar(compact: mobile),
+          StatusChipsBar(compact: mobile),
           const SizedBox(width: 8),
-          connectControl,
+          ConnectControl(compact: mobile),
         ],
       ),
       floatingActionButton: mobile
@@ -201,69 +170,9 @@ class _BuildFab extends ConsumerWidget {
     return FloatingActionButton.extended(
       isExtended: isExtended,
       tooltip: 'New build',
-      onPressed: () => context.go('/builds/new'),
+      onPressed: () => context.go('/builds/actions'),
       icon: const Icon(Icons.add),
       label: Text('New build'),
-    );
-  }
-}
-
-/// Running/queued counts, inline in the app bar's title — a
-/// [NavigationRail]/[NavigationBar] has no room for them, and a dedicated
-/// strip under the bar just added height back after shrinking it elsewhere.
-/// Each chip jumps to the Builds list pre-filtered to its own state — the
-/// count is otherwise just a number with nowhere to go look at it closer.
-class _StatusChipsBar extends ConsumerWidget {
-  const _StatusChipsBar({required this.compact});
-
-  /// Icon-only (no label), for a phone-width app bar that has no room to
-  /// spare next to the title and the Sign-out icon.
-  final bool compact;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final status = ref.watch(statusControllerProvider);
-    return status.maybeWhen(
-      data: (data) {
-        if (data == null) return const SizedBox.shrink();
-        return Row(
-          mainAxisSize: MainAxisSize.min,
-          spacing: compact ? 0 : 12,
-          children: [
-            Badge.count(
-              count: data.running.length,
-              isLabelVisible: data.running.isNotEmpty,
-              child: compact
-                  ? IconButton(
-                      tooltip: 'Running',
-                      icon: const Icon(Icons.autorenew),
-                      onPressed: () => context.go('/builds?state=running'),
-                    )
-                  : ActionChip(
-                      avatar: const Icon(Icons.autorenew),
-                      label: const Text('Running'),
-                      onPressed: () => context.go('/builds?state=running'),
-                    ),
-            ),
-            Badge.count(
-              count: data.queued.length,
-              isLabelVisible: data.queued.isNotEmpty,
-              child: compact
-                  ? IconButton(
-                      tooltip: 'Queued',
-                      icon: const Icon(Icons.schedule),
-                      onPressed: () => context.go('/builds?state=queued'),
-                    )
-                  : ActionChip(
-                      avatar: const Icon(Icons.schedule),
-                      label: const Text('Queued'),
-                      onPressed: () => context.go('/builds?state=queued'),
-                    ),
-            ),
-          ],
-        );
-      },
-      orElse: () => const SizedBox.shrink(),
     );
   }
 }
