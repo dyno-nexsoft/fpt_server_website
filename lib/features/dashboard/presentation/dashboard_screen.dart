@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../../core/models/job.dart';
 import '../../../core/models/system_status.dart';
 import '../../../core/providers/status_provider.dart';
+import '../../../core/router/app_router.dart';
 import '../../../shared/utils/format.dart';
 import '../../../shared/widgets/error_view.dart';
 import '../../../shared/widgets/job_state_chip.dart';
@@ -111,7 +111,7 @@ class _ActiveJobTile extends StatelessWidget {
       leading: JobStateIcon(state: job.state),
       title: Text(job.actionName ?? job.command),
       subtitle: Text(subtitle),
-      onTap: () => context.go('/builds/${job.id}'),
+      onTap: () => JobDetailRoute(job.id).go(context),
     );
   }
 }
@@ -156,7 +156,7 @@ class _RecentJobTile extends StatelessWidget {
       title: Text(job.actionName ?? job.command),
       subtitle: Text(formatRelativeTimestamp(job.createdAt)),
       trailing: duration != null ? Text(duration) : null,
-      onTap: () => context.go('/builds/${job.id}'),
+      onTap: () => JobDetailRoute(job.id).go(context),
     );
   }
 }

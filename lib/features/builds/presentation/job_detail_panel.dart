@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../../core/api/jobs_api.dart';
 import '../../../core/browser/browser_utils.dart';
@@ -8,6 +7,7 @@ import '../../../core/models/job.dart';
 import '../../../core/providers/core_providers.dart';
 import '../../../core/providers/session_provider.dart';
 import '../../../core/providers/status_provider.dart';
+import '../../../core/router/app_router.dart';
 import '../../../core/storage/action_template_store.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../shared/auth_guard.dart';
@@ -69,7 +69,7 @@ class JobDetailPanel extends ConsumerWidget {
             label: const Text('Open raw log'),
           ),
         OutlinedButton.icon(
-          onPressed: () => context.go('/builds/artifacts/${job.artifactKey}'),
+          onPressed: () => ArtifactsRoute('${job.artifactKey}').go(context),
           icon: const Icon(Icons.folder_outlined),
           label: const Text('Artifacts'),
         ),

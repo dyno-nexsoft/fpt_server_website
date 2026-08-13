@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 import '../core/api/api_exception.dart';
 import '../core/models/job.dart';
 import '../core/providers/session_provider.dart';
+import '../core/router/app_router.dart';
 import 'toast/app_toast.dart';
 
 /// Runs a job-mutating call (cancel/promote/retry) only if a key is stored;
@@ -21,7 +21,7 @@ Future<Job?> runAuthedJobAction(
   required Future<Job> Function() action,
 }) async {
   if (!ref.read(sessionProvider).hasKey) {
-    context.go('/login');
+    const LoginRoute().go(context);
     return null;
   }
   try {

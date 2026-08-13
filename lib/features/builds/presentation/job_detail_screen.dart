@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
+import '../../../core/router/app_router.dart';
 import '../../../shared/utils/responsive.dart';
 import '../application/job_log_controller.dart';
 import 'job_detail_body_desktop.dart';
@@ -27,7 +27,7 @@ class JobDetailScreen extends ConsumerWidget {
         // destination, so landing here is a transient redirect, not a
         // decision point.
         WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (context.mounted) context.go('/builds/${resumedJob.id}');
+          if (context.mounted) JobDetailRoute(resumedJob.id).go(context);
         });
         return const _RedirectingBanner();
       }
@@ -108,7 +108,7 @@ class _JobGoneBanner extends StatelessWidget {
                 textAlign: TextAlign.center,
               ),
               OutlinedButton(
-                onPressed: () => context.go('/builds'),
+                onPressed: () => const BuildsRoute().go(context),
                 child: const Text('View builds'),
               ),
             ],

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/models/action_schema.dart';
 import '../../../core/providers/catalogue_providers.dart';
+import '../../../core/router/app_router.dart';
 import '../../../shared/utils/responsive.dart';
 import 'connect_control.dart';
 import 'status_chips_bar.dart';
@@ -28,7 +29,7 @@ class AppShell extends ConsumerStatefulWidget {
     return 0;
   }
 
-  static const _navRoutes = ['/dashboard', '/builds', '/settings'];
+  static const _navRoutes = [DashboardRoute(), BuildsRoute(), SettingsRoute()];
 
   @override
   ConsumerState<AppShell> createState() => _AppShellState();
@@ -44,7 +45,8 @@ class _AppShellState extends ConsumerState<AppShell> {
     final actions = ref.watch(actionsProvider);
     final mobile = isMobileWidth(context);
 
-    void onNavSelected(int index) => context.go(AppShell._navRoutes[index]);
+    void onNavSelected(int index) =>
+        AppShell._navRoutes[index].go(context);
 
     return Scaffold(
       appBar: AppBar(
@@ -170,7 +172,7 @@ class _BuildFab extends ConsumerWidget {
     return FloatingActionButton.extended(
       isExtended: isExtended,
       tooltip: 'New build',
-      onPressed: () => context.go('/builds/actions'),
+      onPressed: () => const NewBuildRoute().go(context),
       icon: const Icon(Icons.add),
       label: Text('New build'),
     );

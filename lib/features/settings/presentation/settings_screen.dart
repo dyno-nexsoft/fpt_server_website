@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../../core/providers/catalogue_providers.dart';
 import '../../../core/providers/connection_provider.dart';
 import '../../../core/providers/session_provider.dart';
+import '../../../core/router/app_router.dart';
 import 'api_keys_section.dart';
 import 'appearance_section.dart';
 import 'system_panel.dart';
@@ -39,7 +39,7 @@ class SettingsScreen extends ConsumerWidget {
                 title: const Text('Server Logs'),
                 subtitle: const Text('View the tail of server.log'),
                 trailing: const Icon(Icons.chevron_right),
-                onTap: () => context.go('/settings/logs'),
+                onTap: () => const ServerLogsRoute().go(context),
               ),
             ),
           if (isAdmin) const SystemPanel(),
@@ -123,14 +123,14 @@ class _ConnectionCard extends ConsumerWidget {
                   // public-ish screen), unlike the background 401 eviction
                   // RouterNotifier handles — an explicit Sign out click
                   // needs its own navigation.
-                  if (context.mounted) context.go('/login');
+                  if (context.mounted) const LoginRoute().go(context);
                 },
                 icon: const Icon(Icons.logout),
                 label: const Text('Sign out'),
               )
             else
               FilledButton.icon(
-                onPressed: () => context.go('/login'),
+                onPressed: () => const LoginRoute().go(context),
                 icon: const Icon(Icons.login),
                 label: const Text('Connect'),
               ),

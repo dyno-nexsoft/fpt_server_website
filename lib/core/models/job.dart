@@ -1,96 +1,67 @@
+import 'package:freezed_annotation/freezed_annotation.dart';
+
+part 'job.freezed.dart';
+part 'job.g.dart';
+
+/// `discord_channel_id`/`discord_message_id` arrive nested under a
+/// `discord` object on the wire rather than flat — read straight out of it
+/// via these rather than a custom `fromJson` body (see [Job.fromJson]'s doc
+/// comment for why that alternative doesn't work with freezed).
+Object? _readDiscordChannelId(Map json, String key) =>
+    (json['discord'] as Map<String, dynamic>?)?['channel_id'];
+
+Object? _readDiscordMessageId(Map json, String key) =>
+    (json['discord'] as Map<String, dynamic>?)?['message_id'];
+
 /// A build/job as returned by every `kind: job` action, `GET /jobs`, and
 /// `GET /jobs/{id}`. Wire format is snake_case; this is the camelCase model.
-class Job {
-  const Job({
-    required this.id,
-    required this.state,
-    required this.command,
-    required this.actionName,
-    required this.actionParams,
-    required this.environments,
-    required this.createdBy,
-    required this.artifactKey,
-    required this.promoted,
-    required this.announce,
-    required this.createdAt,
-    this.startedAt,
-    this.finishedAt,
-    this.exitCode,
-    this.lastLine,
-    required this.lastSeq,
-    this.discordChannelId,
-    this.discordMessageId,
-    this.logUrl,
-    this.warnings = const [],
-    this.message,
-    this.resumedFrom,
-  });
+@freezed
+abstract class Job with _$Job {
+  const Job._();
 
-  factory Job.fromJson(Map<String, dynamic> json) {
-    final discord = json['discord'] as Map<String, dynamic>?;
-    return Job(
-      id: json['id'] as String,
-      state: JobState.fromWire(json['state'] as String),
-      command: json['command'] as String,
-      actionName: json['action_name'] as String?,
-      actionParams: (json['action_params'] as Map<String, dynamic>? ?? {}),
-      environments: (json['environments'] as Map<String, dynamic>? ?? {}),
-      createdBy: json['created_by'] as String?,
-      artifactKey: json['artifact_key'] as int?,
-      promoted: json['promoted'] as bool? ?? false,
-      announce: json['announce'] as bool? ?? false,
-      createdAt: DateTime.parse(json['created_at'] as String),
-      startedAt: (json['started_at'] as String?) != null
-          ? DateTime.parse(json['started_at'] as String)
-          : null,
-      finishedAt: (json['finished_at'] as String?) != null
-          ? DateTime.parse(json['finished_at'] as String)
-          : null,
-      exitCode: json['exit_code'] as int?,
-      lastLine: json['last_line'] as String?,
-      lastSeq: json['last_seq'] as int? ?? 0,
-      discordChannelId: discord?['channel_id'] as String?,
-      discordMessageId: discord?['message_id'] as String?,
-      logUrl: json['log_url'] as String?,
-      warnings:
-          (json['warnings'] as List<dynamic>?)?.cast<String>() ?? const [],
-      message: json['message'] as String?,
-      resumedFrom: json['resumed_from'] as String?,
-    );
-  }
+  const factory Job({
+    required String id,
+    @JobStateConverter() required JobState state,
+    required String command,
 
-  final String id;
-  final JobState state;
-  final String command;
+    /// Null for a handful of legacy/cron records with no recorded action —
+    /// see docs/rest-api.md. Every job created through an Action always has
+    /// one; this only stays nullable for those historical outliers.
+    String? actionName,
+    @Default(<String, dynamic>{}) Map<String, dynamic> actionParams,
+    @Default(<String, dynamic>{}) Map<String, dynamic> environments,
+    String? createdBy,
+    int? artifactKey,
+    @Default(false) bool promoted,
+    @Default(false) bool announce,
+    required DateTime createdAt,
+    DateTime? startedAt,
+    DateTime? finishedAt,
+    int? exitCode,
+    String? lastLine,
+    @Default(0) int lastSeq,
+    @JsonKey(readValue: _readDiscordChannelId) String? discordChannelId,
+    @JsonKey(readValue: _readDiscordMessageId) String? discordMessageId,
+    String? logUrl,
+    @Default(<String>[]) List<String> warnings,
 
-  /// Null for a handful of legacy/cron records with no recorded action —
-  /// see docs/rest-api.md. Every job created through an Action always has
-  /// one; this only stays nullable for those historical outliers.
-  final String? actionName;
-  final Map<String, dynamic> actionParams;
-  final Map<String, dynamic> environments;
-  final String? createdBy;
-  final int? artifactKey;
-  final bool promoted;
-  final bool announce;
-  final DateTime createdAt;
-  final DateTime? startedAt;
-  final DateTime? finishedAt;
-  final int? exitCode;
-  final String? lastLine;
-  final int lastSeq;
-  final String? discordChannelId;
-  final String? discordMessageId;
-  final String? logUrl;
-  final List<String> warnings;
+    /// Only populated on `/cancel` responses — the confirmation text.
+    String? message,
 
-  /// Only populated on `/cancel` responses — the confirmation text.
-  final String? message;
+    /// Id of the job this one replaced after a server restart re-invoked its
+    /// recorded action — see docs/rest-api.md "Restart mid-build". Null for
+    /// every job created the normal way.
+    String? resumedFrom,
+  }) = _Job;
 
-  /// Id of the job this one replaced after a server restart re-invoked its
-  /// recorded action — see docs/rest-api.md "Restart mid-build". Null for
-  /// every job created the normal way.
-  final String? resumedFrom;
+  // Freezed only recognises this exact one-line delegating form as "this
+  // class wants JSON codegen" and hands off to json_serializable for it —
+  // a custom body here (even one that just preprocesses `json` first) makes
+  // freezed skip generating `_$JobFromJson`/`toJson` for this class
+  // entirely, silently, with no error. The `discord`-nesting workaround
+  // that used to live here moved to `readValue` callbacks on the two fields
+  // instead, which json_serializable supports declaratively.
+  factory Job.fromJson(Map<String, dynamic> json) => _$JobFromJson(json);
 
   bool get isTerminal => state.isTerminal;
 
@@ -99,42 +70,6 @@ class Job {
     if (start == null) return null;
     return (finishedAt ?? DateTime.now()).difference(start);
   }
-
-  /// `logUrl`/`warnings` only appear on the job-creation response — a later
-  /// `GET /jobs/{id}` won't carry them. Callers that already know those
-  /// values can preserve them across a refetch instead of losing them; the
-  /// other overrides exist for applying an SSE `finished` event in place.
-  Job copyWith({
-    JobState? state,
-    DateTime? finishedAt,
-    int? exitCode,
-    int? lastSeq,
-    String? logUrl,
-    List<String>? warnings,
-  }) => Job(
-    id: id,
-    state: state ?? this.state,
-    command: command,
-    actionName: actionName,
-    actionParams: actionParams,
-    environments: environments,
-    createdBy: createdBy,
-    artifactKey: artifactKey,
-    promoted: promoted,
-    announce: announce,
-    createdAt: createdAt,
-    startedAt: startedAt,
-    finishedAt: finishedAt ?? this.finishedAt,
-    exitCode: exitCode ?? this.exitCode,
-    lastLine: lastLine,
-    lastSeq: lastSeq ?? this.lastSeq,
-    discordChannelId: discordChannelId,
-    discordMessageId: discordMessageId,
-    logUrl: logUrl ?? this.logUrl,
-    warnings: warnings ?? this.warnings,
-    message: message,
-    resumedFrom: resumedFrom,
-  );
 }
 
 enum JobState {
@@ -163,4 +98,17 @@ enum JobState {
     JobState.interrupted => true,
     _ => false,
   };
+}
+
+/// Routes through [JobState.fromWire] instead of json_serializable's
+/// `unknownEnumValue`, so an unrecognised wire string keeps falling back to
+/// [JobState.unknown] exactly the way the hand-written decoder always did.
+class JobStateConverter implements JsonConverter<JobState, String> {
+  const JobStateConverter();
+
+  @override
+  JobState fromJson(String json) => JobState.fromWire(json);
+
+  @override
+  String toJson(JobState object) => object.name;
 }

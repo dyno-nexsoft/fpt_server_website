@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../../core/api/api_exception.dart';
 import '../../../core/models/action_schema.dart';
@@ -9,6 +8,7 @@ import '../../../core/providers/catalogue_providers.dart';
 import '../../../core/providers/core_providers.dart';
 import '../../../core/providers/job_seed_provider.dart';
 import '../../../core/providers/status_provider.dart';
+import '../../../core/router/app_router.dart';
 import '../../../core/storage/action_template_store.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../shared/toast/app_toast.dart';
@@ -167,7 +167,7 @@ class _ActionFormScreenState extends ConsumerState<ActionFormScreen> {
         // GET /jobs/{id} won't carry logUrl/warnings — seed them for the
         // detail screen this navigates to next.
         ref.read(pendingJobSeedProvider.notifier).set(job);
-        if (mounted) context.go('/builds/${job.id}');
+        if (mounted) JobDetailRoute(job.id).go(context);
         return;
       }
       final message = response['message'] as String?;

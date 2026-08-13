@@ -1,21 +1,17 @@
+import 'package:freezed_annotation/freezed_annotation.dart';
+
+part 'health.freezed.dart';
+part 'health.g.dart';
+
 /// `GET /health` — the only unauthenticated endpoint.
-class Health {
-  const Health({
-    required this.ok,
-    required this.version,
-    required this.uptimeSeconds,
-    required this.hostname,
-  });
+@freezed
+abstract class Health with _$Health {
+  const factory Health({
+    required bool ok,
+    required String version,
+    required int uptimeSeconds,
+    required String hostname,
+  }) = _Health;
 
-  factory Health.fromJson(Map<String, dynamic> json) => Health(
-    ok: json['ok'] as bool,
-    version: json['version'] as String,
-    uptimeSeconds: json['uptimeSeconds'] as int,
-    hostname: json['hostname'] as String,
-  );
-
-  final bool ok;
-  final String version;
-  final int uptimeSeconds;
-  final String hostname;
+  factory Health.fromJson(Map<String, dynamic> json) => _$HealthFromJson(json);
 }

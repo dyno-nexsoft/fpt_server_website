@@ -212,7 +212,9 @@ class JobLogController extends Notifier<JobLogState> {
     if (_disposed) return;
     final merged = job.copyWith(
       logUrl: job.logUrl ?? _seed?.logUrl,
-      warnings: job.warnings.isNotEmpty ? job.warnings : _seed?.warnings,
+      warnings: job.warnings.isNotEmpty
+          ? job.warnings
+          : _seed?.warnings ?? job.warnings,
     );
     state = state.copyWith(job: merged);
   }
@@ -220,7 +222,7 @@ class JobLogController extends Notifier<JobLogState> {
   Future<void> _fetchLogOnce() async {
     final api = ref.read(apiClientProvider);
     final response = await api.getRaw('/jobs/$jobId/log', query: {'offset': 0});
-    _appendRaw(response.body);
+    _appendRaw(response.body ?? '');
     _flushNow();
   }
 
@@ -274,7 +276,7 @@ class JobLogController extends Notifier<JobLogState> {
           state: JobState.fromWire(event.state ?? 'succeeded'),
           finishedAt: DateTime.now(),
           exitCode: event.exitCode,
-          lastSeq: event.seq,
+          lastSeq: event.seq ?? job.lastSeq,
         ),
       );
     }
@@ -298,7 +300,7 @@ class JobLogController extends Notifier<JobLogState> {
         '/jobs/$jobId/log',
         query: {'offset': _nextOffset},
       );
-      _appendRaw(response.body);
+      _appendRaw(response.body ?? '');
       final nextOffsetHeader = response.headers['x-log-next-offset'];
       if (nextOffsetHeader != null) {
         _nextOffset = int.tryParse(nextOffsetHeader) ?? _nextOffset;

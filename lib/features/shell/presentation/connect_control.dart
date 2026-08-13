@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../../core/providers/connection_provider.dart';
 import '../../../core/providers/session_provider.dart';
+import '../../../core/router/app_router.dart';
 import 'app_bar_toggle_chip.dart';
 
 /// The app bar's Sign-out/Connect control — self-contained (reads
@@ -24,7 +24,7 @@ class ConnectControl extends ConsumerWidget {
         compact: compact,
         icon: Icons.login,
         label: 'Connect',
-        onPressed: () => context.go('/login'),
+        onPressed: () => const LoginRoute().go(context),
       );
     }
     return AppBarToggleChip(
@@ -33,7 +33,7 @@ class ConnectControl extends ConsumerWidget {
       label: 'Sign out',
       onPressed: () async {
         await ref.read(connectionControllerProvider.notifier).logout();
-        if (context.mounted) context.go('/login');
+        if (context.mounted) const LoginRoute().go(context);
       },
     );
   }

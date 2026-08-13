@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../../core/api/api_exception.dart';
 import '../../../core/browser/browser_utils.dart';
 import '../../../core/providers/catalogue_providers.dart';
 import '../../../core/providers/connection_provider.dart';
 import '../../../core/providers/session_provider.dart';
+import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../shared/toast/app_toast.dart';
 
@@ -180,7 +180,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       : const Text('Connect'),
                 ),
                 TextButton(
-                  onPressed: () => context.go('/dashboard'),
+                  onPressed: () => const DashboardRoute().go(context),
                   child: const Text('Continue browsing without a key'),
                 ),
               ],

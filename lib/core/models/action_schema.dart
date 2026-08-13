@@ -1,30 +1,25 @@
+import 'package:freezed_annotation/freezed_annotation.dart';
+
+part 'action_schema.freezed.dart';
+part 'action_schema.g.dart';
+
 /// One entry from `GET /actions` / `GET /actions/{name}`. Forms and nav
 /// menus are generated from this instead of being hand-written per action,
 /// so the UI cannot drift from what the server actually accepts.
-class ActionSchema {
-  const ActionSchema({
-    required this.name,
-    required this.description,
-    required this.kind,
-    required this.permission,
-    required this.params,
-  });
+@freezed
+abstract class ActionSchema with _$ActionSchema {
+  const ActionSchema._();
 
-  factory ActionSchema.fromJson(Map<String, dynamic> json) => ActionSchema(
-    name: json['name'] as String,
-    description: json['description'] as String? ?? '',
-    kind: ActionKind.fromWire(json['kind'] as String),
-    permission: json['permission'] as String,
-    params: (json['params'] as List<dynamic>? ?? [])
-        .map((p) => ActionParam.fromJson(p as Map<String, dynamic>))
-        .toList(),
-  );
+  const factory ActionSchema({
+    required String name,
+    @Default('') String description,
+    @ActionKindConverter() required ActionKind kind,
+    required String permission,
+    @Default(<ActionParam>[]) List<ActionParam> params,
+  }) = _ActionSchema;
 
-  final String name;
-  final String description;
-  final ActionKind kind;
-  final String permission;
-  final List<ActionParam> params;
+  factory ActionSchema.fromJson(Map<String, dynamic> json) =>
+      _$ActionSchemaFromJson(json);
 
   bool get isDangerous => permission == 'invokeDangerous';
 }
@@ -42,38 +37,34 @@ enum ActionKind {
   };
 }
 
-class ActionParam {
-  const ActionParam({
-    required this.name,
-    required this.description,
-    required this.type,
-    required this.required,
-    this.choices = const [],
-    this.defaultValue,
-    this.isBranchRef = false,
-  });
+class ActionKindConverter implements JsonConverter<ActionKind, String> {
+  const ActionKindConverter();
 
-  factory ActionParam.fromJson(Map<String, dynamic> json) => ActionParam(
-    name: json['name'] as String,
-    description: json['description'] as String? ?? '',
-    type: ActionParamType.fromWire(json['type'] as String),
-    required: json['required'] as bool? ?? false,
-    choices: (json['choices'] as List<dynamic>?)?.cast<String>() ?? const [],
-    defaultValue: json['default'],
-    isBranchRef: json['is_branch_ref'] as bool? ?? false,
-  );
+  @override
+  ActionKind fromJson(String json) => ActionKind.fromWire(json);
 
-  final String name;
-  final String description;
-  final ActionParamType type;
-  final bool required;
-  final List<String> choices;
-  final dynamic defaultValue;
+  @override
+  String toJson(ActionKind object) => object.name;
+}
 
-  /// Whether this string param is a git branch name — see
-  /// `ParamSpec.isBranchRef` on the server. `name` doubles as the repo key
-  /// for `GET /autocomplete/branches?repo={name}`.
-  final bool isBranchRef;
+@freezed
+abstract class ActionParam with _$ActionParam {
+  const factory ActionParam({
+    required String name,
+    @Default('') String description,
+    @ActionParamTypeConverter() required ActionParamType type,
+    @Default(false) bool required,
+    @Default(<String>[]) List<String> choices,
+    @JsonKey(name: 'default') dynamic defaultValue,
+
+    /// Whether this string param is a git branch name — see
+    /// `ParamSpec.isBranchRef` on the server. `name` doubles as the repo key
+    /// for `GET /autocomplete/branches?repo={name}`.
+    @Default(false) bool isBranchRef,
+  }) = _ActionParam;
+
+  factory ActionParam.fromJson(Map<String, dynamic> json) =>
+      _$ActionParamFromJson(json);
 }
 
 enum ActionParamType {
@@ -91,4 +82,15 @@ enum ActionParamType {
     'enumeration' => ActionParamType.enumeration,
     _ => ActionParamType.string,
   };
+}
+
+class ActionParamTypeConverter
+    implements JsonConverter<ActionParamType, String> {
+  const ActionParamTypeConverter();
+
+  @override
+  ActionParamType fromJson(String json) => ActionParamType.fromWire(json);
+
+  @override
+  String toJson(ActionParamType object) => object.name;
 }

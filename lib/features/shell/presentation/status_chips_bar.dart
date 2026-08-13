@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../../core/providers/status_provider.dart';
+import '../../../core/router/app_router.dart';
 import 'app_bar_toggle_chip.dart';
 
 /// Running/queued counts, inline in the app bar's title — a
@@ -33,7 +33,8 @@ class StatusChipsBar extends ConsumerWidget {
                 compact: compact,
                 icon: Icons.autorenew,
                 label: 'Running',
-                onPressed: () => context.go('/builds?state=running'),
+                onPressed: () =>
+                    const BuildsRoute(state: 'running').go(context),
               ),
             ),
             Badge.count(
@@ -43,7 +44,8 @@ class StatusChipsBar extends ConsumerWidget {
                 compact: compact,
                 icon: Icons.schedule,
                 label: 'Queued',
-                onPressed: () => context.go('/builds?state=queued'),
+                onPressed: () =>
+                    const BuildsRoute(state: 'queued').go(context),
               ),
             ),
           ],

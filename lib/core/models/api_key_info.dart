@@ -1,27 +1,33 @@
+import 'package:freezed_annotation/freezed_annotation.dart';
+
+part 'api_key_info.freezed.dart';
+part 'api_key_info.g.dart';
+
+/// The server sends this as a raw Discord snowflake (a number in practice,
+/// but never guaranteed) — normalised to a string, the only type a JSON id
+/// should ever surface as here. A field-level converter rather than a
+/// custom `fromJson` body: freezed only recognises the plain one-line
+/// `=> _$ApiKeyInfoFromJson(json)` form as "generate JSON code for this
+/// class" and silently skips it for anything else (see `Job.fromJson`'s doc
+/// comment in job.dart for the same pitfall).
+String? _discordUserIdFromJson(Object? value) => value?.toString();
+
 /// One row from `admin.apiKeys.list`. `keyHash` is always truncated to 8 hex
 /// chars server-side — never the full hash, never the secret.
-class ApiKeyInfo {
-  const ApiKeyInfo({
-    required this.id,
-    required this.name,
-    required this.keyHash,
-    required this.scopes,
-    this.discordUserId,
-  });
+@freezed
+abstract class ApiKeyInfo with _$ApiKeyInfo {
+  const ApiKeyInfo._();
 
-  factory ApiKeyInfo.fromJson(Map<String, dynamic> json) => ApiKeyInfo(
-    id: json['id'] as String,
-    name: json['name'] as String,
-    keyHash: json['key_hash'] as String,
-    scopes: (json['scopes'] as List<dynamic>).cast<String>(),
-    discordUserId: json['discord_user_id']?.toString(),
-  );
+  const factory ApiKeyInfo({
+    required String id,
+    required String name,
+    required String keyHash,
+    required List<String> scopes,
+    @JsonKey(fromJson: _discordUserIdFromJson) String? discordUserId,
+  }) = _ApiKeyInfo;
 
-  final String id;
-  final String name;
-  final String keyHash;
-  final List<String> scopes;
-  final String? discordUserId;
+  factory ApiKeyInfo.fromJson(Map<String, dynamic> json) =>
+      _$ApiKeyInfoFromJson(json);
 
   bool get isAdmin => scopes.contains('admin');
 

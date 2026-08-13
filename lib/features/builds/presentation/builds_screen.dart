@@ -6,6 +6,7 @@ import '../../../core/api/jobs_api.dart';
 import '../../../core/models/job.dart';
 import '../../../core/providers/core_providers.dart';
 import '../../../core/providers/status_provider.dart';
+import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../shared/auth_guard.dart';
 import '../../../shared/utils/format.dart';
@@ -117,7 +118,7 @@ class _BuildsScreenState extends ConsumerState<BuildsScreen> {
                         onTap: () {
                           controller.closeView(job.actionName ?? job.id);
                           setState(() => _search = '');
-                          context.go('/builds/${job.id}');
+                          JobDetailRoute(job.id).go(context);
                         },
                       ),
                   ];
@@ -248,7 +249,7 @@ class _JobsTable extends ConsumerWidget {
         ? formatDuration((end ?? DateTime.now()).difference(start))
         : null;
     return DataRow(
-      onSelectChanged: (_) => context.go('/builds/${job.id}'),
+      onSelectChanged: (_) => JobDetailRoute(job.id).go(context),
       cells: [
         DataCell(Text(job.id)),
         DataCell(EllipsisText(job.actionName ?? job.command, maxWidth: 200)),
@@ -276,7 +277,7 @@ class _JobsTable extends ConsumerWidget {
         : null;
 
     Widget cell(Widget child) => TableRowInkWell(
-      onTap: () => context.go('/builds/${job.id}'),
+      onTap: () => JobDetailRoute(job.id).go(context),
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
         child: Align(alignment: Alignment.centerLeft, child: child),

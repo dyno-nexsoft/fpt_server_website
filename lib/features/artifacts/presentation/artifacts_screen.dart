@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../../core/api/api_exception.dart';
 import '../../../core/browser/browser_utils.dart';
 import '../../../core/models/artifact_file.dart';
 import '../../../core/providers/session_provider.dart';
+import '../../../core/router/app_router.dart';
 import '../../../shared/utils/format.dart';
 import '../../../shared/widgets/error_view.dart';
 import '../application/artifacts_provider.dart';
@@ -84,7 +84,7 @@ class _ArtifactsGone extends StatelessWidget {
           textAlign: TextAlign.center,
         ),
         TextButton.icon(
-          onPressed: () => context.go('/builds'),
+          onPressed: () => const BuildsRoute().go(context),
           icon: const Icon(Icons.list_alt_outlined),
           label: const Text('Back to Builds'),
         ),
@@ -113,7 +113,7 @@ class _ArtifactList extends ConsumerWidget {
               title: Text(job.actionName ?? job.command),
               subtitle: Text('Job ${job.id}'),
               trailing: FilledButton.tonal(
-                onPressed: () => context.go('/builds/${job.id}'),
+                onPressed: () => JobDetailRoute(job.id).go(context),
                 child: const Text('Open build'),
               ),
             ),

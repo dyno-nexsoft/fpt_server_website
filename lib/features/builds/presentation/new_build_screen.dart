@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../../core/providers/catalogue_providers.dart';
+import '../../../core/router/app_router.dart';
 import '../../../shared/widgets/error_view.dart';
 
 /// Where the "New build" control lands — picking a specific action to run
@@ -56,7 +56,7 @@ class NewBuildScreen extends ConsumerWidget {
                               : Text(action.description),
                           trailing: const Icon(Icons.chevron_right),
                           onTap: () =>
-                              context.go('/builds/actions/${action.name}'),
+                              ActionFormRoute(action.name).go(context),
                         ),
                       ),
                   ],

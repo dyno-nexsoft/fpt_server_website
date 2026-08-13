@@ -15,6 +15,8 @@ import '../../features/shell/presentation/app_shell.dart';
 import '../providers/connection_provider.dart';
 import '../providers/session_provider.dart';
 
+part 'app_router.g.dart';
+
 /// Bridges Riverpod state changes into `go_router`'s `Listenable`-based
 /// refresh mechanism, and centralizes the auth redirect described in
 /// `docs/web-ui-wireframe.md` "Auth flow".
@@ -75,73 +77,138 @@ final routerProvider = Provider<GoRouter>((ref) {
     initialLocation: '/dashboard',
     refreshListenable: notifier,
     redirect: notifier.redirect,
-    routes: [
-      GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
-      ShellRoute(
-        builder: (_, _, child) => AppShell(child: child),
-        routes: [
-          GoRoute(
-            path: '/dashboard',
-            builder: (context, state) => const DashboardScreen(),
-          ),
-          GoRoute(
-            path: '/builds',
-            builder: (context, state) => const BuildsScreen(),
-            routes: [
-              // Picking which action to run (`actions`) and filling in its
-              // form (`actions/:name`) are both "starting a build", so they
-              // nest under Builds together instead of the form living as an
-              // unrelated top-level `/actions/:name` sibling.
-              GoRoute(
-                path: 'actions',
-                builder: (context, state) => const NewBuildScreen(),
-                routes: [
-                  GoRoute(
-                    path: ':name',
-                    builder: (context, state) {
-                      final name = state.pathParameters['name']!;
-                      return ActionFormScreen(
-                        key: ValueKey(name),
-                        actionName: name,
-                      );
-                    },
-                  ),
-                ],
-              ),
-              // A specific build/job — nested so its URL reads as "the
-              // thing under Builds it is", not a sibling of unrelated top
-              // level sections.
-              GoRoute(
-                path: ':id',
-                builder: (context, state) {
-                  final id = state.pathParameters['id']!;
-                  return JobDetailScreen(key: ValueKey(id), jobId: id);
-                },
-              ),
-              // The file server redirects `/<artifactKey>/` here — see
-              // `ftp_handler.dart`'s `_redirectToArtifactBrowser`, and
-              // `BuildButton._outputDirectoryButton`'s Discord link.
-              GoRoute(
-                path: 'artifacts/:key',
-                builder: (context, state) {
-                  final key = state.pathParameters['key']!;
-                  return ArtifactsScreen(key: ValueKey(key), artifactKey: key);
-                },
-              ),
-            ],
-          ),
-          GoRoute(
-            path: '/settings',
-            builder: (context, state) => const SettingsScreen(),
-            routes: [
-              GoRoute(
-                path: 'logs',
-                builder: (context, state) => const ServerLogsScreen(),
-              ),
-            ],
-          ),
-        ],
-      ),
-    ],
+    routes: $appRoutes,
   );
 });
+
+// ─── Typed routes ──────────────────────────────────────────────────────────
+//
+// Each class below is both the route's *definition* (path, nesting, which
+// screen it builds) and its *call site* — navigating is `const
+// JobDetailRoute(id: job.id).go(context)` instead of
+// `context.go('/builds/${job.id}')`, so a typo'd path or a mismatched
+// parameter is a compile error instead of a dead link discovered by
+// clicking it.
+
+@TypedGoRoute<LoginRoute>(path: '/login')
+class LoginRoute extends GoRouteData with $LoginRoute {
+  const LoginRoute();
+
+  @override
+  Widget build(BuildContext context, GoRouterState state) =>
+      const LoginScreen();
+}
+
+@TypedShellRoute<AppShellRouteData>(
+  routes: [
+    TypedGoRoute<DashboardRoute>(path: '/dashboard'),
+    TypedGoRoute<BuildsRoute>(
+      path: '/builds',
+      routes: [
+        // Picking which action to run (`actions`) and filling in its form
+        // (`actions/:name`) are both "starting a build", so they nest under
+        // Builds together instead of the form living as an unrelated
+        // top-level sibling route.
+        TypedGoRoute<NewBuildRoute>(
+          path: 'actions',
+          routes: [TypedGoRoute<ActionFormRoute>(path: ':name')],
+        ),
+        // A specific build/job — nested so its URL reads as "the thing
+        // under Builds it is", not a sibling of unrelated top level
+        // sections.
+        TypedGoRoute<JobDetailRoute>(path: ':id'),
+        // The file server redirects `/<artifactKey>/` here — see
+        // `ftp_handler.dart`'s `_redirectToArtifactBrowser`, and
+        // `BuildButton._outputDirectoryButton`'s Discord link.
+        TypedGoRoute<ArtifactsRoute>(path: 'artifacts/:key'),
+      ],
+    ),
+    TypedGoRoute<SettingsRoute>(
+      path: '/settings',
+      routes: [TypedGoRoute<ServerLogsRoute>(path: 'logs')],
+    ),
+  ],
+)
+class AppShellRouteData extends ShellRouteData {
+  const AppShellRouteData();
+
+  @override
+  Widget builder(BuildContext context, GoRouterState state, Widget navigator) =>
+      AppShell(child: navigator);
+}
+
+class DashboardRoute extends GoRouteData with $DashboardRoute {
+  const DashboardRoute();
+
+  @override
+  Widget build(BuildContext context, GoRouterState state) =>
+      const DashboardScreen();
+}
+
+class BuildsRoute extends GoRouteData with $BuildsRoute {
+  const BuildsRoute({this.state});
+
+  /// `?state=running`/`?state=queued` etc. — read by [BuildsScreen] itself
+  /// off the ambient `GoRouterState` rather than as a constructor argument,
+  /// so a filter chip tapped locally still works the same way regardless of
+  /// whether this screen was reached via a typed route or a raw URL.
+  final String? state;
+
+  @override
+  Widget build(BuildContext context, GoRouterState state) =>
+      const BuildsScreen();
+}
+
+class NewBuildRoute extends GoRouteData with $NewBuildRoute {
+  const NewBuildRoute();
+
+  @override
+  Widget build(BuildContext context, GoRouterState state) =>
+      const NewBuildScreen();
+}
+
+class ActionFormRoute extends GoRouteData with $ActionFormRoute {
+  const ActionFormRoute(this.name);
+
+  final String name;
+
+  @override
+  Widget build(BuildContext context, GoRouterState state) =>
+      ActionFormScreen(key: ValueKey(name), actionName: name);
+}
+
+class JobDetailRoute extends GoRouteData with $JobDetailRoute {
+  const JobDetailRoute(this.id);
+
+  final String id;
+
+  @override
+  Widget build(BuildContext context, GoRouterState state) =>
+      JobDetailScreen(key: ValueKey(id), jobId: id);
+}
+
+class ArtifactsRoute extends GoRouteData with $ArtifactsRoute {
+  const ArtifactsRoute(this.key);
+
+  final String key;
+
+  @override
+  Widget build(BuildContext context, GoRouterState state) =>
+      ArtifactsScreen(key: ValueKey(key), artifactKey: key);
+}
+
+class SettingsRoute extends GoRouteData with $SettingsRoute {
+  const SettingsRoute();
+
+  @override
+  Widget build(BuildContext context, GoRouterState state) =>
+      const SettingsScreen();
+}
+
+class ServerLogsRoute extends GoRouteData with $ServerLogsRoute {
+  const ServerLogsRoute();
+
+  @override
+  Widget build(BuildContext context, GoRouterState state) =>
+      const ServerLogsScreen();
+}
