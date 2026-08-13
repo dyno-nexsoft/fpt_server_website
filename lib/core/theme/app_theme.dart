@@ -37,12 +37,20 @@ abstract final class AppTheme {
     contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
   );
 
+  static final _pageTransitionsTheme = PageTransitionsTheme(
+    builders: {
+      for (final e in TargetPlatform.values)
+        e: PredictiveBackPageTransitionsBuilder(),
+    },
+  );
+
   static final ThemeData light = ThemeData(
     colorScheme: ColorScheme.fromSeed(
       seedColor: Colors.blueGrey,
       brightness: Brightness.light,
     ),
     inputDecorationTheme: _inputDecorationTheme,
+    pageTransitionsTheme: _pageTransitionsTheme,
   );
 
   static final ThemeData dark = ThemeData(
@@ -51,5 +59,6 @@ abstract final class AppTheme {
       brightness: Brightness.dark,
     ),
     inputDecorationTheme: _inputDecorationTheme,
+    pageTransitionsTheme: _pageTransitionsTheme,
   );
 }
