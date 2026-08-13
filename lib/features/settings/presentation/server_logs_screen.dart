@@ -43,10 +43,7 @@ class ServerLogsScreen extends ConsumerWidget {
                   child: Text('Connect with an admin key to view server logs.'),
                 );
               }
-              return Padding(
-                padding: const EdgeInsets.all(12),
-                child: LogViewer(lines: lines, startAtBottom: true),
-              );
+              return LogViewer(lines: lines, startAtBottom: true);
             },
             loading: () => const Center(child: CircularProgressIndicator()),
             error: (error, _) => ErrorView(error: error),
