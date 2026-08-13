@@ -130,33 +130,42 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     ),
                   ),
                 ),
-                TextField(
-                  controller: _serverController,
-                  keyboardType: TextInputType.url,
-                  decoration: const InputDecoration(
-                    labelText: 'Server URL',
-                    hintText: 'http://localhost:8080',
-                    prefixIcon: Icon(Icons.dns_outlined),
-                  ),
-                ),
-                TextField(
-                  controller: _keyController,
-                  obscureText: _obscureKey,
-                  autocorrect: false,
-                  enableSuggestions: false,
-                  autofillHints: const [],
-                  decoration: InputDecoration(
-                    labelText: 'API key',
-                    prefixIcon: const Icon(Icons.key_outlined),
-                    suffixIcon: IconButton(
-                      icon: Icon(
-                        _obscureKey ? Icons.visibility : Icons.visibility_off,
+                AutofillGroup(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    spacing: 16,
+                    children: [
+                      TextField(
+                        controller: _serverController,
+                        keyboardType: TextInputType.url,
+                        autofillHints: const [AutofillHints.url],
+                        decoration: const InputDecoration(
+                          labelText: 'Server URL',
+                          hintText: 'http://localhost:8080',
+                          prefixIcon: Icon(Icons.dns_outlined),
+                        ),
                       ),
-                      onPressed: () =>
-                          setState(() => _obscureKey = !_obscureKey),
-                    ),
+                      TextField(
+                        controller: _keyController,
+                        obscureText: _obscureKey,
+                        autofillHints: const [AutofillHints.password],
+                        decoration: InputDecoration(
+                          labelText: 'API key',
+                          prefixIcon: const Icon(Icons.key_outlined),
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              _obscureKey
+                                  ? Icons.visibility
+                                  : Icons.visibility_off,
+                            ),
+                            onPressed: () =>
+                                setState(() => _obscureKey = !_obscureKey),
+                          ),
+                        ),
+                        onSubmitted: (_) => _connect(),
+                      ),
+                    ],
                   ),
-                  onSubmitted: (_) => _connect(),
                 ),
                 if (connection.hasError)
                   _ConnectError(
