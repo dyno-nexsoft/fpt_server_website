@@ -3,19 +3,18 @@ import 'dart:convert';
 import 'package:chopper/chopper.dart';
 
 import 'api_exception.dart';
+import 'fpt_api.dart';
 
-/// Thin wrapper over `package:chopper` for the `/api/v1` REST surface.
+/// Thin wrapper over the generated [FptApi] chopper service.
 ///
-/// Chopper here is used for its request/response pipeline (interceptors,
-/// converters, typed `Response`) rather than its `@ChopperApi` code
-/// generation — the paths this client calls are built from a runtime path
-/// string (`/jobs/$id/cancel`, `/actions/${action.name}`), which an
-/// annotation-based generated service has no natural way to express short of
-/// one hand-written method per endpoint. [Response] bodies are always
-/// requested as `String` and JSON-decoded here, exactly like the
-/// `package:http`-based version this replaced — that keeps error handling
-/// (a non-2xx response, a malformed body) in one place instead of split
-/// between this class and a generated service.
+/// [FptApi] defines the endpoints (paths, methods, params) as typed,
+/// compile-checked methods — see its doc comment. This class adds the one
+/// thing that's the same for every endpoint: validating the response and
+/// decoding its body, so that logic lives in one place instead of being
+/// repeated (or drifting) across callers.
+///
+/// Deliberately no `converter:` on [ChopperClient] — see [FptApi]'s doc
+/// comment for why a `JsonConverter` is actively wrong here.
 ///
 /// [baseUrl] has no trailing slash and already includes `/api/v1`.
 /// [apiKey] is sent as `X-API-Key`; `null` means unauthenticated (only
@@ -24,7 +23,7 @@ class ApiClient {
   ApiClient({required this.baseUrl, required this.apiKey})
     : _chopper = ChopperClient(
         baseUrl: Uri.parse(baseUrl),
-        converter: const JsonConverter(),
+        services: [FptApi.create()],
         interceptors: [
           if (apiKey != null && apiKey.isNotEmpty)
             HeadersInterceptor({'X-API-Key': apiKey}),
@@ -35,62 +34,14 @@ class ApiClient {
   final String? apiKey;
   final ChopperClient _chopper;
 
-  Uri _uri(String path, [Map<String, dynamic>? query]) {
-    final full = Uri.parse('$baseUrl$path');
-    if (query == null || query.isEmpty) return full;
-    return full.replace(
-      queryParameters: {
-        ...full.queryParameters,
-        for (final entry in query.entries)
-          if (entry.value != null) entry.key: entry.value.toString(),
-      },
-    );
-  }
+  /// The typed REST methods. Prefer this over adding more decode helpers
+  /// below for a new endpoint — decoding its result is the caller's job.
+  late final FptApi endpoints = _chopper.getService<FptApi>();
 
-  Future<Map<String, dynamic>> getJson(
-    String path, {
-    Map<String, dynamic>? query,
-  }) async {
-    final response = await _send(
-      Request('GET', _uri(path, query), Uri.parse(baseUrl)),
-    );
-    return _decodeObject(response.body);
-  }
-
-  Future<List<dynamic>> getJsonList(
-    String path, {
-    Map<String, dynamic>? query,
-    required String listKey,
-  }) async {
-    final body = await getJson(path, query: query);
-    return body[listKey] as List<dynamic>? ?? [];
-  }
-
-  Future<Map<String, dynamic>> postJson(
-    String path, [
-    Map<String, dynamic>? body,
-  ]) async {
-    final response = await _send(
-      Request(
-        'POST',
-        _uri(path),
-        Uri.parse(baseUrl),
-        body: jsonEncode(body ?? {}),
-        headers: const {'Content-Type': 'application/json'},
-      ),
-    );
-    return _decodeObject(response.body);
-  }
-
-  /// Raw text fetch for the `/jobs/{id}/log?offset=` polling fallback —
-  /// callers need the `X-Log-Next-Offset` response header, not just JSON.
-  Future<Response<String>> getRaw(String path, {Map<String, dynamic>? query}) =>
-      _send(Request('GET', _uri(path, query), Uri.parse(baseUrl)));
-
-  Future<Response<String>> _send(Request request) async {
+  Future<Response<String>> _send(Future<Response<String>> request) async {
     late Response<String> response;
     try {
-      response = await _chopper.send<String, String>(request);
+      response = await request;
     } catch (e) {
       throw ApiException.network(e.toString());
     }
@@ -109,6 +60,34 @@ class ApiClient {
     }
     throw ApiException.fromResponseBody(response.statusCode, body);
   }
+
+  /// Runs [request], then decodes its body as a JSON object.
+  Future<Map<String, dynamic>> decodeMap(
+    Future<Response<String>> request,
+  ) async {
+    final response = await _send(request);
+    return _decodeObject(response.body);
+  }
+
+  /// Runs [request], then decodes its body and pulls out the array at
+  /// [listKey] — the shape every list endpoint here uses (`{jobs: [...]}`,
+  /// `{actions: [...]}`, `{branches: [...]}`).
+  Future<List<dynamic>> decodeList(
+    Future<Response<String>> request, {
+    required String listKey,
+  }) async {
+    final body = await decodeMap(request);
+    return body[listKey] as List<dynamic>? ?? [];
+  }
+
+  /// Runs [request] and validates the response, without decoding — for the
+  /// `/jobs/{id}/log` poll, which needs the raw text plus a response header.
+  Future<Response<String>> rawText(Future<Response<String>> request) =>
+      _send(request);
+
+  /// [FptApi.invokeAction] takes an already-encoded JSON string, not a
+  /// `Map` — see its doc comment for why nothing auto-encodes it.
+  String encodeBody(Map<String, dynamic> body) => jsonEncode(body);
 
   Map<String, dynamic> _decodeObject(String? body) {
     if (body == null || body.isEmpty) return const {};

@@ -221,7 +221,7 @@ class JobLogController extends Notifier<JobLogState> {
 
   Future<void> _fetchLogOnce() async {
     final api = ref.read(apiClientProvider);
-    final response = await api.getRaw('/jobs/$jobId/log', query: {'offset': 0});
+    final response = await api.rawText(api.endpoints.getJobLog(jobId, 0));
     _appendRaw(response.body ?? '');
     _flushNow();
   }
@@ -296,9 +296,8 @@ class JobLogController extends Notifier<JobLogState> {
     if (_disposed) return;
     final api = ref.read(apiClientProvider);
     try {
-      final response = await api.getRaw(
-        '/jobs/$jobId/log',
-        query: {'offset': _nextOffset},
+      final response = await api.rawText(
+        api.endpoints.getJobLog(jobId, _nextOffset),
       );
       _appendRaw(response.body ?? '');
       final nextOffsetHeader = response.headers['x-log-next-offset'];

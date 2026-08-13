@@ -52,7 +52,9 @@ class StatusController extends AsyncNotifier<SystemStatus?> {
     _pollTimer?.cancel();
     final api = ref.read(apiClientProvider);
     try {
-      final status = SystemStatus.fromJson(await api.getJson('/status'));
+      final status = SystemStatus.fromJson(
+        await api.decodeMap(api.endpoints.status()),
+      );
       state = AsyncData(status);
     } catch (e, stackTrace) {
       state = AsyncError(e, stackTrace);
@@ -74,7 +76,8 @@ class StatusController extends AsyncNotifier<SystemStatus?> {
 
   Future<void> _refreshOnceOverSse() async {
     try {
-      final json = await ref.read(apiClientProvider).getJson('/status');
+      final api = ref.read(apiClientProvider);
+      final json = await api.decodeMap(api.endpoints.status());
       state = AsyncData(SystemStatus.fromJson(json));
     } catch (_) {
       // Best-effort — the SSE connection is still the source of truth.

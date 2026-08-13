@@ -38,11 +38,16 @@ class ConnectionController extends AsyncNotifier<ConnectionResult?> {
   Future<ConnectionResult> _check() async {
     final api = ref.read(apiClientProvider);
     try {
-      await api.postJson('/actions/admin.apiKeys.list');
+      await api.decodeMap(
+        api.endpoints.invokeAction(
+          'admin.apiKeys.list',
+          api.encodeBody(const {}),
+        ),
+      );
       return const ConnectionResult(ConnectionLevel.full);
     } on ApiException catch (e) {
       if (e.isForbidden) {
-        await api.getJson('/actions');
+        await api.decodeMap(api.endpoints.listActions());
         return const ConnectionResult(ConnectionLevel.limited);
       }
       rethrow;

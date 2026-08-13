@@ -134,7 +134,9 @@ class _ActionTile extends ConsumerWidget {
 
     try {
       final api = ref.read(apiClientProvider);
-      final body = await api.postJson('/actions/$name');
+      final body = await api.decodeMap(
+        api.endpoints.invokeAction(name, api.encodeBody(const {})),
+      );
       ref
           .read(appToastProvider.notifier)
           .show(body['message'] as String? ?? 'Done');

@@ -120,7 +120,12 @@ class ApiKeysSection extends ConsumerWidget {
     if (confirmed != true) return;
     try {
       final api = ref.read(apiClientProvider);
-      await api.postJson('/actions/admin.apiKeys.remove', {'id': key.id});
+      await api.decodeMap(
+        api.endpoints.invokeAction(
+          'admin.apiKeys.remove',
+          api.encodeBody({'id': key.id}),
+        ),
+      );
       ref.invalidate(apiKeysProvider);
       ref.read(appToastProvider.notifier).show('Key deleted.');
     } on ApiException catch (e) {
@@ -155,9 +160,12 @@ class ApiKeysSection extends ConsumerWidget {
 
     try {
       final api = ref.read(apiClientProvider);
-      final body = await api.postJson('/actions/admin.apiKeys.add', {
-        'name': name,
-      });
+      final body = await api.decodeMap(
+        api.endpoints.invokeAction(
+          'admin.apiKeys.add',
+          api.encodeBody({'name': name}),
+        ),
+      );
       ref.invalidate(apiKeysProvider);
       if (context.mounted) {
         await _showSecretDialog(context, body['secret'] as String);

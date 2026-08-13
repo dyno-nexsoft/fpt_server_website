@@ -160,7 +160,9 @@ class _ActionFormScreenState extends ConsumerState<ActionFormScreen> {
 
     try {
       final api = ref.read(apiClientProvider);
-      final response = await api.postJson('/actions/${action.name}', body);
+      final response = await api.decodeMap(
+        api.endpoints.invokeAction(action.name, api.encodeBody(body)),
+      );
       ref.read(statusControllerProvider.notifier).refreshNow();
       if (action.kind == ActionKind.job) {
         final job = Job.fromJson(response);

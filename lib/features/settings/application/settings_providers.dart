@@ -17,7 +17,9 @@ final apiKeysProvider = FutureProvider.autoDispose<List<ApiKeyInfo>?>((
   final actions = await ref.watch(actionsProvider.future);
   if (findAction(actions, 'admin.apiKeys.list') == null) return null;
   final api = ref.watch(apiClientProvider);
-  final body = await api.postJson('/actions/admin.apiKeys.list');
+  final body = await api.decodeMap(
+    api.endpoints.invokeAction('admin.apiKeys.list', api.encodeBody(const {})),
+  );
   return (body['keys'] as List<dynamic>? ?? [])
       .map((e) => ApiKeyInfo.fromJson(e as Map<String, dynamic>))
       .toList();
@@ -28,6 +30,11 @@ final logsTailProvider = FutureProvider.autoDispose<List<String>?>((ref) async {
   final actions = await ref.watch(actionsProvider.future);
   if (findAction(actions, 'admin.logs.tail') == null) return null;
   final api = ref.watch(apiClientProvider);
-  final body = await api.postJson('/actions/admin.logs.tail', {'lines': 200});
+  final body = await api.decodeMap(
+    api.endpoints.invokeAction(
+      'admin.logs.tail',
+      api.encodeBody({'lines': 200}),
+    ),
+  );
   return (body['lines'] as List<dynamic>? ?? []).cast<String>();
 });

@@ -25,7 +25,10 @@ const _hiddenActionPrefixes = [
 /// `docs/web-ui-wireframe.md`. It is refetched whenever the session changes.
 final actionsProvider = FutureProvider<List<ActionSchema>>((ref) async {
   final api = ref.watch(apiClientProvider);
-  final list = await api.getJsonList('/actions', listKey: 'actions');
+  final list = await api.decodeList(
+    api.endpoints.listActions(),
+    listKey: 'actions',
+  );
   return list
       .map((e) => ActionSchema.fromJson(e as Map<String, dynamic>))
       .where((action) => !_hiddenActionPrefixes.any(action.name.startsWith))
@@ -74,7 +77,7 @@ final healthCheckProvider = FutureProvider.family<Health, String>((
 ) async {
   final client = ApiClient(baseUrl: baseUrl, apiKey: null);
   try {
-    return Health.fromJson(await client.getJson('/health'));
+    return Health.fromJson(await client.decodeMap(client.endpoints.health()));
   } finally {
     client.close();
   }
@@ -88,9 +91,8 @@ final branchAutocompleteProvider = FutureProvider.autoDispose
       if (!ref.watch(sessionProvider).hasKey) return const [];
       final (repo, query) = args;
       final api = ref.watch(apiClientProvider);
-      final list = await api.getJsonList(
-        '/autocomplete/branches',
-        query: {'repo': repo, 'query': query},
+      final list = await api.decodeList(
+        api.endpoints.autocompleteBranches(repo, query),
         listKey: 'branches',
       );
       return list.cast<String>();
@@ -111,7 +113,9 @@ final myKeyInfoProvider = FutureProvider<ApiKeyInfo?>((ref) async {
   if (findAction(actions, 'admin.apiKeys.list') == null) return null;
 
   final api = ref.watch(apiClientProvider);
-  final body = await api.postJson('/actions/admin.apiKeys.list');
+  final body = await api.decodeMap(
+    api.endpoints.invokeAction('admin.apiKeys.list', api.encodeBody(const {})),
+  );
   final keys = (body['keys'] as List<dynamic>? ?? [])
       .map((e) => ApiKeyInfo.fromJson(e as Map<String, dynamic>))
       .toList();

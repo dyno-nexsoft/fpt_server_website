@@ -22,7 +22,7 @@ class StreamToken {
 }
 
 Future<Job> fetchJob(ApiClient api, String id) async =>
-    Job.fromJson(await api.getJson('/jobs/$id'));
+    Job.fromJson(await api.decodeMap(api.endpoints.getJob(id)));
 
 /// `fields=summary` drops `environments`/`discord`/`announce`/`last_seq`
 /// server-side — none of which any list view here renders, but which can
@@ -34,27 +34,28 @@ Future<List<Job>> fetchJobs(
   String? resumedFrom,
   int limit = 20,
 }) async {
-  final list = await api.getJsonList(
-    '/jobs',
-    query: {
+  final list = await api.decodeList(
+    api.endpoints.listJobs({
       'state': ?state,
       'resumed_from': ?resumedFrom,
       'limit': limit,
       'fields': 'summary',
-    },
+    }),
     listKey: 'jobs',
   );
   return list.map((e) => Job.fromJson(e as Map<String, dynamic>)).toList();
 }
 
 Future<Job> cancelJob(ApiClient api, String id) async =>
-    Job.fromJson(await api.postJson('/jobs/$id/cancel'));
+    Job.fromJson(await api.decodeMap(api.endpoints.cancelJob(id)));
 
 Future<Job> promoteJob(ApiClient api, String id) async =>
-    Job.fromJson(await api.postJson('/jobs/$id/promote'));
+    Job.fromJson(await api.decodeMap(api.endpoints.promoteJob(id)));
 
 Future<Job> retryJob(ApiClient api, String id) async =>
-    Job.fromJson(await api.postJson('/jobs/$id/retry'));
+    Job.fromJson(await api.decodeMap(api.endpoints.retryJob(id)));
 
 Future<StreamToken> createStreamToken(ApiClient api, String id) async =>
-    StreamToken.fromJson(await api.postJson('/jobs/$id/stream-token'));
+    StreamToken.fromJson(
+      await api.decodeMap(api.endpoints.createStreamToken(id)),
+    );
