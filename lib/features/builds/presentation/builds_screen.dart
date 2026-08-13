@@ -90,15 +90,38 @@ class _BuildsScreenState extends ConsumerState<BuildsScreen> {
               const Icon(Icons.list_alt_outlined),
               Text('Builds', style: textTheme.headlineSmall),
               const Spacer(),
-              SizedBox(
-                width: 240,
-                child: TextField(
-                  decoration: const InputDecoration(
-                    prefixIcon: Icon(Icons.search),
-                    hintText: 'Search action or job id',
-                  ),
-                  onChanged: (value) => setState(() => _search = value),
+              SearchAnchor(
+                viewHintText: 'Search action or job id',
+                // Keeps the table below filtering live as the reader types,
+                // the same way the old inline field did — suggestions alone
+                // would only help someone who wants to jump straight to one
+                // match, not someone scanning a narrowed table.
+                viewOnChanged: (value) => setState(() => _search = value),
+                builder: (context, controller) => IconButton(
+                  tooltip: 'Search action or job id',
+                  icon: const Icon(Icons.search),
+                  onPressed: controller.openView,
                 ),
+                suggestionsBuilder: (context, controller) {
+                  if (controller.text.trim().isEmpty) return const [];
+                  final matches = jobs.maybeWhen(
+                    data: (list) => _filterJobs(list, controller.text),
+                    orElse: () => const <Job>[],
+                  );
+                  return [
+                    for (final job in matches.take(10))
+                      ListTile(
+                        leading: JobStateChip(state: job.state),
+                        title: Text(job.actionName ?? job.command),
+                        subtitle: Text(job.id),
+                        onTap: () {
+                          controller.closeView(job.actionName ?? job.id);
+                          setState(() => _search = '');
+                          context.go('/builds/${job.id}');
+                        },
+                      ),
+                  ];
+                },
               ),
             ],
           ),
@@ -128,17 +151,24 @@ class _BuildsScreenState extends ConsumerState<BuildsScreen> {
     );
   }
 
-  List<Job> _applySearch(List<Job> jobs) {
-    if (_search.trim().isEmpty) return jobs;
-    final query = _search.trim().toLowerCase();
-    return jobs
-        .where(
-          (job) =>
-              (job.actionName ?? job.command).toLowerCase().contains(query) ||
-              job.id.toLowerCase().contains(query),
-        )
-        .toList();
-  }
+  List<Job> _applySearch(List<Job> jobs) => _filterJobs(jobs, _search);
+}
+
+/// Shared by the table's own live filter (driven by [_search], set from
+/// `SearchAnchor.viewOnChanged`) and the search view's suggestions list
+/// (driven directly off the view's own `SearchController.text`) — the
+/// latter reads that controller straight rather than `_search` to avoid a
+/// one-keystroke lag between the two callbacks firing in the same frame.
+List<Job> _filterJobs(List<Job> jobs, String rawQuery) {
+  final query = rawQuery.trim().toLowerCase();
+  if (query.isEmpty) return jobs;
+  return jobs
+      .where(
+        (job) =>
+            (job.actionName ?? job.command).toLowerCase().contains(query) ||
+            job.id.toLowerCase().contains(query),
+      )
+      .toList();
 }
 
 class _JobsTable extends ConsumerWidget {

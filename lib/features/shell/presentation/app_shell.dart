@@ -46,20 +46,34 @@ class _AppShellState extends ConsumerState<AppShell> {
     final hasKey = ref.watch(sessionProvider).hasKey;
     final mobile = isMobileWidth(context);
 
-    final connectControl = hasKey
-        ? IconButton(
-            tooltip: 'Sign out',
-            icon: const Icon(Icons.logout),
-            onPressed: () async {
-              await ref.read(connectionControllerProvider.notifier).logout();
-              if (context.mounted) context.go('/login');
-            },
-          )
-        : IconButton(
-            tooltip: 'Connect',
-            icon: const Icon(Icons.login),
-            onPressed: () => context.go('/login'),
-          );
+    Future<void> signOut() async {
+      await ref.read(connectionControllerProvider.notifier).logout();
+      if (context.mounted) context.go('/login');
+    }
+
+    final connectControl = mobile
+        ? (hasKey
+              ? IconButton(
+                  tooltip: 'Sign out',
+                  icon: const Icon(Icons.logout),
+                  onPressed: signOut,
+                )
+              : IconButton(
+                  tooltip: 'Connect',
+                  icon: const Icon(Icons.login),
+                  onPressed: () => context.go('/login'),
+                ))
+        : (hasKey
+              ? ActionChip(
+                  avatar: const Icon(Icons.logout),
+                  label: const Text('Sign out'),
+                  onPressed: signOut,
+                )
+              : ActionChip(
+                  avatar: const Icon(Icons.login),
+                  label: const Text('Connect'),
+                  onPressed: () => context.go('/login'),
+                ));
 
     void onNavSelected(int index) => context.go(AppShell._navRoutes[index]);
 

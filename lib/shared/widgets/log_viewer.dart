@@ -42,6 +42,7 @@ class LogViewer extends StatefulWidget {
     this.autoScrollToEnd = false,
     this.startAtBottom = false,
     this.emptyMessage = '(no output yet)',
+    this.verticalController,
   });
 
   /// The complete, `\n`-terminated lines to render.
@@ -72,6 +73,13 @@ class LogViewer extends StatefulWidget {
 
   final String emptyMessage;
 
+  /// Drives vertical scrolling instead of an internally-created controller —
+  /// for a caller that needs this list to scroll as the *body* of a
+  /// [NestedScrollView] (sharing one continuous drag gesture with a header
+  /// above it) rather than as its own independent scrollable competing with
+  /// the page around it for the same gesture.
+  final ScrollController? verticalController;
+
   @override
   State<LogViewer> createState() => _LogViewerState();
 }
@@ -82,7 +90,9 @@ class _LogViewerState extends State<LogViewer> {
   /// having deliberately scrolled away.
   static const _bottomSlack = 8.0;
 
-  final _verticalController = ScrollController();
+  ScrollController? _ownedVerticalController;
+  ScrollController get _verticalController =>
+      widget.verticalController ?? _ownedVerticalController!;
   final _horizontalController = ScrollController();
   final _metrics = _LogMetrics();
 
@@ -96,6 +106,9 @@ class _LogViewerState extends State<LogViewer> {
   @override
   void initState() {
     super.initState();
+    if (widget.verticalController == null) {
+      _ownedVerticalController = ScrollController();
+    }
     _lastRowCount = _rowCount;
     if (widget.startAtBottom) _scheduleScrollToEnd();
   }
@@ -118,7 +131,7 @@ class _LogViewerState extends State<LogViewer> {
 
   @override
   void dispose() {
-    _verticalController.dispose();
+    _ownedVerticalController?.dispose();
     _horizontalController.dispose();
     _metrics.dispose();
     super.dispose();

@@ -2,13 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../core/models/job.dart';
-import '../../../shared/utils/format.dart';
 import '../../../shared/utils/responsive.dart';
-import '../../../shared/widgets/job_state_chip.dart';
-import '../../../shared/widgets/log_viewer.dart';
 import '../application/job_log_controller.dart';
-import 'job_detail_panel.dart';
+import 'job_detail_body_desktop.dart';
+import 'job_detail_body_mobile.dart';
+import 'job_header.dart';
 
 /// The core screen: does not poll, it drives an SSE connection (falling
 /// back to log polling on any stream error) via [JobLogController].
@@ -45,75 +43,21 @@ class JobDetailScreen extends ConsumerWidget {
     }
 
     final mobile = isMobileWidth(context);
+    // Mobile folds JobHeader into the scrolling body instead (see
+    // MobileJobBody) — pinning it here as well as the params panel would
+    // permanently claim two chip rows' worth of a phone's limited height.
+    if (mobile) {
+      return MobileJobBody(job: job, mode: logState.mode, logState: logState);
+    }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _JobHeader(job: job, mode: logState.mode),
+        JobHeader(job: job, mode: logState.mode),
         const Divider(height: 1),
         Expanded(
-          child: Flex(
-            direction: mobile ? Axis.vertical : Axis.horizontal,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Expanded(
-                flex: 3,
-                child: LogViewer(
-                  lines: logState.lines,
-                  pendingLine: logState.pendingLine,
-                  autoScrollToEnd: true,
-                ),
-              ),
-              mobile
-                  ? const Divider(height: 1)
-                  : const VerticalDivider(width: 1),
-              // JobDetailPanel is a ListView — it needs a bounded main-axis
-              // extent either way: a fixed width alongside the log on
-              // desktop, or a share of the remaining height below it on
-              // mobile, where a fixed height would either waste space or
-              // clip a long panel.
-              mobile
-                  ? Expanded(child: JobDetailPanel(job: job))
-                  : SizedBox(width: 320, child: JobDetailPanel(job: job)),
-            ],
-          ),
+          child: DesktopJobBody(job: job, logState: logState),
         ),
       ],
-    );
-  }
-}
-
-class _JobHeader extends StatelessWidget {
-  const _JobHeader({required this.job, required this.mode});
-
-  final Job job;
-  final LogConnectionMode mode;
-
-  String get _modeLabel => switch (mode) {
-    LogConnectionMode.connecting => 'connecting…',
-    LogConnectionMode.live => 'live',
-    LogConnectionMode.polling => 'polling',
-    LogConnectionMode.static => 'finished',
-  };
-
-  @override
-  Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-    final duration = job.runningDuration;
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: Wrap(
-        crossAxisAlignment: WrapCrossAlignment.center,
-        spacing: 12,
-        children: [
-          Text(job.id, style: textTheme.titleMedium),
-          Chip(label: Text(job.actionName ?? job.command)),
-          JobStateChip(state: job.state),
-          if (duration != null) Chip(label: Text(formatDuration(duration))),
-          Chip(label: Text(_modeLabel)),
-          if (job.resumedFrom != null)
-            Chip(label: Text('resumed from ${job.resumedFrom}')),
-        ],
-      ),
     );
   }
 }
