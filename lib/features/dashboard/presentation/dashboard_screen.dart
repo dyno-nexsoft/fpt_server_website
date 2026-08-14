@@ -141,11 +141,7 @@ class _RecentBuildsCard extends StatelessWidget {
           for (final job in jobs)
             _JobTile(
               job: job,
-              trailingText: [
-                formatRelativeTimestamp(job.createdAt),
-                if (job.startedAt != null && job.finishedAt != null)
-                  _compactDuration(job.finishedAt!.difference(job.startedAt!)),
-              ].join(' • '),
+              trailingText: formatRelativeTimestamp(job.createdAt),
             ),
         ],
       ),
@@ -156,9 +152,9 @@ class _RecentBuildsCard extends StatelessWidget {
 /// One row shared by both dashboard cards — state chip, action name, then
 /// author/params as a single truncated subtitle line, with [trailingText]
 /// (a running duration, queue position, or — for recent builds — the
-/// relative timestamp and elapsed build time) on the right. Kept as one
-/// widget rather than two near-identical ones so the two lists can never
-/// silently drift apart in layout again.
+/// relative timestamp) on the right. Kept as one widget rather than two
+/// near-identical ones so the two lists can never silently drift apart in
+/// layout again.
 class _JobTile extends StatelessWidget {
   const _JobTile({required this.job, required this.trailingText});
 
