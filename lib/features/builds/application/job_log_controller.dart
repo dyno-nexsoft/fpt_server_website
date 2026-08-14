@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/api/api_exception.dart';
 import '../../../core/api/jobs_api.dart';
-import '../../../core/models/job.dart';
+import 'package:fpt_server_shared/fpt_server_shared.dart';
 import '../../../core/providers/core_providers.dart';
 import '../../../core/providers/job_seed_provider.dart';
 import '../../../core/providers/status_provider.dart';

@@ -2,7 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/api/artifacts_api.dart';
 import '../../../core/api/jobs_api.dart';
-import '../../../core/models/artifact_file.dart';
+import 'package:fpt_server_shared/fpt_server_shared.dart';
 import '../../../core/providers/core_providers.dart';
 
 /// Keyed by job id, not artifactKey: the URL is job-scoped

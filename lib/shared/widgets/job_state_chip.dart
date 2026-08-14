@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../core/models/job.dart';
+import 'package:fpt_server_shared/fpt_server_shared.dart';
 
 /// State glyph + label. Differentiated by icon and text only — no per-state
 /// colors — so the default Material theme stays the single source of truth

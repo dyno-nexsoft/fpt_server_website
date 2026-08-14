@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/models/job.dart';
-import '../../../core/models/system_status.dart';
+import 'package:fpt_server_shared/fpt_server_shared.dart';
 import '../../../core/providers/status_provider.dart';
 import '../../../core/router/app_router.dart';
 import '../../../shared/utils/format.dart';

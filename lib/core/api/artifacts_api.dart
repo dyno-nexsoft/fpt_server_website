@@ -1,4 +1,4 @@
-import '../models/artifact_file.dart';
+import 'package:fpt_server_shared/fpt_server_shared.dart';
 import 'api_client.dart';
 
 Future<ArtifactListing> fetchArtifacts(ApiClient api, String key) async =>

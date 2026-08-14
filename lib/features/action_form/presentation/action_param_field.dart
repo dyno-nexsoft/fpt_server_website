@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/models/action_schema.dart';
+import 'package:fpt_server_shared/fpt_server_shared.dart';
 import 'branch_autocomplete_field.dart';
 
 /// One form control generated from an [ActionParam] — the shape of the
@@ -27,13 +27,13 @@ class ActionParamField extends StatelessWidget {
   // label than the raw param name ("tbchat").
   String get _label {
     final base = param.description.isEmpty ? param.name : param.description;
-    return param.required ? '$base *' : base;
+    return param.isRequired ? '$base *' : base;
   }
 
   @override
   Widget build(BuildContext context) {
     switch (param.type) {
-      case ActionParamType.enumeration:
+      case ParamType.enumeration:
         return DropdownButtonFormField<String>(
           initialValue: enumValue,
           decoration: InputDecoration(labelText: _label),
@@ -43,21 +43,21 @@ class ActionParamField extends StatelessWidget {
           ],
           onChanged: onEnumChanged,
         );
-      case ActionParamType.boolean:
+      case ParamType.boolean:
         return SwitchListTile(
           title: Text(_label),
           value: boolValue,
           onChanged: onBoolChanged,
         );
-      case ActionParamType.integer:
-      case ActionParamType.number:
+      case ParamType.integer:
+      case ParamType.number:
         return TextFormField(
           controller: controller,
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
           decoration: InputDecoration(labelText: _label),
           validator: (value) => _validateText(value),
         );
-      case ActionParamType.string:
+      case ParamType.string:
         if (param.isBranchRef) {
           return BranchAutocompleteField(
             param: param,
@@ -74,18 +74,18 @@ class ActionParamField extends StatelessWidget {
   }
 
   String? _validateText(String? value) {
-    if (param.required && (value == null || value.trim().isEmpty)) {
+    if (param.isRequired && (value == null || value.trim().isEmpty)) {
       return 'Required';
     }
     if (value != null &&
         value.isNotEmpty &&
-        param.type == ActionParamType.integer &&
+        param.type == ParamType.integer &&
         int.tryParse(value) == null) {
       return 'Must be a whole number';
     }
     if (value != null &&
         value.isNotEmpty &&
-        param.type == ActionParamType.number &&
+        param.type == ParamType.number &&
         double.tryParse(value) == null) {
       return 'Must be a number';
     }

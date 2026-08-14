@@ -1,4 +1,4 @@
-import '../models/job.dart';
+import 'package:fpt_server_shared/fpt_server_shared.dart';
 import 'api_client.dart';
 
 /// `POST /jobs/{id}/stream-token` response — short-lived, since

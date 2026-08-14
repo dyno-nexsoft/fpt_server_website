@@ -2,8 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/api/api_exception.dart';
-import '../../../core/models/action_schema.dart';
-import '../../../core/models/job.dart';
+import 'package:fpt_server_shared/fpt_server_shared.dart';
 import '../../../core/providers/catalogue_providers.dart';
 import '../../../core/providers/core_providers.dart';
 import '../../../core/providers/job_seed_provider.dart';
@@ -55,15 +54,15 @@ class _ActionFormScreenState extends ConsumerState<ActionFormScreen> {
     if (_initialized) return;
     for (final param in action.params) {
       switch (param.type) {
-        case ActionParamType.enumeration:
+        case ParamType.enumeration:
           _enumValues[param.name] =
               param.defaultValue as String? ??
               (param.choices.isNotEmpty ? param.choices.first : null);
-        case ActionParamType.boolean:
+        case ParamType.boolean:
           _boolValues[param.name] = param.defaultValue as bool? ?? false;
-        case ActionParamType.integer:
-        case ActionParamType.number:
-        case ActionParamType.string:
+        case ParamType.integer:
+        case ParamType.number:
+        case ParamType.string:
           _controllers[param.name] = TextEditingController(
             text: param.defaultValue?.toString() ?? '',
           );
@@ -81,14 +80,14 @@ class _ActionFormScreenState extends ConsumerState<ActionFormScreen> {
     final params = <String, Object?>{};
     for (final param in action.params) {
       switch (param.type) {
-        case ActionParamType.enumeration:
+        case ParamType.enumeration:
           final value = _enumValues[param.name];
           if (value != null) params[param.name] = value;
-        case ActionParamType.boolean:
+        case ParamType.boolean:
           params[param.name] = _boolValues[param.name];
-        case ActionParamType.integer:
-        case ActionParamType.number:
-        case ActionParamType.string:
+        case ParamType.integer:
+        case ParamType.number:
+        case ParamType.string:
           final text = _controllers[param.name]!.text.trim();
           if (text.isNotEmpty) params[param.name] = text;
       }
@@ -101,13 +100,13 @@ class _ActionFormScreenState extends ConsumerState<ActionFormScreen> {
       for (final param in action.params) {
         final value = template.params[param.name];
         switch (param.type) {
-          case ActionParamType.enumeration:
+          case ParamType.enumeration:
             if (value is String) _enumValues[param.name] = value;
-          case ActionParamType.boolean:
+          case ParamType.boolean:
             _boolValues[param.name] = value as bool? ?? false;
-          case ActionParamType.integer:
-          case ActionParamType.number:
-          case ActionParamType.string:
+          case ParamType.integer:
+          case ParamType.number:
+          case ParamType.string:
             _controllers[param.name]!.text = value?.toString() ?? '';
         }
       }
@@ -157,14 +156,14 @@ class _ActionFormScreenState extends ConsumerState<ActionFormScreen> {
     for (final param in action.params) {
       final value = rawParams[param.name];
       switch (param.type) {
-        case ActionParamType.enumeration:
-        case ActionParamType.boolean:
+        case ParamType.enumeration:
+        case ParamType.boolean:
           if (value != null) body[param.name] = value;
-        case ActionParamType.integer:
+        case ParamType.integer:
           if (value != null) body[param.name] = int.parse(value as String);
-        case ActionParamType.number:
+        case ParamType.number:
           if (value != null) body[param.name] = double.parse(value as String);
-        case ActionParamType.string:
+        case ParamType.string:
           if (value != null) body[param.name] = value;
       }
     }

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../core/models/job.dart';
+import 'package:fpt_server_shared/fpt_server_shared.dart';
 import '../../../core/router/app_router.dart';
 import '../../../shared/utils/responsive.dart';
 import '../../../shared/widgets/error_view.dart';

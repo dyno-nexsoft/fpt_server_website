@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/models/job.dart';
+import 'package:fpt_server_shared/fpt_server_shared.dart';
 import '../../../core/router/app_router.dart';
 import '../../../shared/utils/format.dart';
 import '../../../shared/widgets/ellipsis_text.dart';

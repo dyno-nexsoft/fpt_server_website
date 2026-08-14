@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../models/job.dart';
+import 'package:fpt_server_shared/fpt_server_shared.dart';
 
 /// Carries a just-created [Job] (with the creation-response-only `logUrl`/
 /// `warnings`) from the action form to the job detail screen it navigates

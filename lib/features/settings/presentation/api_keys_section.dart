@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/api/api_exception.dart';
 import '../../../core/browser/browser_utils.dart';
-import '../../../core/models/api_key_info.dart';
+import 'package:fpt_server_shared/fpt_server_shared.dart';
 import '../../../core/providers/catalogue_providers.dart';
 import '../../../core/providers/core_providers.dart';
 import '../../../shared/toast/app_toast.dart';

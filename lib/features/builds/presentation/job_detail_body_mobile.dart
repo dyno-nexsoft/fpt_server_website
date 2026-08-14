@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/models/job.dart';
+import 'package:fpt_server_shared/fpt_server_shared.dart';
 import '../../../shared/widgets/log_viewer.dart';
 import '../application/job_log_controller.dart';
 import 'job_detail_panel.dart';

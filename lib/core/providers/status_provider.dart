@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../models/system_status.dart';
+import 'package:fpt_server_shared/fpt_server_shared.dart';
 import '../sse/status_event_source.dart';
 import 'core_providers.dart';
 

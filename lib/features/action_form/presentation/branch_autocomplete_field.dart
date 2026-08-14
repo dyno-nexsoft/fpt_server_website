@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/models/action_schema.dart';
+import 'package:fpt_server_shared/fpt_server_shared.dart';
 import '../../../core/providers/catalogue_providers.dart';
 
 /// A branch-name field with the same live suggestions Discord's `/build`
@@ -56,7 +56,7 @@ class _BranchAutocompleteFieldState
           focusNode: focusNode,
           decoration: InputDecoration(labelText: widget.label),
           validator: (value) =>
-              widget.param.required && (value ?? '').trim().isEmpty
+              widget.param.isRequired && (value ?? '').trim().isEmpty
               ? 'Required'
               : null,
         );
