@@ -11,17 +11,12 @@ import '../../../shared/widgets/error_view.dart';
 import '../../../shared/widgets/job_state_chip.dart';
 import '../../builds/application/jobs_providers.dart';
 
-/// A single truncated `key=value, ...` summary of a job's params, shared by
-/// the active and recent job tiles below — same rendering the builds table
-/// uses for its own params column, just without that column's `maxWidth`
-/// clamp since a `ListTile` subtitle is already width-bound by the tile.
-String? _paramsSummary(Map<String, dynamic> params) {
-  final entries = params.entries
-      .where((entry) => entry.value != null)
-      .map((entry) => '${entry.key}=${entry.value}')
-      .toList();
-  return entries.isEmpty ? null : entries.join(', ');
-}
+/// `key=value` entries for a job's params, shared by the active and recent
+/// job tiles below — same source the builds table's `JobParamsCell` reads,
+/// just rendered here as a `ListTile` subtitle instead of a table cell.
+Iterable<String> _paramEntries(Map<String, dynamic> params) => params.entries
+    .where((entry) => entry.value != null)
+    .map((entry) => '${entry.key}=${entry.value}');
 
 /// Drops [formatDuration]'s trailing seconds once a build has run a minute
 /// or more — `32 min 47s` competes with the timestamp/author/params already
@@ -172,18 +167,22 @@ class _JobTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final params = _paramsSummary(job.actionParams);
+    final paramEntries = _paramEntries(job.actionParams).toList();
     final author = job.createdBy;
     final detailParts = [
       if (author != null) 'by $author',
-      if (params != null) params,
+      if (paramEntries.isNotEmpty) paramEntries.join(', '),
     ];
+    final tooltipParts = [if (author != null) 'by $author', ...paramEntries];
     return ListTile(
       leading: JobStateIcon(state: job.state),
       title: Text(job.actionName ?? job.command),
       subtitle: detailParts.isEmpty
           ? null
-          : EllipsisText(detailParts.join(' • ')),
+          : EllipsisText(
+              detailParts.join(' • '),
+              tooltip: tooltipParts.join('\n'),
+            ),
       trailing: trailingText.isEmpty
           ? null
           : Text(trailingText, maxLines: 1, overflow: TextOverflow.ellipsis),

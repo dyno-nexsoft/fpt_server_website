@@ -11,15 +11,12 @@ import 'core_providers.dart';
 import 'session_provider.dart';
 
 /// Action name prefixes this dashboard never exposes: `attendance.*`
-/// (personal/HR), `gitlab.*` (code review), `zentao.*` (daily reports), and
-/// `admin.owners.*` (Discord bot ownership) are all real API capabilities
-/// but none belong on a CI/CD build dashboard.
-const _hiddenActionPrefixes = [
-  'attendance.',
-  'gitlab.',
-  'zentao.',
-  'admin.owners.',
-];
+/// (personal/HR), `zentao.*` (daily reports), and `admin.owners.*` (Discord
+/// bot ownership) are all real API capabilities but none belong on a CI/CD
+/// build dashboard. `gitlab.*` used to be hidden here too, but code review
+/// is close enough to "build" that it now shows in the New Build menu (see
+/// [isBuildMenuAction]).
+const _hiddenActionPrefixes = ['attendance.', 'zentao.', 'admin.owners.'];
 
 /// The action catalogue drives navigation and every generated form — see
 /// `docs/web-ui-wireframe.md`. It is refetched whenever the session changes.
@@ -42,14 +39,16 @@ ActionSchema? findAction(List<ActionSchema> actions, String name) {
   return null;
 }
 
-/// The "New build" nav menu is for CI actions only — `ci.*` and the one
-/// other job/mutation action the wireframe explicitly calls out
-/// (`cron.run`). `admin.apiKeys.add/remove` are job/mutation-kind too but
-/// already have dedicated controls in Settings; listing them here as well
-/// would let a menu meant for builds trigger key or (if ever un-hidden)
-/// owner management instead.
+/// The "New build" nav menu is for CI and GitLab actions — `ci.*`,
+/// `gitlab.*`, and the one other job/mutation action the wireframe
+/// explicitly calls out (`cron.run`). `admin.apiKeys.add/remove` are
+/// job/mutation-kind too but already have dedicated controls in Settings;
+/// listing them here as well would let a menu meant for builds trigger key
+/// or (if ever un-hidden) owner management instead.
 bool isBuildMenuAction(ActionSchema action) =>
-    action.name.startsWith('ci.') || action.name == 'cron.run';
+    action.name.startsWith('ci.') ||
+    action.name.startsWith('gitlab.') ||
+    action.name == 'cron.run';
 
 /// [isBuildMenuAction] entries the connected key can actually call.
 ///
@@ -131,9 +130,8 @@ final myKeyInfoProvider = FutureProvider<ApiKeyInfo?>((ref) async {
       .convert(utf8.encode(creds.apiKey))
       .toString()
       .substring(0, 8);
-  // The server's key_hash sometimes carries a literal trailing "…" as part
-  // of the string, not just the 8 hex chars the docs describe — match on
-  // prefix rather than equality so that formatting quirk can't break this.
+  // Only need to match a short prefix of the full hash the server now
+  // returns — no need to recompute and compare the whole thing.
   for (final key in keys) {
     if (key.keyHash.startsWith(hash)) return key;
   }

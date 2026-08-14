@@ -7,6 +7,7 @@ import '../../../core/providers/session_provider.dart';
 import '../../../core/router/app_router.dart';
 import 'api_keys_section.dart';
 import 'appearance_section.dart';
+import 'hive_panel.dart';
 import 'system_panel.dart';
 
 class SettingsScreen extends ConsumerWidget {
@@ -43,6 +44,7 @@ class SettingsScreen extends ConsumerWidget {
               ),
             ),
           if (isAdmin) const SystemPanel(),
+          if (isAdmin) const HivePanel(),
         ],
       ),
     );
