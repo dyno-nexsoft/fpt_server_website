@@ -15,7 +15,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$Health {
 
- bool get ok; String get version; int get uptimeSeconds; String get hostname;
+ bool get ok; String get version; String get appVersion; int get uptimeSeconds; String get hostname;
 /// Create a copy of Health
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -28,16 +28,16 @@ $HealthCopyWith<Health> get copyWith => _$HealthCopyWithImpl<Health>(this as Hea
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is Health&&(identical(other.ok, ok) || other.ok == ok)&&(identical(other.version, version) || other.version == version)&&(identical(other.uptimeSeconds, uptimeSeconds) || other.uptimeSeconds == uptimeSeconds)&&(identical(other.hostname, hostname) || other.hostname == hostname));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is Health&&(identical(other.ok, ok) || other.ok == ok)&&(identical(other.version, version) || other.version == version)&&(identical(other.appVersion, appVersion) || other.appVersion == appVersion)&&(identical(other.uptimeSeconds, uptimeSeconds) || other.uptimeSeconds == uptimeSeconds)&&(identical(other.hostname, hostname) || other.hostname == hostname));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,ok,version,uptimeSeconds,hostname);
+int get hashCode => Object.hash(runtimeType,ok,version,appVersion,uptimeSeconds,hostname);
 
 @override
 String toString() {
-  return 'Health(ok: $ok, version: $version, uptimeSeconds: $uptimeSeconds, hostname: $hostname)';
+  return 'Health(ok: $ok, version: $version, appVersion: $appVersion, uptimeSeconds: $uptimeSeconds, hostname: $hostname)';
 }
 
 
@@ -48,7 +48,7 @@ abstract mixin class $HealthCopyWith<$Res>  {
   factory $HealthCopyWith(Health value, $Res Function(Health) _then) = _$HealthCopyWithImpl;
 @useResult
 $Res call({
- bool ok, String version, int uptimeSeconds, String hostname
+ bool ok, String version, String appVersion, int uptimeSeconds, String hostname
 });
 
 
@@ -65,10 +65,11 @@ class _$HealthCopyWithImpl<$Res>
 
 /// Create a copy of Health
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? ok = null,Object? version = null,Object? uptimeSeconds = null,Object? hostname = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? ok = null,Object? version = null,Object? appVersion = null,Object? uptimeSeconds = null,Object? hostname = null,}) {
   return _then(_self.copyWith(
 ok: null == ok ? _self.ok : ok // ignore: cast_nullable_to_non_nullable
 as bool,version: null == version ? _self.version : version // ignore: cast_nullable_to_non_nullable
+as String,appVersion: null == appVersion ? _self.appVersion : appVersion // ignore: cast_nullable_to_non_nullable
 as String,uptimeSeconds: null == uptimeSeconds ? _self.uptimeSeconds : uptimeSeconds // ignore: cast_nullable_to_non_nullable
 as int,hostname: null == hostname ? _self.hostname : hostname // ignore: cast_nullable_to_non_nullable
 as String,
@@ -156,10 +157,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( bool ok,  String version,  int uptimeSeconds,  String hostname)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( bool ok,  String version,  String appVersion,  int uptimeSeconds,  String hostname)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _Health() when $default != null:
-return $default(_that.ok,_that.version,_that.uptimeSeconds,_that.hostname);case _:
+return $default(_that.ok,_that.version,_that.appVersion,_that.uptimeSeconds,_that.hostname);case _:
   return orElse();
 
 }
@@ -177,10 +178,10 @@ return $default(_that.ok,_that.version,_that.uptimeSeconds,_that.hostname);case 
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( bool ok,  String version,  int uptimeSeconds,  String hostname)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( bool ok,  String version,  String appVersion,  int uptimeSeconds,  String hostname)  $default,) {final _that = this;
 switch (_that) {
 case _Health():
-return $default(_that.ok,_that.version,_that.uptimeSeconds,_that.hostname);case _:
+return $default(_that.ok,_that.version,_that.appVersion,_that.uptimeSeconds,_that.hostname);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -197,10 +198,10 @@ return $default(_that.ok,_that.version,_that.uptimeSeconds,_that.hostname);case 
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( bool ok,  String version,  int uptimeSeconds,  String hostname)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( bool ok,  String version,  String appVersion,  int uptimeSeconds,  String hostname)?  $default,) {final _that = this;
 switch (_that) {
 case _Health() when $default != null:
-return $default(_that.ok,_that.version,_that.uptimeSeconds,_that.hostname);case _:
+return $default(_that.ok,_that.version,_that.appVersion,_that.uptimeSeconds,_that.hostname);case _:
   return null;
 
 }
@@ -212,11 +213,12 @@ return $default(_that.ok,_that.version,_that.uptimeSeconds,_that.hostname);case 
 @JsonSerializable()
 
 class _Health implements Health {
-  const _Health({required this.ok, required this.version, required this.uptimeSeconds, required this.hostname});
+  const _Health({required this.ok, required this.version, required this.appVersion, required this.uptimeSeconds, required this.hostname});
   factory _Health.fromJson(Map<String, dynamic> json) => _$HealthFromJson(json);
 
 @override final  bool ok;
 @override final  String version;
+@override final  String appVersion;
 @override final  int uptimeSeconds;
 @override final  String hostname;
 
@@ -233,16 +235,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _Health&&(identical(other.ok, ok) || other.ok == ok)&&(identical(other.version, version) || other.version == version)&&(identical(other.uptimeSeconds, uptimeSeconds) || other.uptimeSeconds == uptimeSeconds)&&(identical(other.hostname, hostname) || other.hostname == hostname));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _Health&&(identical(other.ok, ok) || other.ok == ok)&&(identical(other.version, version) || other.version == version)&&(identical(other.appVersion, appVersion) || other.appVersion == appVersion)&&(identical(other.uptimeSeconds, uptimeSeconds) || other.uptimeSeconds == uptimeSeconds)&&(identical(other.hostname, hostname) || other.hostname == hostname));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,ok,version,uptimeSeconds,hostname);
+int get hashCode => Object.hash(runtimeType,ok,version,appVersion,uptimeSeconds,hostname);
 
 @override
 String toString() {
-  return 'Health(ok: $ok, version: $version, uptimeSeconds: $uptimeSeconds, hostname: $hostname)';
+  return 'Health(ok: $ok, version: $version, appVersion: $appVersion, uptimeSeconds: $uptimeSeconds, hostname: $hostname)';
 }
 
 
@@ -253,7 +255,7 @@ abstract mixin class _$HealthCopyWith<$Res> implements $HealthCopyWith<$Res> {
   factory _$HealthCopyWith(_Health value, $Res Function(_Health) _then) = __$HealthCopyWithImpl;
 @override @useResult
 $Res call({
- bool ok, String version, int uptimeSeconds, String hostname
+ bool ok, String version, String appVersion, int uptimeSeconds, String hostname
 });
 
 
@@ -270,10 +272,11 @@ class __$HealthCopyWithImpl<$Res>
 
 /// Create a copy of Health
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? ok = null,Object? version = null,Object? uptimeSeconds = null,Object? hostname = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? ok = null,Object? version = null,Object? appVersion = null,Object? uptimeSeconds = null,Object? hostname = null,}) {
   return _then(_Health(
 ok: null == ok ? _self.ok : ok // ignore: cast_nullable_to_non_nullable
 as bool,version: null == version ? _self.version : version // ignore: cast_nullable_to_non_nullable
+as String,appVersion: null == appVersion ? _self.appVersion : appVersion // ignore: cast_nullable_to_non_nullable
 as String,uptimeSeconds: null == uptimeSeconds ? _self.uptimeSeconds : uptimeSeconds // ignore: cast_nullable_to_non_nullable
 as int,hostname: null == hostname ? _self.hostname : hostname // ignore: cast_nullable_to_non_nullable
 as String,

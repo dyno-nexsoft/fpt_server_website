@@ -9,6 +9,7 @@ abstract class Health with _$Health {
   const factory Health({
     required bool ok,
     required String version,
+    required String appVersion,
     required int uptimeSeconds,
     required String hostname,
   }) = _Health;

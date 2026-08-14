@@ -88,8 +88,10 @@ class _ConnectionCard extends ConsumerWidget {
               leading: const Icon(Icons.dns_outlined),
               title: Text(creds.serverUrl),
               subtitle: health.when(
-                data: (data) =>
-                    Text('${data.hostname} · uptime ${data.uptimeSeconds}s'),
+                data: (data) => Text(
+                  '${data.hostname} · v${data.appVersion} · '
+                  'uptime ${data.uptimeSeconds}s',
+                ),
                 loading: () => const Text('Checking…'),
                 error: (error, _) => Text('Unreachable: $error'),
               ),
