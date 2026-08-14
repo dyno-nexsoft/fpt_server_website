@@ -5,6 +5,7 @@ import '../../../core/api/jobs_api.dart';
 import '../../../core/models/job.dart';
 import '../../../core/providers/core_providers.dart';
 import '../../../core/providers/status_provider.dart';
+import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../shared/auth_guard.dart';
 import '../../../shared/widgets/confirm_dialog.dart';
@@ -90,6 +91,7 @@ class JobRowActions extends ConsumerWidget {
               ref,
               'Retried',
               () => retryJob(ref.read(apiClientProvider), job.id),
+              onSuccess: (result) => _openIfNewJob(context, result),
             ),
           ),
       ],
@@ -117,8 +119,9 @@ class JobRowActions extends ConsumerWidget {
     BuildContext context,
     WidgetRef ref,
     String? fallbackMessage,
-    Future<Job> Function() action,
-  ) async {
+    Future<Job> Function() action, {
+    void Function(Job result)? onSuccess,
+  }) async {
     final result = await runAuthedJobAction(
       context,
       ref,
@@ -128,6 +131,17 @@ class JobRowActions extends ConsumerWidget {
     if (result != null) {
       ref.invalidate(jobsListProvider);
       ref.read(statusControllerProvider.notifier).refreshNow();
+      onSuccess?.call(result);
+    }
+  }
+
+  /// A retry that couldn't re-edit the original message gets a genuinely new
+  /// job id (see `JobRegistry.reopen`'s doc comment) — without this, the only
+  /// trace of that new run is the warning toast `runAuthedJobAction` already
+  /// showed, with no way to actually watch it happen from here.
+  void _openIfNewJob(BuildContext context, Job result) {
+    if (result.id != job.id && context.mounted) {
+      JobDetailRoute(result.id).go(context);
     }
   }
 }

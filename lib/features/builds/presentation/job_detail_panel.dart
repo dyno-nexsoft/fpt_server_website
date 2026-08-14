@@ -112,6 +112,7 @@ class JobDetailPanel extends ConsumerWidget {
               ref,
               'Retried',
               () => retryJob(ref.read(apiClientProvider), job.id),
+              onSuccess: (result) => _openIfNewJob(context, result),
             ),
             icon: const Icon(Icons.replay),
             label: const Text('Retry'),
@@ -174,8 +175,9 @@ class JobDetailPanel extends ConsumerWidget {
     BuildContext context,
     WidgetRef ref,
     String? fallbackMessage,
-    Future<Job> Function() action,
-  ) async {
+    Future<Job> Function() action, {
+    void Function(Job result)? onSuccess,
+  }) async {
     final result = await runAuthedJobAction(
       context,
       ref,
@@ -184,6 +186,18 @@ class JobDetailPanel extends ConsumerWidget {
     );
     if (result != null) {
       ref.read(statusControllerProvider.notifier).refreshNow();
+      onSuccess?.call(result);
+    }
+  }
+
+  /// A retry that couldn't re-edit the original message gets a genuinely new
+  /// job id (see `JobRegistry.reopen`'s doc comment) — without this, the only
+  /// trace of that new run is the warning toast `runAuthedJobAction` already
+  /// showed, with no way to actually watch it happen from here (this page is
+  /// still showing the OLD, now-superseded job).
+  void _openIfNewJob(BuildContext context, Job result) {
+    if (result.id != job.id && context.mounted) {
+      JobDetailRoute(result.id).go(context);
     }
   }
 }
