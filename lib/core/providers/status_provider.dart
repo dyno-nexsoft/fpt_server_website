@@ -21,6 +21,20 @@ class StatusController extends AsyncNotifier<SystemStatus?> {
   StatusEventSource? _sse;
   Timer? _pollTimer;
 
+  /// True for the duration of an in-flight `GET /status` call — [_pollTimer]
+  /// alone can't guard re-entry, since it's `null` for that entire window
+  /// (cleared by [_poll]'s own first line, not re-set until the request
+  /// resolves). Without this, [refreshNow] calling [_poll] directly while a
+  /// timer-driven poll was already awaiting its response created two
+  /// independent poll chains: each one's [_poll] call ends by overwriting
+  /// [_pollTimer] with its own `Timer(_pollInterval, _poll)`, so the loser's
+  /// timer object becomes orphaned — nothing holds a reference to cancel it,
+  /// so it keeps firing forever on its own cadence. Repeat that every time an
+  /// action (retry/promote/cancel/submit) calls [refreshNow] while a tab is
+  /// already stuck in polling fallback, and the orphaned chains accumulate
+  /// into bursts of several near-simultaneous `system.status` calls.
+  bool _polling = false;
+
   @override
   FutureOr<SystemStatus?> build() {
     ref.onDispose(() {
@@ -42,14 +56,20 @@ class StatusController extends AsyncNotifier<SystemStatus?> {
   }
 
   void _fallbackToPolling() {
-    if (_pollTimer != null) return; // already polling
+    if (_pollTimer != null || _polling) return; // already polling
     _sse?.close();
     _sse = null;
     unawaited(_poll());
   }
 
   Future<void> _poll() async {
+    // A concurrent call — the timer-driven cycle and a `refreshNow` call
+    // landed at the same time — is a no-op rather than a second chain: the
+    // one already in flight will update `state` within moments regardless.
+    if (_polling) return;
+    _polling = true;
     _pollTimer?.cancel();
+    _pollTimer = null;
     final api = ref.read(apiClientProvider);
     try {
       final status = SystemStatus.fromJson(
@@ -58,6 +78,8 @@ class StatusController extends AsyncNotifier<SystemStatus?> {
       state = AsyncData(status);
     } catch (e, stackTrace) {
       state = AsyncError(e, stackTrace);
+    } finally {
+      _polling = false;
     }
     _pollTimer = Timer(_pollInterval, _poll);
   }
