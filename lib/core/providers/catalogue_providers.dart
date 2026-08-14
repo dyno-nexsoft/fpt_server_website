@@ -20,16 +20,25 @@ const _hiddenActionPrefixes = ['attendance.', 'zentao.', 'admin.owners.'];
 
 /// The action catalogue drives navigation and every generated form — see
 /// `docs/web-ui-wireframe.md`. It is refetched whenever the session changes.
+///
+/// Sorted dangerous-last, then by name: every list built from this provider
+/// (New Build, ...) inherits the same order instead of each screen
+/// re-deriving its own routine/dangerous split.
 final actionsProvider = FutureProvider<List<ActionSchema>>((ref) async {
   final api = ref.watch(apiClientProvider);
   final list = await api.decodeList(
     api.endpoints.listActions(),
     listKey: 'actions',
   );
-  return list
+  final actions = list
       .map((e) => ActionSchema.fromJson(e as Map<String, dynamic>))
       .where((action) => !_hiddenActionPrefixes.any(action.name.startsWith))
       .toList();
+  actions.sort((a, b) {
+    if (a.isDangerous != b.isDangerous) return a.isDangerous ? 1 : -1;
+    return a.name.compareTo(b.name);
+  });
+  return actions;
 });
 
 ActionSchema? findAction(List<ActionSchema> actions, String name) {
@@ -59,20 +68,16 @@ bool isBuildMenuAction(ActionSchema action) =>
 /// whose permission the key's scopes don't cover (e.g. `ci.clean` needs
 /// `invokeDangerous`, an `invoke`-only key doesn't have it) never gets a
 /// chance to show its "requires elevated permission" warning after the fact.
+///
+/// [actions] is expected to already be [actionsProvider]'s dangerous-last
+/// order — filtering here preserves it rather than re-deriving it.
 List<ActionSchema> visibleBuildMenuActions(
   List<ActionSchema> actions,
   ApiKeyInfo? myKey,
-) {
-  final visible = actions
-      .where(isBuildMenuAction)
-      .where((action) => myKey == null || myKey.can(action.permission));
-  // Everyday build actions first, then the ones that warn on the way in
-  // (ci.clean, cron.run) — grouped at the bottom instead of interleaved by
-  // whatever order the server happens to register them in.
-  final routine = visible.where((action) => !action.isDangerous);
-  final dangerous = visible.where((action) => action.isDangerous);
-  return [...routine, ...dangerous];
-}
+) => actions
+    .where(isBuildMenuAction)
+    .where((action) => myKey == null || myKey.can(action.permission))
+    .toList();
 
 /// One-off, unauthenticated health check against an arbitrary base URL —
 /// used both to validate a server URL on the login screen and to refresh

@@ -20,52 +20,55 @@ class SystemPanel extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          spacing: 8,
-          children: [
-            Text('System', style: Theme.of(context).textTheme.titleMedium),
-            _ActionTile(
-              icon: Icons.refresh,
-              name: 'system.hotReload',
-              description: 'Pull the latest code and hot reload — no restart.',
-              confirmTitle: 'Hot reload?',
-              confirmBody: 'Pulls the latest code and hot reloads the bot.',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        spacing: 8,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+            child: Text(
+              'System',
+              style: Theme.of(context).textTheme.titleMedium,
             ),
-            _ActionTile(
-              icon: Icons.restart_alt,
-              name: 'system.restart',
-              description:
-                  'Pull code, install dependencies, and restart — briefly '
-                  'offline.',
-              confirmTitle: 'Restart the server?',
-              confirmBody:
-                  'Pulls code, installs dependencies, and restarts the bot. '
-                  'It will be briefly unreachable.',
-            ),
-            const ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: Icon(Icons.block),
-              title: Text('system.shutdown'),
-              subtitle: Text('Unavailable in browser — use Discord.'),
-            ),
-            _ActionTile(
-              icon: Icons.delete_sweep_outlined,
-              name: 'system.clearHistory',
-              description:
-                  'Delete all finished build history. Running/queued jobs '
-                  'are untouched.',
-              confirmTitle: 'Clear all build history?',
-              confirmBody:
-                  'Permanently deletes every finished job from history. '
-                  'This cannot be undone.',
-              onSuccess: () => ref.invalidate(jobsListProvider),
-              isDangerous: true,
-            ),
-          ],
-        ),
+          ),
+          _ActionTile(
+            icon: Icons.refresh,
+            name: 'system.hotReload',
+            description: 'Pull the latest code and hot reload — no restart.',
+            confirmTitle: 'Hot reload?',
+            confirmBody: 'Pulls the latest code and hot reloads the bot.',
+          ),
+          _ActionTile(
+            icon: Icons.restart_alt,
+            name: 'system.restart',
+            description:
+                'Pull code, install dependencies, and restart — briefly '
+                'offline.',
+            confirmTitle: 'Restart the server?',
+            confirmBody:
+                'Pulls code, installs dependencies, and restarts the bot. '
+                'It will be briefly unreachable.',
+          ),
+          const ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: Icon(Icons.block),
+            title: Text('system.shutdown'),
+            subtitle: Text('Unavailable in browser — use Discord.'),
+          ),
+          _ActionTile(
+            icon: Icons.delete_sweep_outlined,
+            name: 'system.clearHistory',
+            description:
+                'Delete all finished build history. Running/queued jobs '
+                'are untouched.',
+            confirmTitle: 'Clear all build history?',
+            confirmBody:
+                'Permanently deletes every finished job from history. '
+                'This cannot be undone.',
+            onSuccess: () => ref.invalidate(jobsListProvider),
+            isDangerous: true,
+          ),
+        ],
       ),
     );
   }
