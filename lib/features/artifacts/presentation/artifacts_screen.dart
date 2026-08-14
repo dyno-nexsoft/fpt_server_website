@@ -159,13 +159,15 @@ class _ArtifactTile extends StatelessWidget {
       _ when _isIpa => Icons.phone_iphone,
       _ when name.endsWith('.log') || name.endsWith('.txt') =>
         Icons.description_outlined,
-      _ when name.endsWith('.zip') ||
-          name.endsWith('.tar') ||
-          name.endsWith('.gz') =>
+      _
+          when name.endsWith('.zip') ||
+              name.endsWith('.tar') ||
+              name.endsWith('.gz') =>
         Icons.folder_zip_outlined,
-      _ when name.endsWith('.png') ||
-          name.endsWith('.jpg') ||
-          name.endsWith('.jpeg') =>
+      _
+          when name.endsWith('.png') ||
+              name.endsWith('.jpg') ||
+              name.endsWith('.jpeg') =>
         Icons.image_outlined,
       _ when name.endsWith('.json') || name.endsWith('.plist') =>
         Icons.data_object_outlined,

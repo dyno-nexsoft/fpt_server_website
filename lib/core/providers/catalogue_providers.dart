@@ -63,10 +63,17 @@ bool isBuildMenuAction(ActionSchema action) =>
 List<ActionSchema> visibleBuildMenuActions(
   List<ActionSchema> actions,
   ApiKeyInfo? myKey,
-) => actions
-    .where(isBuildMenuAction)
-    .where((action) => myKey == null || myKey.can(action.permission))
-    .toList();
+) {
+  final visible = actions
+      .where(isBuildMenuAction)
+      .where((action) => myKey == null || myKey.can(action.permission));
+  // Everyday build actions first, then the ones that warn on the way in
+  // (ci.clean, cron.run) — grouped at the bottom instead of interleaved by
+  // whatever order the server happens to register them in.
+  final routine = visible.where((action) => !action.isDangerous);
+  final dangerous = visible.where((action) => action.isDangerous);
+  return [...routine, ...dangerous];
+}
 
 /// One-off, unauthenticated health check against an arbitrary base URL —
 /// used both to validate a server URL on the login screen and to refresh

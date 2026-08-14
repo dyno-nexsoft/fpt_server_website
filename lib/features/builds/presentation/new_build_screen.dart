@@ -55,8 +55,7 @@ class NewBuildScreen extends ConsumerWidget {
                               ? null
                               : Text(action.description),
                           trailing: const Icon(Icons.chevron_right),
-                          onTap: () =>
-                              ActionFormRoute(action.name).go(context),
+                          onTap: () => ActionFormRoute(action.name).go(context),
                         ),
                       ),
                   ],

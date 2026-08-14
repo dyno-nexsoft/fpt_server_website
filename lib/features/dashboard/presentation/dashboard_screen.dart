@@ -149,9 +149,7 @@ class _RecentBuildsCard extends StatelessWidget {
               trailingText: [
                 formatRelativeTimestamp(job.createdAt),
                 if (job.startedAt != null && job.finishedAt != null)
-                  _compactDuration(
-                    job.finishedAt!.difference(job.startedAt!),
-                  ),
+                  _compactDuration(job.finishedAt!.difference(job.startedAt!)),
               ].join(' • '),
             ),
         ],
@@ -188,11 +186,7 @@ class _JobTile extends StatelessWidget {
           : EllipsisText(detailParts.join(' • ')),
       trailing: trailingText.isEmpty
           ? null
-          : Text(
-              trailingText,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
+          : Text(trailingText, maxLines: 1, overflow: TextOverflow.ellipsis),
       onTap: () => JobDetailRoute(job.id).go(context),
     );
   }
