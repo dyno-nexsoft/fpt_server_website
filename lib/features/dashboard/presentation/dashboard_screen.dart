@@ -23,6 +23,18 @@ String? _paramsSummary(Map<String, dynamic> params) {
   return entries.isEmpty ? null : entries.join(', ');
 }
 
+/// Drops [formatDuration]'s trailing seconds once a build has run a minute
+/// or more — `32 min 47s` competes with the timestamp/author/params already
+/// packed into these tiles' one trailing line, and nobody reads a dashboard
+/// tile for second-level precision.
+String _compactDuration(Duration duration) {
+  if (duration.inSeconds < 60) return '${duration.inSeconds}s';
+  if (duration.inMinutes < 60) return '${duration.inMinutes} min';
+  final hours = duration.inHours;
+  final minutes = duration.inMinutes % 60;
+  return minutes == 0 ? '${hours}h' : '${hours}h ${minutes}m';
+}
+
 /// Aggregates `GET /status` (polled) and `GET /jobs?limit=20`.
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
@@ -99,7 +111,7 @@ class _ActiveJobsCard extends StatelessWidget {
             _JobTile(
               job: job,
               trailingText: job.runningDuration != null
-                  ? formatDuration(job.runningDuration!)
+                  ? _compactDuration(job.runningDuration!)
                   : 'queued',
             ),
           for (final entry in data.queued.asMap().entries)
@@ -137,7 +149,7 @@ class _RecentBuildsCard extends StatelessWidget {
               trailingText: [
                 formatRelativeTimestamp(job.createdAt),
                 if (job.startedAt != null && job.finishedAt != null)
-                  formatDuration(
+                  _compactDuration(
                     job.finishedAt!.difference(job.startedAt!),
                   ),
               ].join(' • '),
@@ -169,7 +181,7 @@ class _JobTile extends StatelessWidget {
       if (params != null) params,
     ];
     return ListTile(
-      leading: JobStateChip(state: job.state),
+      leading: JobStateIcon(state: job.state),
       title: Text(job.actionName ?? job.command),
       subtitle: detailParts.isEmpty
           ? null

@@ -59,7 +59,7 @@ class _JobCard extends StatelessWidget {
               Row(
                 spacing: 8,
                 children: [
-                  JobStateChip(state: job.state),
+                  JobStateIcon(state: job.state),
                   Expanded(
                     child: Text(
                       job.actionName ?? job.command,
