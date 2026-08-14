@@ -5,6 +5,7 @@ import '../../../core/providers/catalogue_providers.dart';
 import '../../../core/providers/connection_provider.dart';
 import '../../../core/providers/session_provider.dart';
 import '../../../core/router/app_router.dart';
+import '../../../shared/utils/format.dart';
 import 'api_keys_section.dart';
 import 'appearance_section.dart';
 import 'hive_panel.dart';
@@ -90,7 +91,7 @@ class _ConnectionCard extends ConsumerWidget {
               subtitle: health.when(
                 data: (data) => Text(
                   '${data.hostname} · v${data.appVersion} · '
-                  'uptime ${data.uptimeSeconds}s',
+                  'uptime ${formatUptime(data.uptimeSeconds)}',
                 ),
                 loading: () => const Text('Checking…'),
                 error: (error, _) => Text('Unreachable: $error'),
