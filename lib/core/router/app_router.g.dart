@@ -63,11 +63,13 @@ RouteBase get $appShellRouteData => ShellRouteData.$route(
           path: ':id',
           hasOverriddenOnExit: false,
           factory: $JobDetailRoute._fromState,
-        ),
-        GoRouteData.$route(
-          path: 'artifacts/:key',
-          hasOverriddenOnExit: false,
-          factory: $ArtifactsRoute._fromState,
+          routes: [
+            GoRouteData.$route(
+              path: 'artifacts',
+              hasOverriddenOnExit: false,
+              factory: $ArtifactsRoute._fromState,
+            ),
+          ],
         ),
       ],
     ),
@@ -209,13 +211,13 @@ mixin $JobDetailRoute on GoRouteData {
 
 mixin $ArtifactsRoute on GoRouteData {
   static ArtifactsRoute _fromState(GoRouterState state) =>
-      ArtifactsRoute(state.pathParameters['key']!);
+      ArtifactsRoute(state.pathParameters['id']!);
 
   ArtifactsRoute get _self => this as ArtifactsRoute;
 
   @override
   String get location => GoRouteData.$location(
-    '/builds/artifacts/${Uri.encodeComponent(_self.key)}',
+    '/builds/${Uri.encodeComponent(_self.id)}/artifacts',
   );
 
   @override

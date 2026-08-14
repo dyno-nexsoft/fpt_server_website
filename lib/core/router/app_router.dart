@@ -115,12 +115,13 @@ class LoginRoute extends GoRouteData with $LoginRoute {
         ),
         // A specific build/job — nested so its URL reads as "the thing
         // under Builds it is", not a sibling of unrelated top level
-        // sections.
-        TypedGoRoute<JobDetailRoute>(path: ':id'),
-        // The file server redirects `/<artifactKey>/` here — see
-        // `ftp_handler.dart`'s `_redirectToArtifactBrowser`, and
-        // `BuildButton._outputDirectoryButton`'s Discord link.
-        TypedGoRoute<ArtifactsRoute>(path: 'artifacts/:key'),
+        // sections. Artifacts nest one level deeper still: they are that
+        // job's own output, not a separate top-level concept keyed by the
+        // artifactKey directory name a reader has no reason to know.
+        TypedGoRoute<JobDetailRoute>(
+          path: ':id',
+          routes: [TypedGoRoute<ArtifactsRoute>(path: 'artifacts')],
+        ),
       ],
     ),
     TypedGoRoute<SettingsRoute>(
@@ -188,13 +189,16 @@ class JobDetailRoute extends GoRouteData with $JobDetailRoute {
 }
 
 class ArtifactsRoute extends GoRouteData with $ArtifactsRoute {
-  const ArtifactsRoute(this.key);
+  const ArtifactsRoute(this.id);
 
-  final String key;
+  /// Job id, inherited from the parent [JobDetailRoute] segment — the field
+  /// name must match [JobDetailRoute.id] for go_router_builder to pull it
+  /// from the shared `:id` path segment.
+  final String id;
 
   @override
   Widget build(BuildContext context, GoRouterState state) =>
-      ArtifactsScreen(key: ValueKey(key), artifactKey: key);
+      ArtifactsScreen(key: ValueKey(id), jobId: id);
 }
 
 class SettingsRoute extends GoRouteData with $SettingsRoute {

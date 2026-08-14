@@ -12,18 +12,16 @@ import '../application/artifacts_provider.dart';
 
 /// Browses one job's output directory (`build/<artifactKey>/`).
 ///
-/// Replaces the server-rendered directory listing the file server used to
-/// return for `/<artifactKey>/` — that path now redirects here. Reached
-/// both that way (old Discord links) and from a job's "Artifacts" button.
+/// Reached from a job's "Artifacts" button — see `job_detail_panel.dart`.
 class ArtifactsScreen extends ConsumerWidget {
-  const ArtifactsScreen({super.key, required this.artifactKey});
+  const ArtifactsScreen({super.key, required this.jobId});
 
-  final String artifactKey;
+  final String jobId;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final textTheme = Theme.of(context).textTheme;
-    final listing = ref.watch(artifactListingProvider(artifactKey));
+    final listing = ref.watch(artifactListingProvider(jobId));
 
     return Padding(
       padding: const EdgeInsets.all(16),
@@ -35,13 +33,12 @@ class ArtifactsScreen extends ConsumerWidget {
             children: [
               Text('Artifacts', style: textTheme.headlineSmall),
               const SizedBox(width: 12),
-              Text(artifactKey, style: textTheme.bodySmall),
+              Text(jobId, style: textTheme.bodySmall),
               const Spacer(),
               IconButton(
                 tooltip: 'Refresh',
                 icon: const Icon(Icons.refresh),
-                onPressed: () =>
-                    ref.invalidate(artifactListingProvider(artifactKey)),
+                onPressed: () => ref.invalidate(artifactListingProvider(jobId)),
               ),
             ],
           ),
@@ -61,10 +58,12 @@ class ArtifactsScreen extends ConsumerWidget {
   }
 }
 
-/// Shown when `GET /artifacts/{key}` 404s — the job record can outlive its
-/// files: `assets/clean.sh` prunes `build/<artifactKey>/` by age on its own
-/// schedule, independent of how long the job stays in history, so this is an
-/// expected, recoverable state rather than an error to surface raw.
+/// Shown for a 404 from either request the provider makes: `GET /jobs/{id}`
+/// (the job itself aged out of history — [JobRegistry]'s finished-job limit
+/// is bounded) or `GET /artifacts/{key}` (the job record survives, but
+/// `assets/clean.sh` prunes `build/<artifactKey>/` by age on its own,
+/// independent schedule). Both are expected, recoverable states rather than
+/// errors to surface raw.
 class _ArtifactsGone extends StatelessWidget {
   const _ArtifactsGone();
 
@@ -78,8 +77,8 @@ class _ArtifactsGone extends StatelessWidget {
         const Icon(Icons.folder_off_outlined, size: 48),
         Text('These artifacts are gone', style: textTheme.titleMedium),
         Text(
-          'Cleaned up by disk housekeeping — the build record is still '
-          'kept, but its files are no longer on disk.',
+          'Either the build record aged out of history, or its files were '
+          'cleaned up by disk housekeeping.',
           style: textTheme.bodySmall,
           textAlign: TextAlign.center,
         ),

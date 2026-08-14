@@ -70,7 +70,7 @@ class JobDetailPanel extends ConsumerWidget {
             label: const Text('Open raw log'),
           ),
         OutlinedButton.icon(
-          onPressed: () => ArtifactsRoute('${job.artifactKey}').go(context),
+          onPressed: () => ArtifactsRoute(job.id).go(context),
           icon: const Icon(Icons.folder_outlined),
           label: const Text('Artifacts'),
         ),
