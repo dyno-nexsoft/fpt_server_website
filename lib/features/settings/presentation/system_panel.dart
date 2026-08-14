@@ -105,7 +105,6 @@ class _ActionTile extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final colorScheme = Theme.of(context).colorScheme;
     return ListTile(
-      contentPadding: EdgeInsets.zero,
       leading: Icon(icon, color: isDangerous ? colorScheme.error : null),
       title: Text(
         name,

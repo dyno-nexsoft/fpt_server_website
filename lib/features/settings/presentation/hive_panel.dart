@@ -30,6 +30,15 @@ class _HivePanelState extends ConsumerState<HivePanel> {
   List<_HiveBoxInfo>? _boxes;
   bool _loading = false;
 
+  @override
+  void initState() {
+    super.initState();
+    // Loads as soon as the panel appears — the header's refresh icon is the
+    // only other trigger, so there is no reason to also make the reader
+    // click a separate "Load boxes" button first.
+    _load();
+  }
+
   Future<void> _load() async {
     setState(() => _loading = true);
     try {
@@ -116,16 +125,10 @@ class _HivePanelState extends ConsumerState<HivePanel> {
               ],
             ),
             if (boxes == null)
-              _loading
-                  ? const Padding(
-                      padding: EdgeInsets.all(16),
-                      child: Center(child: CircularProgressIndicator()),
-                    )
-                  : TextButton.icon(
-                      onPressed: _load,
-                      icon: const Icon(Icons.storage_outlined),
-                      label: const Text('Load boxes'),
-                    )
+              const Padding(
+                padding: EdgeInsets.all(16),
+                child: Center(child: CircularProgressIndicator()),
+              )
             else if (boxes.isEmpty)
               const Text('No boxes open.')
             else

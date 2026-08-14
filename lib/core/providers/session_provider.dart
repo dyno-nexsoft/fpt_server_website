@@ -1,6 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../env.dart';
 import 'core_providers.dart';
 
 /// The pasted server URL + API key. This *is* the session — there is no
@@ -27,12 +26,9 @@ class SessionNotifier extends Notifier<SessionCredentials> {
   @override
   SessionCredentials build() {
     final prefs = ref.watch(sessionPrefsProvider);
-    final defaultServerUrl = AppEnv.defaultServerUrl.isNotEmpty
-        ? AppEnv.defaultServerUrl
-        : Uri.base.origin;
     return SessionCredentials(
-      serverUrl: prefs.serverUrl ?? defaultServerUrl,
-      apiKey: prefs.apiKey ?? AppEnv.defaultApiKeyTest,
+      serverUrl: prefs.serverUrl ?? Uri.base.origin,
+      apiKey: prefs.apiKey ?? '',
     );
   }
 
