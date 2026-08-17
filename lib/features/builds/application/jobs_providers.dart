@@ -19,7 +19,7 @@ class JobsQuery {
   int get hashCode => Object.hash(state, limit);
 }
 
-/// `GET /jobs?limit=20` for the dashboard's "Recent builds" list.
+/// `GET /jobs?limit=5` for the dashboard's "Recent builds" list.
 ///
 /// Watches [statusControllerProvider] purely to re-run on every job-registry
 /// change it pushes over `/status/events` — a build queued/started/finished
@@ -29,6 +29,18 @@ final recentJobsProvider = FutureProvider.autoDispose<List<Job>>((ref) async {
   ref.watch(statusControllerProvider);
   final api = ref.watch(apiClientProvider);
   return fetchJobs(api, limit: 5);
+});
+
+/// `GET /jobs?limit=100` — full job history for the dashboard charts.
+///
+/// Uses the same live-refetch pattern as [recentJobsProvider] so the charts
+/// update automatically when a new build completes without a manual refresh.
+final dashboardJobsProvider = FutureProvider.autoDispose<List<Job>>((
+  ref,
+) async {
+  ref.watch(statusControllerProvider);
+  final api = ref.watch(apiClientProvider);
+  return fetchJobs(api, limit: 100);
 });
 
 /// `GET /jobs?state=&limit=` backing the filterable Builds list.
