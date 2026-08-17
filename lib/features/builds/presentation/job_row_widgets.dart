@@ -1,13 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/api/api_exception.dart';
 import '../../../core/api/jobs_api.dart';
 import 'package:fpt_server_shared/fpt_server_shared.dart';
+import '../../../core/providers/catalogue_providers.dart';
 import '../../../core/providers/core_providers.dart';
+import '../../../core/providers/session_provider.dart';
 import '../../../core/providers/status_provider.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../shared/auth_guard.dart';
+import '../../../shared/toast/app_toast.dart';
 import '../../../shared/widgets/confirm_dialog.dart';
 import '../../../shared/widgets/ellipsis_text.dart';
 import '../application/jobs_providers.dart';
@@ -58,6 +62,12 @@ class JobRowActions extends ConsumerWidget {
         job.state == JobState.queued || job.state == JobState.running;
     final canPromote = job.state == JobState.queued && !job.promoted;
     final canRetry = job.isTerminal;
+    // Deleting erases history everyone with read access can see, including
+    // builds triggered by someone else — scoped to admin, same as the
+    // server enforces (see ApiRouter._deleteJob's doc comment).
+    final canDelete =
+        job.isTerminal &&
+        (ref.watch(myKeyInfoProvider).value?.isAdmin ?? false);
 
     return Row(
       mainAxisSize: MainAxisSize.min,
@@ -94,8 +104,40 @@ class JobRowActions extends ConsumerWidget {
               onSuccess: (result) => _openIfNewJob(context, result),
             ),
           ),
+        if (canDelete)
+          IconButton(
+            style: AppTheme.destructiveIconButtonStyle(
+              Theme.of(context).colorScheme,
+            ),
+            tooltip: 'Delete — permanently removes this build from history',
+            icon: const Icon(Icons.delete_outline),
+            onPressed: () => _confirmDelete(context, ref),
+          ),
       ],
     );
+  }
+
+  Future<void> _confirmDelete(BuildContext context, WidgetRef ref) async {
+    final confirmed = await ConfirmDialog.show(
+      context,
+      title: 'Delete this build?',
+      body: 'This permanently removes it from history and cannot be undone.',
+      confirmLabel: 'Delete',
+      isDangerous: true,
+    );
+    if (!confirmed) return;
+    if (!ref.read(sessionProvider).hasKey) {
+      if (context.mounted) const LoginRoute().go(context);
+      return;
+    }
+    try {
+      await deleteJob(ref.read(apiClientProvider), job.id);
+      ref.invalidate(jobsListProvider);
+      ref.read(statusControllerProvider.notifier).refreshNow();
+      ref.read(appToastProvider.notifier).show('Deleted');
+    } on ApiException catch (e) {
+      ref.read(appToastProvider.notifier).show(e.message, isError: true);
+    }
   }
 
   Future<void> _confirmCancel(BuildContext context, WidgetRef ref) async {

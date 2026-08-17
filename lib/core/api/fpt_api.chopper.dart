@@ -96,6 +96,13 @@ final class _$FptApi extends FptApi {
   }
 
   @override
+  Future<Response<String>> deleteJob(String id) {
+    final Uri $url = Uri.parse('/jobs/${id}');
+    final Request $request = Request('DELETE', $url, client.baseUrl);
+    return client.send<String, String>($request);
+  }
+
+  @override
   Future<Response<String>> createStreamToken(String id) {
     final Uri $url = Uri.parse('/jobs/${id}/stream-token');
     final Request $request = Request('POST', $url, client.baseUrl);

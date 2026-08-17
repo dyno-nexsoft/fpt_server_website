@@ -55,6 +55,12 @@ Future<Job> promoteJob(ApiClient api, String id) async =>
 Future<Job> retryJob(ApiClient api, String id) async =>
     Job.fromJson(await api.decodeMap(api.endpoints.retryJob(id)));
 
+/// Permanently removes a finished build from history. `admin`-only —
+/// see `ApiRouter._deleteJob`'s doc comment for why.
+Future<void> deleteJob(ApiClient api, String id) async {
+  await api.rawText(api.endpoints.deleteJob(id));
+}
+
 Future<StreamToken> createStreamToken(ApiClient api, String id) async =>
     StreamToken.fromJson(
       await api.decodeMap(api.endpoints.createStreamToken(id)),

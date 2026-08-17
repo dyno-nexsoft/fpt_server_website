@@ -52,6 +52,9 @@ abstract class FptApi extends ChopperService {
   @POST(path: '/jobs/{id}/retry')
   Future<Response<String>> retryJob(@Path('id') String id);
 
+  @DELETE(path: '/jobs/{id}')
+  Future<Response<String>> deleteJob(@Path('id') String id);
+
   @POST(path: '/jobs/{id}/stream-token')
   Future<Response<String>> createStreamToken(@Path('id') String id);
 
