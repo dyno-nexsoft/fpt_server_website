@@ -100,8 +100,7 @@ class BuildsByStateCard extends StatelessWidget {
                 Text('$total total', style: textTheme.bodySmall),
               ],
             ),
-            _Legend(data: data),
-            BarChart(data: data),
+            Expanded(child: BarChart(data: data)),
           ],
         ),
       ),
@@ -172,63 +171,10 @@ class BuildsByDayCard extends StatelessWidget {
                 Text('Builds per day (7 days)', style: textTheme.titleSmall),
               ],
             ),
-            BarChart(data: data),
+            Expanded(child: BarChart(data: data)),
           ],
         ),
       ),
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Legend row
-// ---------------------------------------------------------------------------
-
-class _Legend extends StatelessWidget {
-  const _Legend({required this.data});
-
-  final List<BarChartData> data;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Wrap(
-      spacing: 12,
-      runSpacing: 4,
-      children: [
-        for (final d in data.where((d) => d.value > 0))
-          _LegendItem(
-            label: '${d.label} (${d.value})',
-            color: d.color ?? theme.colorScheme.primary,
-          ),
-      ],
-    );
-  }
-}
-
-class _LegendItem extends StatelessWidget {
-  const _LegendItem({required this.label, required this.color});
-
-  final String label;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      spacing: 4,
-      children: [
-        Container(
-          width: 10,
-          height: 10,
-          decoration: BoxDecoration(
-            color: color,
-            borderRadius: BorderRadius.circular(2),
-          ),
-        ),
-        Text(label, style: textTheme.labelSmall),
-      ],
     );
   }
 }

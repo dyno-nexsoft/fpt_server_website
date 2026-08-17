@@ -26,7 +26,8 @@ class BarChart extends StatefulWidget {
   const BarChart({
     super.key,
     required this.data,
-    this.height = 260,
+    this.height = double.infinity,
+    this.width = double.infinity,
     this.barBorderRadius = 4,
     this.showValues = true,
     this.showGrid = true,
@@ -35,6 +36,7 @@ class BarChart extends StatefulWidget {
 
   final List<BarChartData> data;
   final double height;
+  final double width;
 
   /// Radius for the rounded top corners of each bar.
   final double barBorderRadius;
@@ -122,7 +124,7 @@ class _BarChartState extends State<BarChart>
 
     return SizedBox(
       height: widget.height,
-      width: double.infinity,
+      width: widget.width,
       child: AnimatedBuilder(
         animation: _controller,
         builder: (context, child) => CustomPaint(

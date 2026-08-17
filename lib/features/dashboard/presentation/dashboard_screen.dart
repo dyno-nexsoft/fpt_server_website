@@ -35,7 +35,7 @@ class DashboardScreen extends ConsumerWidget {
     final status = ref.watch(statusControllerProvider);
     final all = ref.watch(dashboardJobsProvider);
 
-    return SingleChildScrollView(
+    return Padding(
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -67,10 +67,12 @@ class DashboardScreen extends ConsumerWidget {
               Text('Build stats', style: textTheme.titleMedium),
             ],
           ),
-          all.when(
-            data: (jobs) => _BuildStatsSection(jobs: jobs),
-            loading: () => const LinearProgressIndicator(),
-            error: (error, _) => ErrorListTile(error: error),
+          Expanded(
+            child: all.when(
+              data: (jobs) => _BuildStatsSection(jobs: jobs),
+              loading: () => const LinearProgressIndicator(),
+              error: (error, _) => ErrorListTile(error: error),
+            ),
           ),
         ],
       ),
@@ -85,16 +87,14 @@ class _BuildStatsSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return IntrinsicHeight(
-      child: Flex(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        spacing: 12,
-        direction: isTabletWidth(context) ? Axis.vertical : Axis.horizontal,
-        children: [
-          Expanded(child: BuildsByStateCard(jobs: jobs)),
-          Expanded(child: BuildsByDayCard(jobs: jobs)),
-        ],
-      ),
+    return Flex(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      spacing: 12,
+      direction: isTabletWidth(context) ? Axis.vertical : Axis.horizontal,
+      children: [
+        Expanded(child: BuildsByStateCard(jobs: jobs)),
+        Expanded(child: BuildsByDayCard(jobs: jobs)),
+      ],
     );
   }
 }
