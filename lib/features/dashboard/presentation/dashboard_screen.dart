@@ -63,7 +63,7 @@ class DashboardScreen extends ConsumerWidget {
           Row(
             spacing: 8,
             children: [
-              const Icon(Icons.bar_chart),
+              const Icon(Icons.analytics),
               Text('Build stats', style: textTheme.titleMedium),
             ],
           ),
