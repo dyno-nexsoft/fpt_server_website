@@ -55,7 +55,7 @@ class BuildsByStateCard extends StatelessWidget {
     // Short labels so they fit under narrow bars without clipping.
     return [
       BarChartData(
-        label: 'OK',
+        label: 'Succeeded',
         value: counts[JobState.succeeded]!,
         color: Colors.green,
       ),
@@ -65,12 +65,12 @@ class BuildsByStateCard extends StatelessWidget {
         color: cs.error,
       ),
       BarChartData(
-        label: 'Cancel',
+        label: 'Cancelled',
         value: counts[JobState.cancelled]!,
         color: cs.secondary,
       ),
       BarChartData(
-        label: 'Interr.',
+        label: 'Interrupted',
         value: counts[JobState.interrupted]!,
         color: Colors.orange,
       ),
