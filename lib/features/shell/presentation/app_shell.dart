@@ -50,7 +50,10 @@ class _AppShellState extends ConsumerState<AppShell> {
     return Scaffold(
       appBar: AppBar(
         elevation: 5,
-        title: const Text('CI/CD'),
+        title: InkWell(
+          onTap: () => context.go('/'),
+          child: const Text('CI/CD'),
+        ),
         leading: mobile
             ? null
             : IconButton(
