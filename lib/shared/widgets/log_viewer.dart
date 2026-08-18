@@ -167,6 +167,24 @@ class _LogViewerState extends State<LogViewer> {
     });
   }
 
+  void _scrollToTop() {
+    if (!_verticalController.hasClients) return;
+    _verticalController.animateTo(
+      0,
+      duration: const Duration(milliseconds: 200),
+      curve: Curves.easeOut,
+    );
+  }
+
+  void _scrollToBottom() {
+    if (!_verticalController.hasClients) return;
+    _verticalController.animateTo(
+      _verticalController.position.maxScrollExtent,
+      duration: const Duration(milliseconds: 200),
+      curve: Curves.easeOut,
+    );
+  }
+
   static bool _isVertical(ScrollNotification notification) =>
       notification.metrics.axis == Axis.vertical;
 
@@ -201,25 +219,51 @@ class _LogViewerState extends State<LogViewer> {
     // box, so its thumb was drawn at the right edge of the widest line in the
     // log and was simply not on screen unless you happened to scroll all the
     // way right.
-    return Scrollbar(
-      controller: _verticalController,
-      // Out here the list's notifications have already bubbled through the
-      // horizontal Scrollable, so their depth is 1 and the default depth == 0
-      // predicate would drop every one of them, leaving the thumb frozen.
-      // Axis is the property that actually identifies them.
-      notificationPredicate: _isVertical,
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          _PinnedGutter(
-            controller: _verticalController,
-            rowCount: rowCount,
-            rowHeight: _metrics.rowHeight,
-            style: rowStyle,
+    return Stack(
+      children: [
+        Scrollbar(
+          controller: _verticalController,
+          // Out here the list's notifications have already bubbled through
+          // the horizontal Scrollable, so their depth is 1 and the default
+          // depth == 0 predicate would drop every one of them, leaving the
+          // thumb frozen. Axis is the property that actually identifies them.
+          notificationPredicate: _isVertical,
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _PinnedGutter(
+                controller: _verticalController,
+                rowCount: rowCount,
+                rowHeight: _metrics.rowHeight,
+                style: rowStyle,
+              ),
+              Expanded(child: _content(rowCount, rowStyle)),
+            ],
           ),
-          Expanded(child: _content(rowCount, rowStyle)),
-        ],
-      ),
+        ),
+        Positioned(
+          right: 16,
+          bottom: 16,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            spacing: 8,
+            children: [
+              FloatingActionButton.small(
+                heroTag: null,
+                tooltip: 'Scroll to top',
+                onPressed: _scrollToTop,
+                child: const Icon(Icons.keyboard_double_arrow_up),
+              ),
+              FloatingActionButton.small(
+                heroTag: null,
+                tooltip: 'Scroll to bottom',
+                onPressed: _scrollToBottom,
+                child: const Icon(Icons.keyboard_double_arrow_down),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
