@@ -23,7 +23,7 @@ class ConnectControl extends ConsumerWidget {
       return AppBarToggleChip(
         compact: compact,
         icon: Icons.login,
-        label: 'Connect',
+        label: 'Sign in',
         onPressed: () => const LoginRoute().go(context),
       );
     }

@@ -177,7 +177,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           width: 16,
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
-                      : const Text('Connect'),
+                      : const Text('Sign in'),
                 ),
                 TextButton(
                   onPressed: () => const DashboardRoute().go(context),

@@ -137,7 +137,7 @@ class _ConnectionCard extends ConsumerWidget {
               FilledButton.icon(
                 onPressed: () => const LoginRoute().go(context),
                 icon: const Icon(Icons.login),
-                label: const Text('Connect'),
+                label: const Text('Sign in'),
               ),
           ],
         ),
