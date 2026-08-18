@@ -242,7 +242,10 @@ class _LogViewerState extends State<LogViewer> {
           ),
         ),
         Positioned(
-          right: 16,
+          // Left, not right: the shell's own "New build" FAB sits bottom-
+          // right on every mobile screen (see AppShell), so right here would
+          // sit directly under it wherever a log is shown on mobile.
+          left: 16,
           bottom: 16,
           child: Column(
             mainAxisSize: MainAxisSize.min,
