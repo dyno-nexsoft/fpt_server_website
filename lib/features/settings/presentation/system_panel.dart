@@ -100,19 +100,29 @@ class _ActionTile extends ConsumerWidget {
   }
 
   Future<void> _confirmAndRun(BuildContext context, WidgetRef ref) async {
-    final confirmed = await ConfirmDialog.show(
-      context,
-      title: confirmTitle,
-      body: confirmBody,
-      confirmLabel: 'Run',
-      isDangerous: isDangerous,
-    );
-    if (!confirmed) return;
+    final Map<String, dynamic> params;
+    // system.restart alone gets the when_idle choice — hotReload/shutdown
+    // have no such param, and ConfirmDialog's plain yes/no covers them fine.
+    if (name == 'system.restart') {
+      final whenIdle = await _RestartConfirmDialog.show(context);
+      if (whenIdle == null) return;
+      params = {if (whenIdle) 'when_idle': true};
+    } else {
+      final confirmed = await ConfirmDialog.show(
+        context,
+        title: confirmTitle,
+        body: confirmBody,
+        confirmLabel: 'Run',
+        isDangerous: isDangerous,
+      );
+      if (!confirmed) return;
+      params = const {};
+    }
 
     try {
       final api = ref.read(apiClientProvider);
       final body = await api.decodeMap(
-        api.endpoints.invokeAction(name, api.encodeBody(const {})),
+        api.endpoints.invokeAction(name, api.encodeBody(params)),
       );
       ref
           .read(appToastProvider.notifier)
@@ -120,5 +130,60 @@ class _ActionTile extends ConsumerWidget {
     } on ApiException catch (e) {
       ref.read(appToastProvider.notifier).show(e.message, isError: true);
     }
+  }
+}
+
+/// [ConfirmDialog] plus a "wait until idle" checkbox — `system.restart`'s
+/// only param, so this doesn't warrant a generic extension to the shared
+/// dialog every other confirmation here still uses unchanged.
+///
+/// Resolves `null` on cancel, otherwise the checkbox's value.
+class _RestartConfirmDialog extends StatefulWidget {
+  const _RestartConfirmDialog();
+
+  static Future<bool?> show(BuildContext context) => showDialog<bool>(
+    context: context,
+    builder: (_) => const _RestartConfirmDialog(),
+  );
+
+  @override
+  State<_RestartConfirmDialog> createState() => _RestartConfirmDialogState();
+}
+
+class _RestartConfirmDialogState extends State<_RestartConfirmDialog> {
+  bool _whenIdle = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Restart the server?'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Pulls code, installs dependencies, and restarts the bot. It '
+            'will be briefly unreachable.',
+          ),
+          CheckboxListTile(
+            contentPadding: EdgeInsets.zero,
+            value: _whenIdle,
+            onChanged: (value) => setState(() => _whenIdle = value ?? false),
+            title: const Text('Wait until no builds are running or queued'),
+            controlAffinity: ListTileControlAffinity.leading,
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.pop(context, _whenIdle),
+          child: const Text('Run'),
+        ),
+      ],
+    );
   }
 }
