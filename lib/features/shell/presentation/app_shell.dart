@@ -50,7 +50,7 @@ class _AppShellState extends ConsumerState<AppShell> {
     return Scaffold(
       appBar: AppBar(
         elevation: 5,
-        title: InkWell(
+        title: GestureDetector(
           onTap: () => context.go('/'),
           child: const Text('CI/CD'),
         ),
