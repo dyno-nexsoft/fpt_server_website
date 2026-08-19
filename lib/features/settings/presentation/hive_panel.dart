@@ -28,19 +28,8 @@ class HivePanel extends ConsumerStatefulWidget {
 
 class _HivePanelState extends ConsumerState<HivePanel> {
   List<_HiveBoxInfo>? _boxes;
-  bool _loading = false;
-
-  @override
-  void initState() {
-    super.initState();
-    // Loads as soon as the panel appears — the header's refresh icon is the
-    // only other trigger, so there is no reason to also make the reader
-    // click a separate "Load boxes" button first.
-    _load();
-  }
 
   Future<void> _load() async {
-    setState(() => _loading = true);
     try {
       final api = ref.read(apiClientProvider);
       final body = await api.decodeMap(
@@ -62,8 +51,6 @@ class _HivePanelState extends ConsumerState<HivePanel> {
       if (mounted) {
         ref.read(appToastProvider.notifier).show(e.message, isError: true);
       }
-    } finally {
-      if (mounted) setState(() => _loading = false);
     }
   }
 
@@ -104,54 +91,43 @@ class _HivePanelState extends ConsumerState<HivePanel> {
   Widget build(BuildContext context) {
     final boxes = _boxes;
     return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          spacing: 8,
-          children: [
-            Row(
-              children: [
-                Text(
-                  'Hive database',
-                  style: Theme.of(context).textTheme.titleMedium,
+      child: ExpansionTile(
+        leading: const Icon(Icons.storage),
+        title: const Text('Hive database'),
+        subtitle: const Text('Inspect and clean storage boxes'),
+        onExpansionChanged: (value) {
+          if (value && boxes == null) _load();
+        },
+        children: [
+          if (boxes == null)
+            const Padding(
+              padding: EdgeInsets.all(16),
+              child: Center(child: CircularProgressIndicator()),
+            )
+          else if (boxes.isEmpty)
+            Padding(
+              padding: EdgeInsets.all(16),
+              child: const Text('No boxes open.'),
+            )
+          else
+            for (final box in boxes)
+              ListTile(
+                leading: const Icon(Icons.inventory_2_outlined),
+                title: Text(box.name),
+                subtitle: Text(
+                  '${box.entryCount} '
+                  'entr${box.entryCount == 1 ? 'y' : 'ies'}',
                 ),
-                const Spacer(),
-                IconButton(
-                  tooltip: 'Refresh',
-                  icon: const Icon(Icons.refresh),
-                  onPressed: _loading ? null : _load,
-                ),
-              ],
-            ),
-            if (boxes == null)
-              const Padding(
-                padding: EdgeInsets.all(16),
-                child: Center(child: CircularProgressIndicator()),
-              )
-            else if (boxes.isEmpty)
-              const Text('No boxes open.')
-            else
-              for (final box in boxes)
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: const Icon(Icons.inventory_2_outlined),
-                  title: Text(box.name),
-                  subtitle: Text(
-                    '${box.entryCount} '
-                    'entr${box.entryCount == 1 ? 'y' : 'ies'}',
+                trailing: IconButton(
+                  tooltip: 'Clean this box',
+                  icon: Icon(
+                    Icons.delete_outline,
+                    color: Theme.of(context).colorScheme.error,
                   ),
-                  trailing: IconButton(
-                    tooltip: 'Clean this box',
-                    icon: Icon(
-                      Icons.delete_outline,
-                      color: Theme.of(context).colorScheme.error,
-                    ),
-                    onPressed: () => _clean(box),
-                  ),
+                  onPressed: () => _clean(box),
                 ),
-          ],
-        ),
+              ),
+        ],
       ),
     );
   }

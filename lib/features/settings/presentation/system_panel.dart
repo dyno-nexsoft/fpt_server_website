@@ -19,17 +19,11 @@ class SystemPanel extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return Card(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        spacing: 8,
+      child: ExpansionTile(
+        leading: const Icon(Icons.computer),
+        title: Text('System'),
+        subtitle: const Text('Restart, hot reload, or shut down the bot'),
         children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-            child: Text(
-              'System',
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-          ),
           _ActionTile(
             icon: Icons.refresh,
             name: 'system.hotReload',
