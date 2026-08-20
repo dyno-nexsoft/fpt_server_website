@@ -14,6 +14,7 @@ import '../../../shared/auth_guard.dart';
 import '../../../shared/toast/app_toast.dart';
 import '../../../shared/widgets/confirm_dialog.dart';
 import '../../../shared/widgets/name_template_dialog.dart';
+import '../application/job_log_controller.dart';
 
 /// Right-hand sidebar of the job detail screen: params, artifact/log links,
 /// and the Promote / Cancel / Retry controls.
@@ -112,7 +113,7 @@ class JobDetailPanel extends ConsumerWidget {
               ref,
               'Retried',
               () => retryJob(ref.read(apiClientProvider), job.id),
-              onSuccess: (result) => _openIfNewJob(context, result),
+              onSuccess: (result) => _openIfNewJob(context, ref, result),
             ),
             icon: const Icon(Icons.replay),
             label: const Text('Retry'),
@@ -190,15 +191,22 @@ class JobDetailPanel extends ConsumerWidget {
     }
   }
 
-  /// A retry that couldn't re-edit the original message gets a genuinely new
-  /// job id (see `JobRegistry.reopen`'s doc comment) — without this, the only
-  /// trace of that new run is the warning toast `runAuthedJobAction` already
+  /// A retry either gets a genuinely new job id (see `JobRegistry.reopen`'s
+  /// doc comment) or reuses this one's. New id: without this, the only trace
+  /// of that new run is the warning toast `runAuthedJobAction` already
   /// showed, with no way to actually watch it happen from here (this page is
-  /// still showing the OLD, now-superseded job).
-  void _openIfNewJob(BuildContext context, Job result) {
-    if (result.id != job.id && context.mounted) {
-      JobDetailRoute(result.id).go(context);
+  /// still showing the OLD, now-superseded job). Same id: confirmed live —
+  /// the log stayed frozen on the old (cancelled) run's output with no new
+  /// SSE events, because `jobLogControllerProvider` was still subscribed to
+  /// the old `Job` instance's stream, which `reopen` replaced out from under
+  /// it. Neither this page's route nor the job id changed, so nothing else
+  /// would ever tell it to reconnect.
+  void _openIfNewJob(BuildContext context, WidgetRef ref, Job result) {
+    if (result.id != job.id) {
+      if (context.mounted) JobDetailRoute(result.id).go(context);
+      return;
     }
+    ref.invalidate(jobLogControllerProvider(job.id));
   }
 }
 

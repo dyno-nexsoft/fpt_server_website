@@ -14,6 +14,7 @@ import '../../../shared/auth_guard.dart';
 import '../../../shared/toast/app_toast.dart';
 import '../../../shared/widgets/confirm_dialog.dart';
 import '../../../shared/widgets/ellipsis_text.dart';
+import '../application/job_log_controller.dart';
 import '../application/jobs_providers.dart';
 
 /// A single truncated `key=value, ...` line instead of the raw dump wrapping
@@ -101,7 +102,7 @@ class JobRowActions extends ConsumerWidget {
               ref,
               'Retried',
               () => retryJob(ref.read(apiClientProvider), job.id),
-              onSuccess: (result) => _openIfNewJob(context, result),
+              onSuccess: (result) => _openIfNewJob(context, ref, result),
             ),
           ),
         if (canDelete)
@@ -177,13 +178,20 @@ class JobRowActions extends ConsumerWidget {
     }
   }
 
-  /// A retry that couldn't re-edit the original message gets a genuinely new
-  /// job id (see `JobRegistry.reopen`'s doc comment) — without this, the only
-  /// trace of that new run is the warning toast `runAuthedJobAction` already
-  /// showed, with no way to actually watch it happen from here.
-  void _openIfNewJob(BuildContext context, Job result) {
-    if (result.id != job.id && context.mounted) {
-      JobDetailRoute(result.id).go(context);
+  /// A retry either gets a genuinely new job id (see `JobRegistry.reopen`'s
+  /// doc comment) or reuses this one's. New id: without this, the only trace
+  /// of that new run is the warning toast `runAuthedJobAction` already
+  /// showed, with no way to actually watch it happen from here. Same id: a
+  /// job detail page already open for it is watching
+  /// `jobLogControllerProvider`, whose SSE connection is still subscribed to
+  /// the *old* `Job` instance's stream — `reopen` replaced it out from under
+  /// that provider, and nothing else would ever tell it to reconnect. See
+  /// `JobDetailPanel._openIfNewJob`, which hit this live.
+  void _openIfNewJob(BuildContext context, WidgetRef ref, Job result) {
+    if (result.id != job.id) {
+      if (context.mounted) JobDetailRoute(result.id).go(context);
+      return;
     }
+    ref.invalidate(jobLogControllerProvider(job.id));
   }
 }
