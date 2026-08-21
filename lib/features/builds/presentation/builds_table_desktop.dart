@@ -43,8 +43,8 @@ class BuildsTableDesktop extends ConsumerWidget {
           2: FixedColumnWidth(120),
           3: FlexColumnWidth(),
           4: FixedColumnWidth(150),
-          5: FixedColumnWidth(90),
-          6: FixedColumnWidth(90),
+          5: FixedColumnWidth(100),
+          6: FixedColumnWidth(100),
           7: FixedColumnWidth(140),
         },
         children: [

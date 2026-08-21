@@ -1,24 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/api/api_exception.dart';
 import 'package:fpt_server_shared/fpt_server_shared.dart';
-import '../../../core/providers/catalogue_providers.dart';
-import '../../../core/providers/core_providers.dart';
-import '../../../core/providers/job_seed_provider.dart';
-import '../../../core/providers/status_provider.dart';
-import '../../../core/router/app_router.dart';
-import '../../../core/storage/action_template_store.dart';
-import '../../../core/theme/app_theme.dart';
-import '../../../shared/toast/app_toast.dart';
-import '../../../shared/utils/responsive.dart';
-import '../../../shared/widgets/error_view.dart';
-import '../../../shared/widgets/name_template_dialog.dart';
+
+import 'action_form_controller.dart';
 import 'action_param_field.dart';
 
-/// A flat form generated from `GET /actions/{name}`'s schema — one field per
+/// A form generated from `GET /actions/{name}`'s schema — one field per
 /// param — so the UI can never drift from what the server actually accepts.
-/// Used for `New build` (`ci.build`) and every other invokable action.
+/// Used for every invokable action except `ci.build`, which has its own
+/// sectioned form (`CiBuildFormScreen`) because its fields fall into natural
+/// groups that a flat list hides.
 class ActionFormScreen extends ConsumerStatefulWidget {
   const ActionFormScreen({super.key, required this.actionName});
 
@@ -28,285 +20,18 @@ class ActionFormScreen extends ConsumerStatefulWidget {
   ConsumerState<ActionFormScreen> createState() => _ActionFormScreenState();
 }
 
-class _ActionFormScreenState extends ConsumerState<ActionFormScreen> {
-  final _formKey = GlobalKey<FormState>();
-  final _controllers = <String, TextEditingController>{};
-  final _enumValues = <String, String?>{};
-  final _boolValues = <String, bool>{};
-  bool _initialized = false;
-  bool _submitting = false;
-  List<String> _problems = const [];
-
-  /// The template currently filled into the form, if any — highlighted in
-  /// [_TemplatesBar] and used to pre-fill [_saveAsTemplate]'s dialog so
-  /// saving over it doesn't require retyping its name.
-  String? _selectedTemplateName;
-
-  @override
-  void dispose() {
-    for (final controller in _controllers.values) {
-      controller.dispose();
-    }
-    super.dispose();
-  }
-
-  void _initFields(ActionSchema action) {
-    if (_initialized) return;
-    for (final param in action.params) {
-      switch (param.type) {
-        case ParamType.enumeration:
-          _enumValues[param.name] =
-              param.defaultValue as String? ??
-              (param.choices.isNotEmpty ? param.choices.first : null);
-        case ParamType.boolean:
-          _boolValues[param.name] = param.defaultValue as bool? ?? false;
-        case ParamType.integer:
-        case ParamType.number:
-        case ParamType.string:
-          _controllers[param.name] = TextEditingController(
-            text: param.defaultValue?.toString() ?? '',
-          );
-      }
-    }
-    _initialized = true;
-  }
-
-  /// Reads the form's current values into a plain params map — shared by
-  /// [_submit] (which sends it as the request body) and [_saveAsTemplate]
-  /// (which persists it verbatim, without the int/double parsing `_submit`
-  /// needs for the wire format — a template only ever feeds back into these
-  /// same text fields).
-  Map<String, Object?> _collectParams(ActionSchema action) {
-    final params = <String, Object?>{};
-    for (final param in action.params) {
-      switch (param.type) {
-        case ParamType.enumeration:
-          final value = _enumValues[param.name];
-          if (value != null) params[param.name] = value;
-        case ParamType.boolean:
-          params[param.name] = _boolValues[param.name];
-        case ParamType.integer:
-        case ParamType.number:
-        case ParamType.string:
-          final text = _controllers[param.name]!.text.trim();
-          if (text.isNotEmpty) params[param.name] = text;
-      }
-    }
-    return params;
-  }
-
-  void _applyTemplate(ActionSchema action, ActionTemplate template) {
-    setState(() {
-      for (final param in action.params) {
-        final value = template.params[param.name];
-        switch (param.type) {
-          case ParamType.enumeration:
-            if (value is String) _enumValues[param.name] = value;
-          case ParamType.boolean:
-            _boolValues[param.name] = value as bool? ?? false;
-          case ParamType.integer:
-          case ParamType.number:
-          case ParamType.string:
-            _controllers[param.name]!.text = value?.toString() ?? '';
-        }
-      }
-      _selectedTemplateName = template.name;
-    });
-  }
-
-  Future<void> _saveAsTemplate(ActionSchema action) async {
-    final name = await showDialog<String>(
-      context: context,
-      builder: (context) => NameTemplateDialog(
-        initialName: _selectedTemplateName,
-        existingNames: ref
-            .read(actionTemplateStoreProvider)
-            .list(action.name)
-            .map((t) => t.name)
-            .toSet(),
-      ),
-    );
-    if (name == null || name.isEmpty) return;
-    await ref
-        .read(actionTemplateStoreProvider)
-        .save(
-          action.name,
-          ActionTemplate(name: name, params: _collectParams(action)),
-        );
-    if (mounted) setState(() => _selectedTemplateName = name);
-  }
-
-  Future<void> _deleteTemplate(ActionSchema action, String name) async {
-    await ref.read(actionTemplateStoreProvider).delete(action.name, name);
-    if (mounted) {
-      setState(() {
-        if (_selectedTemplateName == name) _selectedTemplateName = null;
-      });
-    }
-  }
-
-  Future<void> _submit(ActionSchema action) async {
-    if (!(_formKey.currentState?.validate() ?? false)) return;
-    setState(() {
-      _submitting = true;
-      _problems = const [];
-    });
-    final rawParams = _collectParams(action);
-    final body = <String, dynamic>{};
-    for (final param in action.params) {
-      final value = rawParams[param.name];
-      switch (param.type) {
-        case ParamType.enumeration:
-        case ParamType.boolean:
-          if (value != null) body[param.name] = value;
-        case ParamType.integer:
-          if (value != null) body[param.name] = int.parse(value as String);
-        case ParamType.number:
-          if (value != null) body[param.name] = double.parse(value as String);
-        case ParamType.string:
-          if (value != null) body[param.name] = value;
-      }
-    }
-
-    try {
-      final api = ref.read(apiClientProvider);
-      final response = await api.decodeMap(
-        api.endpoints.invokeAction(action.name, api.encodeBody(body)),
-      );
-      ref.read(statusControllerProvider.notifier).refreshNow();
-      if (action.kind == ActionKind.job) {
-        final job = Job.fromJson(response);
-        // GET /jobs/{id} won't carry logUrl/warnings — seed them for the
-        // detail screen this navigates to next.
-        ref.read(pendingJobSeedProvider.notifier).set(job);
-        if (mounted) JobDetailRoute(job.id).go(context);
-        return;
-      }
-      final message = response['message'] as String?;
-      ref
-          .read(appToastProvider.notifier)
-          .show(message ?? '${action.name} completed.');
-    } on ApiException catch (e) {
-      if (e.isValidation && e.problems != null) {
-        setState(() => _problems = e.problems!);
-      } else {
-        ref.read(appToastProvider.notifier).show(e.message, isError: true);
-      }
-    } finally {
-      if (mounted) setState(() => _submitting = false);
-    }
-  }
-
+class _ActionFormScreenState extends ConsumerState<ActionFormScreen>
+    with ActionFormControllerState<ActionFormScreen> {
   @override
   Widget build(BuildContext context) {
-    final actionsAsync = ref.watch(actionsProvider);
-    return actionsAsync.when(
-      data: (actions) {
-        final action = findAction(actions, widget.actionName);
-        if (action == null) {
-          return Center(child: Text('Unknown action ${widget.actionName}'));
-        }
-        _initFields(action);
-        return _buildForm(context, action);
-      },
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (error, _) => ErrorView(error: error),
-    );
-  }
-
-  Widget _buildForm(BuildContext context, ActionSchema action) {
-    final textTheme = Theme.of(context).textTheme;
-    final title = action.name == 'ci.build' ? 'New build' : action.name;
-    final hasTemplates = action.params.isNotEmpty;
-
-    final header = Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(title, style: textTheme.headlineSmall),
-        Text('(${action.name})', style: textTheme.bodySmall),
-        const SizedBox(height: 8),
-        if (action.description.isNotEmpty) Text(action.description),
-      ],
-    );
-
-    // Not `ref.watch` — this Provider never itself changes; the list only
-    // changes via `setState` after save/delete, which already forces
-    // `_buildForm` to re-run.
-    final templatesBar = hasTemplates
-        ? _TemplatesBar(
-            templates: ref.read(actionTemplateStoreProvider).list(action.name),
-            selectedName: _selectedTemplateName,
-            onApply: (template) => _applyTemplate(action, template),
-            onDelete: (name) => _deleteTemplate(action, name),
-          )
-        : null;
-
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: Form(
-        key: _formKey,
-        child: ListView(
-          children: [
-            // Side by side on desktop — matches where the template card used
-            // to sit as its own full-width block below the header, which
-            // pushed every field down for no benefit. Stacked on mobile:
-            // there is no spare horizontal room to share.
-            if (templatesBar != null && !isMobileWidth(context))
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(child: header),
-                  const SizedBox(width: 16),
-                  Expanded(child: templatesBar),
-                ],
-              )
-            else ...[
-              header,
-              if (templatesBar != null) ...[
-                const SizedBox(height: 16),
-                templatesBar,
-              ],
-            ],
-            const SizedBox(height: 16),
-            _buildFields(action),
-            if (_problems.isNotEmpty) _ProblemsCard(problems: _problems),
-            const SizedBox(height: 8),
-            Row(
-              spacing: 12,
-              children: [
-                Expanded(
-                  child: FilledButton(
-                    style: action.isDangerous
-                        ? AppTheme.destructiveButtonStyle(
-                            Theme.of(context).colorScheme,
-                          )
-                        : null,
-                    onPressed: _submitting ? null : () => _submit(action),
-                    child: _submitting
-                        ? const SizedBox(
-                            height: 16,
-                            width: 16,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : Text(
-                            action.kind == ActionKind.job
-                                ? 'Start build'
-                                : 'Run',
-                          ),
-                  ),
-                ),
-                if (hasTemplates)
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: () => _saveAsTemplate(action),
-                      icon: const Icon(Icons.bookmark_add_outlined),
-                      label: const Text('Save current as template'),
-                    ),
-                  ),
-              ],
-            ),
-          ],
-        ),
+    return buildActionForm(
+      context,
+      widget.actionName,
+      (action) => buildFormScaffold(
+        context,
+        action,
+        title: action.name,
+        fields: _buildFields(action),
       ),
     );
   }
@@ -315,13 +40,13 @@ class _ActionFormScreenState extends ConsumerState<ActionFormScreen> {
     for (final param in action.params)
       ActionParamField(
         param: param,
-        controller: _controllers[param.name],
-        enumValue: _enumValues[param.name],
-        boolValue: _boolValues[param.name] ?? false,
+        controller: controllers[param.name],
+        enumValue: enumValues[param.name],
+        boolValue: boolValues[param.name] ?? false,
         onEnumChanged: (value) =>
-            setState(() => _enumValues[param.name] = value),
+            setState(() => enumValues[param.name] = value),
         onBoolChanged: (value) =>
-            setState(() => _boolValues[param.name] = value),
+            setState(() => boolValues[param.name] = value),
       ),
   ];
 
@@ -352,91 +77,6 @@ class _ActionFormScreenState extends ConsumerState<ActionFormScreen> {
         crossAxisSpacing: 16,
       ),
       children: _fieldWidgets(action),
-    );
-  }
-}
-
-/// Saved form presets for one action — tap a chip to refill the form with
-/// it. Saving a new one happens from the button next to Start build at the
-/// bottom of the form, not here: this card sits beside the header, where
-/// there's room for a chip list but not for a save button too.
-class _TemplatesBar extends StatelessWidget {
-  const _TemplatesBar({
-    required this.templates,
-    required this.selectedName,
-    required this.onApply,
-    required this.onDelete,
-  });
-
-  final List<ActionTemplate> templates;
-
-  /// The template currently filled into the form, if any — shown with a
-  /// checkmark so "Save current as template" has an obvious target.
-  final String? selectedName;
-  final ValueChanged<ActionTemplate> onApply;
-  final ValueChanged<String> onDelete;
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          spacing: 8,
-          children: [
-            Row(
-              children: [
-                const Icon(Icons.bookmark_border, size: 18),
-                const SizedBox(width: 8),
-                Text(
-                  'Templates',
-                  style: Theme.of(context).textTheme.labelLarge,
-                ),
-              ],
-            ),
-            if (templates.isEmpty)
-              const Text('No saved templates yet for this action.')
-            else
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  for (final template in templates)
-                    InputChip(
-                      label: Text(template.name),
-                      selected: template.name == selectedName,
-                      showCheckmark: true,
-                      onPressed: () => onApply(template),
-                      onDeleted: () => onDelete(template.name),
-                    ),
-                ],
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _ProblemsCard extends StatelessWidget {
-  const _ProblemsCard({required this.problems});
-
-  final List<String> problems;
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('* required (server rejected this request):'),
-            for (final problem in problems) Text('• $problem'),
-          ],
-        ),
-      ),
     );
   }
 }

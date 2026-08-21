@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../features/artifacts/presentation/artifacts_screen.dart';
 import '../../features/auth/presentation/login_screen.dart';
 import '../../features/action_form/presentation/action_form_screen.dart';
+import '../../features/action_form/presentation/ci_build_form_screen.dart';
 import '../../features/builds/presentation/builds_screen.dart';
 import '../../features/builds/presentation/job_detail_screen.dart';
 import '../../features/builds/presentation/new_build_screen.dart';
@@ -174,8 +175,14 @@ class ActionFormRoute extends GoRouteData with $ActionFormRoute {
   final String name;
 
   @override
-  Widget build(BuildContext context, GoRouterState state) =>
-      ActionFormScreen(key: ValueKey(name), actionName: name);
+  Widget build(BuildContext context, GoRouterState state) {
+    // ci.build gets a hand-built, sectioned form (its fields fall into
+    // natural groups); everything else stays on the schema-generated form.
+    if (name == CiBuildFormScreen.actionName) {
+      return const CiBuildFormScreen();
+    }
+    return ActionFormScreen(key: ValueKey(name), actionName: name);
+  }
 }
 
 class JobDetailRoute extends GoRouteData with $JobDetailRoute {
