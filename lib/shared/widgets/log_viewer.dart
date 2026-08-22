@@ -317,9 +317,9 @@ class _LogViewerState extends State<LogViewer> {
             children: [
               FloatingActionButton.small(
                 heroTag: null,
-                tooltip: 'Copy selection (or the whole log)',
+                tooltip: 'Copy to clipboard',
                 onPressed: _copySelection,
-                child: const Icon(Icons.copy_all_outlined),
+                child: const Icon(Icons.content_copy_outlined),
               ),
               FloatingActionButton.small(
                 heroTag: null,
