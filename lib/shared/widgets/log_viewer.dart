@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart' show SelectedContent;
 
 import '../../core/browser/browser_utils.dart';
 import '../../core/theme/app_theme.dart';
@@ -97,6 +98,14 @@ class _LogViewerState extends State<LogViewer> {
   final _horizontalController = ScrollController();
   final _metrics = _LogMetrics();
 
+  /// Tracked via `SelectionArea.onSelectionChanged` rather than pulled
+  /// on-demand from a `GlobalKey<SelectionAreaState>` — `SelectableRegionState`
+  /// (what that key would give access to) never exposes `getSelectedContent()`
+  /// publicly; only its private `MultiSelectableSelectionContainerDelegate`
+  /// does, and `onSelectionChanged` is the one sanctioned way to observe it
+  /// from outside.
+  SelectedContent? _lastSelection;
+
   int _lastRowCount = 0;
   bool _stickToBottom = true;
   bool _scrollScheduled = false;
@@ -186,28 +195,41 @@ class _LogViewerState extends State<LogViewer> {
     );
   }
 
-  /// Copies the whole log as one real newline-joined string, bypassing
-  /// drag-select entirely.
+  /// Copies the current drag-selection verbatim when there is one — the
+  /// framework's own [SelectedContent.plainText] (see [_lastSelection])
+  /// already joins the selected text with real `\n`s between lines,
+  /// correctly, for whatever is actually selected. Falls back to the whole
+  /// log when nothing is selected, so the button still does something useful
+  /// on a bare click.
   ///
-  /// `SelectionArea` over [_LogRows] (a virtualized `ListView.builder`, one
-  /// `Text` per line) cannot reliably select or copy lines scrolled out of
-  /// view — they're not built, so there's nothing there to select — a known
-  /// Flutter limitation (flutter/flutter#102943), not something fixable from
-  /// here. This sidesteps it: the source of truth is [widget.lines] itself,
-  /// never what's currently on screen.
-  void _copyAll() {
-    final buffer = StringBuffer()..writeAll(widget.lines, '\n');
-    if (widget.pendingLine.isNotEmpty) {
-      if (widget.lines.isNotEmpty) buffer.write('\n');
-      buffer.write(widget.pendingLine);
+  /// The one thing this can never fix: `SelectionArea` over [_LogRows] (a
+  /// virtualized `ListView.builder`, one `Text` per line) cannot select
+  /// lines scrolled out of view — they're not built, so there's nothing
+  /// there to select — a known Flutter limitation (flutter/flutter#102943).
+  /// A selection can only ever cover whatever is currently on screen.
+  void _copySelection() {
+    final selected = _lastSelection?.plainText;
+    final String text;
+    final String toastMessage;
+    if (selected != null && selected.isNotEmpty) {
+      text = selected;
+      toastMessage = 'Selection copied to clipboard';
+    } else {
+      final buffer = StringBuffer()..writeAll(widget.lines, '\n');
+      if (widget.pendingLine.isNotEmpty) {
+        if (widget.lines.isNotEmpty) buffer.write('\n');
+        buffer.write(widget.pendingLine);
+      }
+      text = buffer.toString();
+      toastMessage = 'Log copied to clipboard';
     }
     // Not `Clipboard.setData` — see copyToClipboard's own doc comment: this
     // dashboard is plain HTTP on the LAN, where the async Clipboard API
     // silently no-ops instead of throwing.
-    copyToClipboard(buffer.toString());
+    copyToClipboard(text);
     ScaffoldMessenger.of(
       context,
-    ).showSnackBar(const SnackBar(content: Text('Log copied to clipboard')));
+    ).showSnackBar(SnackBar(content: Text(toastMessage)));
   }
 
   static bool _isVertical(ScrollNotification notification) =>
@@ -279,8 +301,8 @@ class _LogViewerState extends State<LogViewer> {
             children: [
               FloatingActionButton.small(
                 heroTag: null,
-                tooltip: 'Copy log',
-                onPressed: _copyAll,
+                tooltip: 'Copy selection (or the whole log)',
+                onPressed: _copySelection,
                 child: const Icon(Icons.copy_all_outlined),
               ),
               FloatingActionButton.small(
@@ -317,6 +339,7 @@ class _LogViewerState extends State<LogViewer> {
           // at all on a log of short lines.
           width: math.max(rowStyle.contentWidth, constraints.maxWidth),
           child: SelectionArea(
+            onSelectionChanged: (content) => _lastSelection = content,
             child: _HorizontalTouchPan(
               controller: _horizontalController,
               child: NotificationListener<ScrollNotification>(
