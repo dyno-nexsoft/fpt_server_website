@@ -2,8 +2,8 @@ import 'dart:math' as math;
 
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
+import '../../core/browser/browser_utils.dart';
 import '../../core/theme/app_theme.dart';
 
 part 'log_viewer_gutter.dart';
@@ -195,18 +195,19 @@ class _LogViewerState extends State<LogViewer> {
   /// Flutter limitation (flutter/flutter#102943), not something fixable from
   /// here. This sidesteps it: the source of truth is [widget.lines] itself,
   /// never what's currently on screen.
-  Future<void> _copyAll() async {
+  void _copyAll() {
     final buffer = StringBuffer()..writeAll(widget.lines, '\n');
     if (widget.pendingLine.isNotEmpty) {
       if (widget.lines.isNotEmpty) buffer.write('\n');
       buffer.write(widget.pendingLine);
     }
-    await Clipboard.setData(ClipboardData(text: buffer.toString()));
-    if (mounted) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Log copied to clipboard')));
-    }
+    // Not `Clipboard.setData` — see copyToClipboard's own doc comment: this
+    // dashboard is plain HTTP on the LAN, where the async Clipboard API
+    // silently no-ops instead of throwing.
+    copyToClipboard(buffer.toString());
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Log copied to clipboard')));
   }
 
   static bool _isVertical(ScrollNotification notification) =>
