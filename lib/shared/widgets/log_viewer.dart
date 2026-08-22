@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../core/theme/app_theme.dart';
 
@@ -185,6 +186,29 @@ class _LogViewerState extends State<LogViewer> {
     );
   }
 
+  /// Copies the whole log as one real newline-joined string, bypassing
+  /// drag-select entirely.
+  ///
+  /// `SelectionArea` over [_LogRows] (a virtualized `ListView.builder`, one
+  /// `Text` per line) cannot reliably select or copy lines scrolled out of
+  /// view — they're not built, so there's nothing there to select — a known
+  /// Flutter limitation (flutter/flutter#102943), not something fixable from
+  /// here. This sidesteps it: the source of truth is [widget.lines] itself,
+  /// never what's currently on screen.
+  Future<void> _copyAll() async {
+    final buffer = StringBuffer()..writeAll(widget.lines, '\n');
+    if (widget.pendingLine.isNotEmpty) {
+      if (widget.lines.isNotEmpty) buffer.write('\n');
+      buffer.write(widget.pendingLine);
+    }
+    await Clipboard.setData(ClipboardData(text: buffer.toString()));
+    if (mounted) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Log copied to clipboard')));
+    }
+  }
+
   static bool _isVertical(ScrollNotification notification) =>
       notification.metrics.axis == Axis.vertical;
 
@@ -252,6 +276,12 @@ class _LogViewerState extends State<LogViewer> {
             mainAxisSize: MainAxisSize.min,
             spacing: 8,
             children: [
+              FloatingActionButton.small(
+                heroTag: null,
+                tooltip: 'Copy log',
+                onPressed: _copyAll,
+                child: const Icon(Icons.copy_all_outlined),
+              ),
               FloatingActionButton.small(
                 heroTag: null,
                 tooltip: 'Scroll to top',
