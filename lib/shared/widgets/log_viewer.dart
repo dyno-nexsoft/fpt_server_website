@@ -104,6 +104,13 @@ class _LogViewerState extends State<LogViewer> {
   /// publicly; only its private `MultiSelectableSelectionContainerDelegate`
   /// does, and `onSelectionChanged` is the one sanctioned way to observe it
   /// from outside.
+  ///
+  /// Deliberately sticky — see [_onSelectionChanged]: overwriting this with
+  /// every `null` event made the Copy button always fall through to
+  /// copy-everything, confirmed live. Tapping the button itself steals focus
+  /// from the `SelectionArea`, which fires `onSelectionChanged(null)` as the
+  /// selection clears *before* `onPressed` ever runs — by the time
+  /// `_copySelection` read this field, the real selection was already gone.
   SelectedContent? _lastSelection;
 
   int _lastRowCount = 0;
@@ -193,6 +200,15 @@ class _LogViewerState extends State<LogViewer> {
       duration: const Duration(milliseconds: 200),
       curve: Curves.easeOut,
     );
+  }
+
+  /// Ignores `null` — see [_lastSelection]'s doc comment for why overwriting
+  /// it on every deselect broke the Copy button entirely. A genuinely new
+  /// drag-selection always arrives as a non-null [SelectedContent] first
+  /// (there is content to report), so this never gets stuck showing a
+  /// selection from several drags ago instead of the current one.
+  void _onSelectionChanged(SelectedContent? content) {
+    if (content != null) _lastSelection = content;
   }
 
   /// Copies the current drag-selection verbatim when there is one — the
@@ -339,7 +355,7 @@ class _LogViewerState extends State<LogViewer> {
           // at all on a log of short lines.
           width: math.max(rowStyle.contentWidth, constraints.maxWidth),
           child: SelectionArea(
-            onSelectionChanged: (content) => _lastSelection = content,
+            onSelectionChanged: _onSelectionChanged,
             child: _HorizontalTouchPan(
               controller: _horizontalController,
               child: NotificationListener<ScrollNotification>(
