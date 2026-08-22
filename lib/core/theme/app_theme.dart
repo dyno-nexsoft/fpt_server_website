@@ -44,6 +44,11 @@ abstract final class AppTheme {
     },
   );
 
+  static final _expansionTileTheme = ExpansionTileThemeData(
+    shape: LinearBorder.none,
+    collapsedShape: LinearBorder.none,
+  );
+
   static final ThemeData light = ThemeData(
     colorScheme: ColorScheme.fromSeed(
       seedColor: Colors.blueGrey,
@@ -51,6 +56,7 @@ abstract final class AppTheme {
     ),
     inputDecorationTheme: _inputDecorationTheme,
     pageTransitionsTheme: _pageTransitionsTheme,
+    expansionTileTheme: _expansionTileTheme,
   );
 
   static final ThemeData dark = ThemeData(
@@ -60,5 +66,6 @@ abstract final class AppTheme {
     ),
     inputDecorationTheme: _inputDecorationTheme,
     pageTransitionsTheme: _pageTransitionsTheme,
+    expansionTileTheme: _expansionTileTheme,
   );
 }

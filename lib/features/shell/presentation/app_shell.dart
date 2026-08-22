@@ -88,8 +88,8 @@ class _AppShellState extends ConsumerState<AppShell> {
                   label: 'Dashboard',
                 ),
                 NavigationDestination(
-                  icon: Icon(Icons.list_alt_outlined),
-                  selectedIcon: Icon(Icons.list_alt),
+                  icon: Icon(Icons.build_outlined),
+                  selectedIcon: Icon(Icons.build),
                   label: 'Builds',
                 ),
                 NavigationDestination(
@@ -137,8 +137,8 @@ class _AppShellState extends ConsumerState<AppShell> {
               label: Text('Dashboard'),
             ),
             NavigationRailDestination(
-              icon: Icon(Icons.list_alt_outlined),
-              selectedIcon: Icon(Icons.list_alt),
+              icon: Icon(Icons.build_outlined),
+              selectedIcon: Icon(Icons.build),
               label: Text('Builds'),
             ),
             NavigationRailDestination(
