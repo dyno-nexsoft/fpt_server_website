@@ -185,13 +185,17 @@ class JobRowActions extends ConsumerWidget {
   /// job detail page already open for it is watching
   /// `jobLogControllerProvider`, whose SSE connection is still subscribed to
   /// the *old* `Job` instance's stream — `reopen` replaced it out from under
-  /// that provider, and nothing else would ever tell it to reconnect. See
-  /// `JobDetailPanel._openIfNewJob`, which hit this live.
+  /// that provider, and nothing else would ever tell it to reconnect.
+  ///
+  /// Calls the controller's own [JobLogController.refresh] rather than
+  /// `ref.invalidate` — see `JobDetailPanel._openIfNewJob`'s doc comment:
+  /// invalidating tore down and rebuilt the whole provider, and left that
+  /// page stuck on a permanent loading spinner instead of reconnecting.
   void _openIfNewJob(BuildContext context, WidgetRef ref, Job result) {
     if (result.id != job.id) {
       if (context.mounted) JobDetailRoute(result.id).go(context);
       return;
     }
-    ref.invalidate(jobLogControllerProvider(job.id));
+    ref.read(jobLogControllerProvider(job.id).notifier).refresh();
   }
 }

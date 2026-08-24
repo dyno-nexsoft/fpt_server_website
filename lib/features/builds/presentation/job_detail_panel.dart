@@ -201,12 +201,20 @@ class JobDetailPanel extends ConsumerWidget {
   /// the old `Job` instance's stream, which `reopen` replaced out from under
   /// it. Neither this page's route nor the job id changed, so nothing else
   /// would ever tell it to reconnect.
+  ///
+  /// Calls the controller's own [JobLogController.refresh] rather than
+  /// `ref.invalidate` — confirmed live: invalidating tore down and rebuilt
+  /// the whole provider, and the page got stuck on a permanent loading
+  /// spinner (`JobDetailScreen` shows one whenever `logState.job` is null,
+  /// which it briefly is on every fresh `build()` — a plain state reset
+  /// never leaves that gap). `refresh()` exists precisely for this: reset in
+  /// place, no provider disposal at all.
   void _openIfNewJob(BuildContext context, WidgetRef ref, Job result) {
     if (result.id != job.id) {
       if (context.mounted) JobDetailRoute(result.id).go(context);
       return;
     }
-    ref.invalidate(jobLogControllerProvider(job.id));
+    ref.read(jobLogControllerProvider(job.id).notifier).refresh();
   }
 }
 
