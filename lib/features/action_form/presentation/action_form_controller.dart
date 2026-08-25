@@ -15,6 +15,35 @@ import '../../../shared/toast/app_toast.dart';
 import '../../../shared/utils/responsive.dart';
 import '../../../shared/widgets/error_view.dart';
 import '../../../shared/widgets/name_template_dialog.dart';
+import 'submitting_indicator.dart';
+
+/// Fake "what's probably happening right now" messages shown by
+/// [SubmittingIndicator] while an action's request is in flight — see that
+/// widget's doc comment for why they're fake rather than real progress.
+/// `gitlab.review`/`gitlab.translateArb` get AI-pipeline-specific wording
+/// since they're the actions that actually run long enough for this to
+/// matter; everything else gets a generic fallback.
+List<String> _submittingMessages(String actionName) => switch (actionName) {
+  'gitlab.review' => const [
+    '🔍 Fetching the merge request\'s diffs...',
+    '📄 Reading full file content for context...',
+    '🤖 Asking Gemini AI to review the changes...',
+    '🧠 Thinking through possible issues...',
+    '📝 Compiling the review comment...',
+  ],
+  'gitlab.translateArb' => const [
+    '📂 Reading the module\'s translation files...',
+    '🔎 Finding missing translations...',
+    '🤖 Asking Gemini AI to translate...',
+    '🌐 Cross-checking existing locales for context...',
+    '🔀 Opening the merge request...',
+  ],
+  _ => const [
+    'Sending the request...',
+    'Waiting for the server...',
+    'Still working — this can take a moment...',
+  ],
+};
 
 /// The shared controller layer behind every schema-generated action form:
 /// owns the per-param [TextEditingController]s and enum/bool selections, the
@@ -285,6 +314,10 @@ mixin ActionFormControllerState<T extends ConsumerStatefulWidget>
           if (problems.isNotEmpty) ...[
             const SizedBox(height: 16),
             _ProblemsCard(problems: problems),
+          ],
+          if (submitting) ...[
+            const SizedBox(height: 16),
+            SubmittingIndicator(messages: _submittingMessages(action.name)),
           ],
           const SizedBox(height: 8),
           FilledButton(

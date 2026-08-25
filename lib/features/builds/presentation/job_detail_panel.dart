@@ -163,7 +163,7 @@ class JobDetailPanel extends ConsumerWidget {
       confirmLabel: 'Cancel build',
       isDangerous: true,
     );
-    if (!confirmed) return;
+    if (!confirmed || !context.mounted) return;
     await _act(
       context,
       ref,
