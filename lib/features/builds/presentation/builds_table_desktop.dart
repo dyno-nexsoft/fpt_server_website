@@ -1,28 +1,15 @@
+import 'package:data_table_2/data_table_2.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:fpt_server_shared/fpt_server_shared.dart';
 import '../../../core/router/app_router.dart';
 import '../../../shared/utils/format.dart';
+import '../../../shared/utils/responsive.dart';
 import '../../../shared/widgets/ellipsis_text.dart';
 import '../../../shared/widgets/job_state_chip.dart';
 import 'job_row_widgets.dart';
 
-const _columnLabels = [
-  'Job',
-  'Action',
-  'Author',
-  'Params',
-  'State',
-  'Started',
-  'Duration',
-  '',
-];
-
-/// Desktop builds list: a flexible `Table` whose Params column claims
-/// leftover width instead of the fixed-width, horizontally-scrolling
-/// `DataTable` a narrow screen needs — see [BuildsListMobile]'s doc comment
-/// for why the two can't share one implementation.
 class BuildsTableDesktop extends ConsumerWidget {
   const BuildsTableDesktop({super.key, required this.jobs});
 
@@ -33,89 +20,79 @@ class BuildsTableDesktop extends ConsumerWidget {
     if (jobs.isEmpty) {
       return const Center(child: Text('No builds match this filter'));
     }
-    return SingleChildScrollView(
+
+    return Padding(
       padding: const EdgeInsets.all(16),
-      child: Table(
-        defaultVerticalAlignment: TableCellVerticalAlignment.middle,
-        columnWidths: const {
-          0: FixedColumnWidth(160),
-          1: FixedColumnWidth(110),
-          2: FixedColumnWidth(120),
-          3: FlexColumnWidth(),
-          4: FixedColumnWidth(150),
-          5: FixedColumnWidth(100),
-          6: FixedColumnWidth(100),
-          7: FixedColumnWidth(140),
-        },
-        children: [
-          TableRow(
-            decoration: BoxDecoration(
-              border: Border(
-                bottom: BorderSide(color: Theme.of(context).dividerColor),
-              ),
-            ),
-            children: [
-              for (final label in _columnLabels)
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                    vertical: 12,
-                    horizontal: 8,
-                  ),
-                  child: Text(
-                    label,
-                    style: Theme.of(context).textTheme.titleSmall,
-                  ),
-                ),
-            ],
+      child: PaginatedDataTable2(
+        minWidth: kTabletBreakpoint,
+        columnSpacing: 16,
+        horizontalMargin: 16,
+        autoRowsToHeight: true,
+        headingTextStyle: Theme.of(context).textTheme.titleMedium,
+        columns: const [
+          DataColumn2(label: Text('Job'), fixedWidth: 150),
+          DataColumn2(label: Text('Action'), fixedWidth: 100),
+          DataColumn2(label: Text('Author'), size: ColumnSize.S),
+          DataColumn2(label: Text('Params'), size: ColumnSize.L),
+          DataColumn2(label: Text('State'), fixedWidth: 150),
+          DataColumn2(
+            label: Text('Started'),
+            fixedWidth: 120,
+            headingRowAlignment: .center,
           ),
-          for (final job in jobs) _buildRow(context, job),
+          DataColumn2(
+            label: Text('Duration'),
+            fixedWidth: 120,
+            headingRowAlignment: .center,
+          ),
+          DataColumn2(label: Text('Actions'), fixedWidth: 120),
         ],
+        source: _JobsDataSource(context: context, jobs: jobs),
       ),
     );
   }
+}
 
-  TableRow _buildRow(BuildContext context, Job job) {
+class _JobsDataSource extends DataTableSource {
+  _JobsDataSource({required this.context, required this.jobs});
+
+  final BuildContext context;
+  final List<Job> jobs;
+
+  @override
+  DataRow2 getRow(int index) {
+    final job = jobs[index];
     final start = job.startedAt;
-    final end = job.finishedAt;
-    final duration = start != null
-        ? formatDuration((end ?? DateTime.now()).difference(start))
-        : null;
+    var end = job.finishedAt;
+    String? duration, startedAt;
+    if (start != null) {
+      end ??= DateTime.now();
+      duration = formatDuration(end.difference(start));
+      startedAt = formatRelativeTimestamp(start);
+    }
 
-    Widget cell(Widget child) => TableRowInkWell(
+    return DataRow2(
+      key: ValueKey(job.id),
       onTap: () => JobDetailRoute(job.id).go(context),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
-        child: Align(alignment: Alignment.centerLeft, child: child),
-      ),
-    );
-
-    return TableRow(
-      decoration: BoxDecoration(
-        border: Border(
-          bottom: BorderSide(
-            color: Theme.of(context).dividerColor.withValues(alpha: 0.5),
-          ),
-        ),
-      ),
-      children: [
-        cell(Text(job.id)),
-        cell(EllipsisText(job.actionName ?? job.command)),
-        cell(Text(job.createdBy ?? '—')),
-        cell(JobParamsCell(params: job.actionParams)),
-        cell(JobStateChip(state: job.state)),
-        cell(
-          Text(
-            job.startedAt != null
-                ? formatRelativeTimestamp(job.startedAt!)
-                : '',
-          ),
-        ),
-        cell(Text(duration ?? '')),
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
-          child: JobRowActions(job: job),
-        ),
+      cells: [
+        DataCell(Text(job.id)),
+        DataCell(Text(job.actionName ?? job.command)),
+        DataCell(EllipsisText(job.createdBy ?? '—')),
+        DataCell(JobParamsCell(params: job.actionParams)),
+        DataCell(JobStateChip(state: job.state)),
+        DataCell(Center(child: Text(startedAt ?? '—'))),
+        DataCell(Center(child: Text(duration ?? '—'))),
+        DataCell(JobRowActions(job: job)),
       ],
     );
   }
+
+  @override
+  bool get isRowCountApproximate => false;
+
+  @override
+  int get rowCount => jobs.length;
+
+  @override
+  int get selectedRowCount => 0;
 }
