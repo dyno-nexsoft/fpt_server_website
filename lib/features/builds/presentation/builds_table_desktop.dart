@@ -32,7 +32,7 @@ class BuildsTableDesktop extends ConsumerWidget {
         columns: const [
           DataColumn2(label: Text('Job'), fixedWidth: 150),
           DataColumn2(label: Text('Action'), fixedWidth: 100),
-          DataColumn2(label: Text('Author'), size: ColumnSize.S),
+          DataColumn2(label: Text('Author'), fixedWidth: 150),
           DataColumn2(label: Text('Params'), size: ColumnSize.L),
           DataColumn2(label: Text('State'), fixedWidth: 150),
           DataColumn2(
