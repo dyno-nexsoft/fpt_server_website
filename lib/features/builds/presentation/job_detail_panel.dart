@@ -1,20 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/api/jobs_api.dart';
 import '../../../core/browser/browser_utils.dart';
 import 'package:fpt_server_shared/fpt_server_shared.dart';
-import '../../../core/providers/core_providers.dart';
 import '../../../core/providers/session_provider.dart';
-import '../../../core/providers/status_provider.dart';
 import '../../../core/router/app_router.dart';
-import '../../../core/storage/action_template_store.dart';
 import '../../../core/theme/app_theme.dart';
-import '../../../shared/auth_guard.dart';
-import '../../../shared/toast/app_toast.dart';
 import '../../../shared/widgets/confirm_dialog.dart';
-import '../../../shared/widgets/name_template_dialog.dart';
-import '../application/job_log_controller.dart';
+import '../application/job_actions_controller.dart';
 
 /// Right-hand sidebar of the job detail screen: params, artifact/log links,
 /// and the Promote / Cancel / Retry controls.
@@ -80,18 +73,16 @@ class JobDetailPanel extends ConsumerWidget {
         // template by, so there's nothing to offer saving here.
         if (job.actionName != null)
           OutlinedButton.icon(
-            onPressed: () => _saveAsTemplate(context, ref, job.actionName!),
+            onPressed: () => ref
+                .read(jobActionsControllerProvider)
+                .saveAsTemplate(context, job),
             icon: const Icon(Icons.bookmark_add_outlined),
             label: const Text('Save as template'),
           ),
         if (canPromote)
           FilledButton.tonalIcon(
-            onPressed: () => _act(
-              context,
-              ref,
-              'Promoted',
-              () => promoteJob(ref.read(apiClientProvider), job.id),
-            ),
+            onPressed: () =>
+                ref.read(jobActionsControllerProvider).promote(context, job),
             icon: const Icon(Icons.upgrade),
             label: const Text('Promote'),
           ),
@@ -108,13 +99,7 @@ class JobDetailPanel extends ConsumerWidget {
         ],
         if (canRetry)
           FilledButton.icon(
-            onPressed: () => _act(
-              context,
-              ref,
-              'Retried',
-              () => retryJob(ref.read(apiClientProvider), job.id),
-              onSuccess: (result) => _openIfNewJob(context, ref, result),
-            ),
+            onPressed: () => _retry(context, ref),
             icon: const Icon(Icons.replay),
             label: const Text('Retry'),
           ),
@@ -135,26 +120,6 @@ class JobDetailPanel extends ConsumerWidget {
     );
   }
 
-  Future<void> _saveAsTemplate(
-    BuildContext context,
-    WidgetRef ref,
-    String actionName,
-  ) async {
-    final store = ref.read(actionTemplateStoreProvider);
-    final name = await showDialog<String>(
-      context: context,
-      builder: (context) => NameTemplateDialog(
-        existingNames: store.list(actionName).map((t) => t.name).toSet(),
-      ),
-    );
-    if (name == null || name.isEmpty) return;
-    await store.save(
-      actionName,
-      ActionTemplate(name: name, params: job.actionParams),
-    );
-    ref.read(appToastProvider.notifier).show('Saved as "$name"');
-  }
-
   Future<void> _confirmCancel(BuildContext context, WidgetRef ref) async {
     final confirmed = await ConfirmDialog.show(
       context,
@@ -164,57 +129,15 @@ class JobDetailPanel extends ConsumerWidget {
       isDangerous: true,
     );
     if (!confirmed || !context.mounted) return;
-    await _act(
-      context,
-      ref,
-      null,
-      () => cancelJob(ref.read(apiClientProvider), job.id),
-    );
+    await ref.read(jobActionsControllerProvider).cancel(context, job);
   }
 
-  Future<void> _act(
-    BuildContext context,
-    WidgetRef ref,
-    String? fallbackMessage,
-    Future<Job> Function() action, {
-    void Function(Job result)? onSuccess,
-  }) async {
-    final result = await runAuthedJobAction(
-      context,
-      ref,
-      fallbackMessage: fallbackMessage,
-      action: action,
-    );
-    if (result != null) {
-      ref.read(statusControllerProvider.notifier).refreshNow();
-      onSuccess?.call(result);
+  Future<void> _retry(BuildContext context, WidgetRef ref) async {
+    final controller = ref.read(jobActionsControllerProvider);
+    final result = await controller.retry(context, job);
+    if (result != null && context.mounted) {
+      controller.handleRetryResult(context, job, result);
     }
-  }
-
-  /// A retry either gets a genuinely new job id (see `JobRegistry.reopen`'s
-  /// doc comment) or reuses this one's. New id: without this, the only trace
-  /// of that new run is the warning toast `runAuthedJobAction` already
-  /// showed, with no way to actually watch it happen from here (this page is
-  /// still showing the OLD, now-superseded job). Same id: confirmed live —
-  /// the log stayed frozen on the old (cancelled) run's output with no new
-  /// SSE events, because `jobLogControllerProvider` was still subscribed to
-  /// the old `Job` instance's stream, which `reopen` replaced out from under
-  /// it. Neither this page's route nor the job id changed, so nothing else
-  /// would ever tell it to reconnect.
-  ///
-  /// Calls the controller's own [JobLogController.refresh] rather than
-  /// `ref.invalidate` — confirmed live: invalidating tore down and rebuilt
-  /// the whole provider, and the page got stuck on a permanent loading
-  /// spinner (`JobDetailScreen` shows one whenever `logState.job` is null,
-  /// which it briefly is on every fresh `build()` — a plain state reset
-  /// never leaves that gap). `refresh()` exists precisely for this: reset in
-  /// place, no provider disposal at all.
-  void _openIfNewJob(BuildContext context, WidgetRef ref, Job result) {
-    if (result.id != job.id) {
-      if (context.mounted) JobDetailRoute(result.id).go(context);
-      return;
-    }
-    ref.read(jobLogControllerProvider(job.id).notifier).refresh();
   }
 }
 

@@ -192,6 +192,49 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 }
 
+/// User-facing message + retry-offer for a failed connection attempt —
+/// classification logic kept off the widget so `_ConnectError.build` only
+/// renders, it doesn't decide.
+class _ConnectErrorPresentation {
+  const _ConnectErrorPresentation({
+    required this.message,
+    required this.offerRetry,
+  });
+
+  factory _ConnectErrorPresentation.of(Object? error, String serverUrl) {
+    if (error is! ApiException) {
+      return _ConnectErrorPresentation(
+        message: 'Unexpected error: $error',
+        offerRetry: false,
+      );
+    }
+    if (error.isUnauthorized) {
+      return const _ConnectErrorPresentation(
+        message: 'Key not recognised.',
+        offerRetry: false,
+      );
+    }
+    if (error.isServerNotConfigured) {
+      return const _ConnectErrorPresentation(
+        message:
+            'Server has no API key configured yet. '
+            'Run /admin api-key-add in Discord.',
+        offerRetry: false,
+      );
+    }
+    if (error.isNetworkError) {
+      return _ConnectErrorPresentation(
+        message: 'Cannot reach server at $serverUrl.',
+        offerRetry: true,
+      );
+    }
+    return _ConnectErrorPresentation(message: error.message, offerRetry: false);
+  }
+
+  final String message;
+  final bool offerRetry;
+}
+
 class _ConnectError extends ConsumerWidget {
   const _ConnectError({required this.error, required this.serverUrl});
 
@@ -200,29 +243,7 @@ class _ConnectError extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final err = error;
-    final String message;
-    final bool offerRetry;
-    if (err is ApiException) {
-      if (err.isUnauthorized) {
-        message = 'Key not recognised.';
-        offerRetry = false;
-      } else if (err.isServerNotConfigured) {
-        message =
-            'Server has no API key configured yet. '
-            'Run /admin api-key-add in Discord.';
-        offerRetry = false;
-      } else if (err.isNetworkError) {
-        message = 'Cannot reach server at $serverUrl.';
-        offerRetry = true;
-      } else {
-        message = err.message;
-        offerRetry = false;
-      }
-    } else {
-      message = 'Unexpected error: $err';
-      offerRetry = false;
-    }
+    final presentation = _ConnectErrorPresentation.of(error, serverUrl);
 
     return Card(
       child: Padding(
@@ -231,8 +252,8 @@ class _ConnectError extends ConsumerWidget {
           spacing: 12,
           children: [
             const Icon(Icons.error_outline),
-            Expanded(child: Text(message)),
-            if (offerRetry)
+            Expanded(child: Text(presentation.message)),
+            if (presentation.offerRetry)
               TextButton(
                 onPressed: () => ref.invalidate(healthCheckProvider(serverUrl)),
                 child: const Text('Retry'),

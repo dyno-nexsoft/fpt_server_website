@@ -1,21 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/api/api_exception.dart';
-import '../../../core/api/jobs_api.dart';
 import 'package:fpt_server_shared/fpt_server_shared.dart';
 import '../../../core/providers/catalogue_providers.dart';
-import '../../../core/providers/core_providers.dart';
-import '../../../core/providers/session_provider.dart';
-import '../../../core/providers/status_provider.dart';
-import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_theme.dart';
-import '../../../shared/auth_guard.dart';
-import '../../../shared/toast/app_toast.dart';
 import '../../../shared/widgets/confirm_dialog.dart';
 import '../../../shared/widgets/ellipsis_text.dart';
-import '../application/job_log_controller.dart';
-import '../application/jobs_providers.dart';
+import '../application/job_actions_controller.dart';
 
 /// A single truncated `key=value, ...` line instead of the raw dump wrapping
 /// across the row — the tooltip breaks the same entries one per line instead
@@ -77,12 +68,8 @@ class JobRowActions extends ConsumerWidget {
           IconButton(
             tooltip: 'Promote',
             icon: const Icon(Icons.upgrade),
-            onPressed: () => _act(
-              context,
-              ref,
-              'Promoted',
-              () => promoteJob(ref.read(apiClientProvider), job.id),
-            ),
+            onPressed: () =>
+                ref.read(jobActionsControllerProvider).promote(context, job),
           ),
         if (canCancel)
           IconButton(
@@ -97,13 +84,7 @@ class JobRowActions extends ConsumerWidget {
           IconButton(
             tooltip: 'Retry',
             icon: const Icon(Icons.replay),
-            onPressed: () => _act(
-              context,
-              ref,
-              'Retried',
-              () => retryJob(ref.read(apiClientProvider), job.id),
-              onSuccess: (result) => _openIfNewJob(context, ref, result),
-            ),
+            onPressed: () => _retry(context, ref),
           ),
         if (canDelete)
           IconButton(
@@ -126,19 +107,8 @@ class JobRowActions extends ConsumerWidget {
       confirmLabel: 'Delete',
       isDangerous: true,
     );
-    if (!confirmed) return;
-    if (!ref.read(sessionProvider).hasKey) {
-      if (context.mounted) const LoginRoute().go(context);
-      return;
-    }
-    try {
-      await deleteJob(ref.read(apiClientProvider), job.id);
-      ref.invalidate(jobsListProvider);
-      ref.read(statusControllerProvider.notifier).refreshNow();
-      ref.read(appToastProvider.notifier).show('Deleted');
-    } on ApiException catch (e) {
-      ref.read(appToastProvider.notifier).show(e.message, isError: true);
-    }
+    if (!confirmed || !context.mounted) return;
+    await ref.read(jobActionsControllerProvider).delete(context, job);
   }
 
   Future<void> _confirmCancel(BuildContext context, WidgetRef ref) async {
@@ -150,52 +120,14 @@ class JobRowActions extends ConsumerWidget {
       isDangerous: true,
     );
     if (!confirmed || !context.mounted) return;
-    await _act(
-      context,
-      ref,
-      null,
-      () => cancelJob(ref.read(apiClientProvider), job.id),
-    );
+    await ref.read(jobActionsControllerProvider).cancel(context, job);
   }
 
-  Future<void> _act(
-    BuildContext context,
-    WidgetRef ref,
-    String? fallbackMessage,
-    Future<Job> Function() action, {
-    void Function(Job result)? onSuccess,
-  }) async {
-    final result = await runAuthedJobAction(
-      context,
-      ref,
-      fallbackMessage: fallbackMessage,
-      action: action,
-    );
-    if (result != null) {
-      ref.invalidate(jobsListProvider);
-      ref.read(statusControllerProvider.notifier).refreshNow();
-      onSuccess?.call(result);
+  Future<void> _retry(BuildContext context, WidgetRef ref) async {
+    final controller = ref.read(jobActionsControllerProvider);
+    final result = await controller.retry(context, job);
+    if (result != null && context.mounted) {
+      controller.handleRetryResult(context, job, result);
     }
-  }
-
-  /// A retry either gets a genuinely new job id (see `JobRegistry.reopen`'s
-  /// doc comment) or reuses this one's. New id: without this, the only trace
-  /// of that new run is the warning toast `runAuthedJobAction` already
-  /// showed, with no way to actually watch it happen from here. Same id: a
-  /// job detail page already open for it is watching
-  /// `jobLogControllerProvider`, whose SSE connection is still subscribed to
-  /// the *old* `Job` instance's stream — `reopen` replaced it out from under
-  /// that provider, and nothing else would ever tell it to reconnect.
-  ///
-  /// Calls the controller's own [JobLogController.refresh] rather than
-  /// `ref.invalidate` — see `JobDetailPanel._openIfNewJob`'s doc comment:
-  /// invalidating tore down and rebuilt the whole provider, and left that
-  /// page stuck on a permanent loading spinner instead of reconnecting.
-  void _openIfNewJob(BuildContext context, WidgetRef ref, Job result) {
-    if (result.id != job.id) {
-      if (context.mounted) JobDetailRoute(result.id).go(context);
-      return;
-    }
-    ref.read(jobLogControllerProvider(job.id).notifier).refresh();
   }
 }

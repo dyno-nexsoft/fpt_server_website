@@ -142,9 +142,7 @@ class _ArtifactTile extends StatelessWidget {
   final String listingKey;
   final String origin;
 
-  String get _url => '$origin/$listingKey/${Uri.encodeComponent(file.name)}';
-
-  bool get _isIpa => file.name.toLowerCase().endsWith('.ipa');
+  String get _url => file.downloadUrl(origin: origin, listingKey: listingKey);
 
   /// Glyph by extension so the list reads at a glance instead of every file
   /// showing the same generic sheet — the handful of types this build
@@ -155,7 +153,7 @@ class _ArtifactTile extends StatelessWidget {
     final name = file.name.toLowerCase();
     return switch (name) {
       _ when name.endsWith('.apk') => Icons.android,
-      _ when _isIpa => Icons.phone_iphone,
+      _ when file.isIpa => Icons.phone_iphone,
       _ when name.endsWith('.log') || name.endsWith('.txt') =>
         Icons.description_outlined,
       _
@@ -174,18 +172,6 @@ class _ArtifactTile extends StatelessWidget {
     };
   }
 
-  /// Apple's over-the-air install handoff: the device fetches a manifest
-  /// (served by `ftp_handler`'s `manifest.plist?ipa=` route) which points back
-  /// at the `.ipa`. Requires an iOS device *and* HTTPS — the server is
-  /// LAN-only now, so this only works over a VPN/tunnel that terminates TLS
-  /// in front of it; a bare `http://` [origin] will not trigger the install.
-  String get _installUrl {
-    final ipaPath = Uri.encodeComponent('$listingKey/${file.name}');
-    final manifestUrl = '$origin/manifest.plist?ipa=$ipaPath';
-    return 'itms-services://?action=download-manifest'
-        '&url=${Uri.encodeComponent(manifestUrl)}';
-  }
-
   @override
   Widget build(BuildContext context) {
     final size = file.size;
@@ -201,11 +187,16 @@ class _ArtifactTile extends StatelessWidget {
           : Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                if (_isIpa)
+                if (file.isIpa)
                   IconButton(
                     tooltip: 'Install on iOS',
                     icon: const Icon(Icons.install_mobile),
-                    onPressed: () => openInNewTab(_installUrl),
+                    onPressed: () => openInNewTab(
+                      file.iosInstallUrl(
+                        origin: origin,
+                        listingKey: listingKey,
+                      ),
+                    ),
                   ),
                 IconButton(
                   tooltip: 'View raw',

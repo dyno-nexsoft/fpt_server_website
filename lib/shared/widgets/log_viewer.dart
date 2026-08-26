@@ -3,9 +3,11 @@ import 'dart:math' as math;
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart' show SelectedContent;
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/browser/browser_utils.dart';
 import '../../core/theme/app_theme.dart';
+import '../toast/app_toast.dart';
 
 part 'log_viewer_gutter.dart';
 part 'log_viewer_metrics.dart';
@@ -36,7 +38,7 @@ part 'log_viewer_row.dart';
 /// `doc/log-viewer.md` covers that budget, the append-only contract with
 /// `JobLogController`, and the four scrolling bugs this structure exists to
 /// avoid.
-class LogViewer extends StatefulWidget {
+class LogViewer extends ConsumerStatefulWidget {
   const LogViewer({
     super.key,
     required this.lines,
@@ -83,10 +85,10 @@ class LogViewer extends StatefulWidget {
   final ScrollController? verticalController;
 
   @override
-  State<LogViewer> createState() => _LogViewerState();
+  ConsumerState<LogViewer> createState() => _LogViewerState();
 }
 
-class _LogViewerState extends State<LogViewer> {
+class _LogViewerState extends ConsumerState<LogViewer> {
   /// How near the bottom still counts as "following the tail" — a fraction of
   /// a row, so a pixel of scroll-physics overshoot doesn't read as the reader
   /// having deliberately scrolled away.
@@ -243,9 +245,7 @@ class _LogViewerState extends State<LogViewer> {
     // dashboard is plain HTTP on the LAN, where the async Clipboard API
     // silently no-ops instead of throwing.
     copyToClipboard(text);
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(toastMessage)));
+    ref.read(appToastProvider.notifier).show(toastMessage);
   }
 
   static bool _isVertical(ScrollNotification notification) =>

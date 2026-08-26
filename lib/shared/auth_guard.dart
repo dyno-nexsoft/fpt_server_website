@@ -16,7 +16,7 @@ import 'toast/app_toast.dart';
 /// list, etc.); null if the guard redirected or the call failed.
 Future<Job?> runAuthedJobAction(
   BuildContext context,
-  WidgetRef ref, {
+  Ref ref, {
   required String? fallbackMessage,
   required Future<Job> Function() action,
 }) async {

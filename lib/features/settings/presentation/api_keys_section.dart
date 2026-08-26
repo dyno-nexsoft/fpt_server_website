@@ -1,14 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/api/api_exception.dart';
 import '../../../core/browser/browser_utils.dart';
 import 'package:fpt_server_shared/fpt_server_shared.dart';
 import '../../../core/providers/catalogue_providers.dart';
-import '../../../core/providers/connection_provider.dart';
-import '../../../core/providers/core_providers.dart';
-import '../../../core/router/app_router.dart';
-import '../../../shared/toast/app_toast.dart';
+import '../application/api_keys_controller.dart';
 import '../application/settings_providers.dart';
 
 /// `admin.apiKeys.list/add/remove` — self-service key management. Delete on
@@ -119,35 +115,8 @@ class ApiKeysSection extends ConsumerWidget {
         ],
       ),
     );
-    if (confirmed != true) return;
-
-    // Read before the delete call, not after: once the key that's actually
-    // signed in is gone, every subsequent request (including whatever
-    // myKeyInfoProvider would refetch) 401s.
-    final isSelf = ref.read(myKeyInfoProvider).value?.id == key.id;
-
-    try {
-      final api = ref.read(apiClientProvider);
-      await api.decodeMap(
-        api.endpoints.invokeAction(
-          'admin.apiKeys.remove',
-          api.encodeBody({'id': key.id}),
-        ),
-      );
-      if (isSelf) {
-        // The credential this session is signed in with no longer exists
-        // server-side — every further authed call from here on 401s until
-        // the user signs in again, so sign out now instead of leaving the
-        // UI showing a now-invalid "connected" state.
-        await ref.read(connectionControllerProvider.notifier).logout();
-        if (context.mounted) const LoginRoute().go(context);
-        return;
-      }
-      ref.invalidate(apiKeysProvider);
-      ref.read(appToastProvider.notifier).show('Key deleted.');
-    } on ApiException catch (e) {
-      ref.read(appToastProvider.notifier).show(e.message, isError: true);
-    }
+    if (confirmed != true || !context.mounted) return;
+    await ref.read(apiKeysControllerProvider).delete(context, key);
   }
 
   Future<void> _showCreateKeyFlow(BuildContext context, WidgetRef ref) async {
@@ -175,20 +144,9 @@ class ApiKeysSection extends ConsumerWidget {
     );
     if (name == null || name.isEmpty || !context.mounted) return;
 
-    try {
-      final api = ref.read(apiClientProvider);
-      final body = await api.decodeMap(
-        api.endpoints.invokeAction(
-          'admin.apiKeys.add',
-          api.encodeBody({'name': name}),
-        ),
-      );
-      ref.invalidate(apiKeysProvider);
-      if (context.mounted) {
-        await _showSecretDialog(context, body['secret'] as String);
-      }
-    } on ApiException catch (e) {
-      ref.read(appToastProvider.notifier).show(e.message, isError: true);
+    final secret = await ref.read(apiKeysControllerProvider).create(name);
+    if (secret != null && context.mounted) {
+      await _showSecretDialog(context, secret);
     }
   }
 

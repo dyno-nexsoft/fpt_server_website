@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/api/api_exception.dart';
-import '../../../core/providers/core_providers.dart';
 import '../../../shared/toast/app_toast.dart';
 import '../../../shared/widgets/confirm_dialog.dart';
+import '../application/admin_actions_controller.dart';
 
 /// `system.restart` and `system.hotReload` are `admin`-only but, like
 /// `admin.logs.tail`, are exposed over REST — see `SystemAction`'s doc
@@ -113,17 +112,13 @@ class _ActionTile extends ConsumerWidget {
       params = const {};
     }
 
-    try {
-      final api = ref.read(apiClientProvider);
-      final body = await api.decodeMap(
-        api.endpoints.invokeAction(name, api.encodeBody(params)),
-      );
-      ref
-          .read(appToastProvider.notifier)
-          .show(body['message'] as String? ?? 'Done');
-    } on ApiException catch (e) {
-      ref.read(appToastProvider.notifier).show(e.message, isError: true);
-    }
+    final body = await ref
+        .read(adminActionsControllerProvider)
+        .run(name, params);
+    if (body == null) return;
+    ref
+        .read(appToastProvider.notifier)
+        .show(body['message'] as String? ?? 'Done');
   }
 }
 
