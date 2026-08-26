@@ -15,7 +15,25 @@ import '../../../shared/toast/app_toast.dart';
 import '../../../shared/utils/responsive.dart';
 import '../../../shared/widgets/error_view.dart';
 import '../../../shared/widgets/name_template_dialog.dart';
+import 'action_result_dialog.dart';
 import 'submitting_indicator.dart';
+
+/// REST response fields that carry a link worth surfacing as its own
+/// button, and the label to show it under — mirrors the "View Review" /
+/// "View MR" buttons `gitlab.review`/`gitlab.translateArb` already get on
+/// Discord, so the website result isn't just a toast with no way to jump to
+/// what was actually created.
+const _resultLinkFields = {'note_url': 'View Review', 'mr_url': 'View MR'};
+
+/// The first recognized link field present (and non-null) in [response], if
+/// any — an action's result carries at most one of these.
+({String label, String url})? _findResultLink(Map<String, dynamic> response) {
+  for (final entry in _resultLinkFields.entries) {
+    final url = response[entry.key] as String?;
+    if (url != null) return (label: entry.value, url: url);
+  }
+  return null;
+}
 
 /// Fake "what's probably happening right now" messages shown by
 /// [SubmittingIndicator] while an action's request is in flight — see that
@@ -212,9 +230,31 @@ mixin ActionFormControllerState<T extends ConsumerStatefulWidget>
         return;
       }
       final message = response['message'] as String?;
-      ref
-          .read(appToastProvider.notifier)
-          .show(message ?? '${action.name} completed.');
+      final link = _findResultLink(response);
+      final warnings =
+          (response['warnings'] as List<dynamic>?)?.cast<String>() ?? const [];
+      final keysByFile =
+          (response['keys_by_file'] as Map<String, dynamic>?) ?? const {};
+      final details = [
+        for (final entry in keysByFile.entries)
+          '${entry.key}: ${entry.value} key(s)',
+      ];
+      if (mounted &&
+          (link != null || warnings.isNotEmpty || details.isNotEmpty)) {
+        await showDialog<void>(
+          context: context,
+          builder: (_) => ActionResultDialog(
+            message: message ?? '${action.name} completed.',
+            details: details,
+            warnings: warnings,
+            link: link,
+          ),
+        );
+      } else {
+        ref
+            .read(appToastProvider.notifier)
+            .show(message ?? '${action.name} completed.');
+      }
     } on ApiException catch (e) {
       if (e.isValidation && e.problems != null) {
         setState(() => problems = e.problems!);
