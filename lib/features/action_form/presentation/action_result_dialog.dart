@@ -44,10 +44,7 @@ class ActionResultDialog extends StatelessWidget {
               Padding(
                 padding: const EdgeInsets.only(right: 16),
                 child: FilledButton(
-                  onPressed: () {
-                    openInNewTab(link!.url);
-                    Navigator.of(context).pop();
-                  },
+                  onPressed: () => openInNewTab(link!.url),
                   child: Text(link!.label),
                 ),
               ),
@@ -56,16 +53,14 @@ class ActionResultDialog extends StatelessWidget {
         body: ListView(
           padding: const EdgeInsets.all(16),
           children: [
-            Row(
-              spacing: 12,
-              children: [
-                Icon(
-                  warnings.isEmpty
-                      ? Icons.check_circle_outline
-                      : Icons.warning_amber,
-                ),
-                Expanded(child: Text(message)),
-              ],
+            ListTile(
+              dense: true,
+              leading: Icon(
+                warnings.isEmpty
+                    ? Icons.check_circle_outline
+                    : Icons.warning_amber,
+              ),
+              title: Text(message),
             ),
             if (details.isNotEmpty)
               _ResultSection(
