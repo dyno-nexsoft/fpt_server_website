@@ -2,19 +2,34 @@ import 'package:flutter/material.dart';
 
 import '../../../core/browser/browser_utils.dart';
 
+/// One `gitlab.review` finding — mirrors the backend's `ReportedIssue`, kept
+/// as loose fields (not a `fpt_server_shared` model) since it's parsed
+/// ad hoc off the REST response the same way `details`/`warnings` already
+/// are, not a proper wire-contract type.
+typedef ReviewIssueView = ({
+  String severity,
+  String file,
+  int lineStart,
+  int? lineEnd,
+  String description,
+  String? url,
+});
+
 /// Result of a mutation action, shown as a full-screen dialog rather than
 /// a toast whenever there's something worth a closer look: a link to what
-/// was created (mirrors Discord's "View Review"/"View MR" buttons), or
-/// warnings about the data itself (e.g. `gitlab.translateArb`'s duplicate
-/// arb key findings and per-file breakdown) that a passing toast — or a
-/// small centered dialog, for a module with many locales/warnings — would
-/// be too easy to miss or too cramped to read.
+/// was created (mirrors Discord's "View Review"/"View MR" buttons), findings
+/// from `gitlab.review`, or warnings about the data itself (e.g.
+/// `gitlab.translateArb`'s duplicate arb key findings and per-file
+/// breakdown) that a passing toast — or a small centered dialog, for a
+/// module with many locales/warnings — would be too easy to miss or too
+/// cramped to read.
 class ActionResultDialog extends StatelessWidget {
   const ActionResultDialog({
     super.key,
     required this.message,
     this.details = const [],
     this.warnings = const [],
+    this.issues = const [],
     this.link,
   });
 
@@ -24,6 +39,10 @@ class ActionResultDialog extends StatelessWidget {
   /// `gitlab.translateArb`'s per-file key counts.
   final List<String> details;
   final List<String> warnings;
+
+  /// `gitlab.review`'s findings, in the same severity order already posted
+  /// to the GitLab MR comment.
+  final List<ReviewIssueView> issues;
 
   /// A link worth its own button — e.g. `{label: 'View MR', url: '...'}`.
   final ({String label, String url})? link;
@@ -62,6 +81,15 @@ class ActionResultDialog extends StatelessWidget {
               ),
               title: Text(message),
             ),
+            if (issues.isNotEmpty) ...[
+              const Divider(),
+              ListTile(
+                dense: true,
+                leading: const Icon(Icons.bug_report_outlined),
+                title: Text('Issues (${issues.length})'),
+              ),
+              for (final issue in issues) _IssueTile(issue: issue),
+            ],
             if (details.isNotEmpty)
               _ResultSection(
                 icon: Icons.description_outlined,
@@ -79,6 +107,53 @@ class ActionResultDialog extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// One `gitlab.review` finding — severity as an icon (color only for `HIGH`,
+/// via [ColorScheme.error] the same way every other destructive/dangerous
+/// indicator in this app already does — never a hardcoded color) rather
+/// than a custom badge, per this app's no-inline-styling rule.
+class _IssueTile extends StatelessWidget {
+  const _IssueTile({required this.issue});
+
+  final ReviewIssueView issue;
+
+  IconData get _icon => switch (issue.severity) {
+    'HIGH' => Icons.error_outline,
+    'MEDIUM' => Icons.warning_amber_outlined,
+    _ => Icons.info_outline,
+  };
+
+  /// `file:line` (or `file:start-end` for a multi-line finding) — just the
+  /// file name for a synthetic pipeline notice, which has no real line to
+  /// cite (see `ReportedIssue.fileUrl`'s doc comment).
+  String get _location {
+    if (issue.lineStart <= 0) return issue.file;
+    final end = issue.lineEnd;
+    return (end != null && end != issue.lineStart)
+        ? '${issue.file}:${issue.lineStart}-$end'
+        : '${issue.file}:${issue.lineStart}';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return ListTile(
+      leading: Icon(
+        _icon,
+        color: issue.severity == 'HIGH' ? colorScheme.error : null,
+      ),
+      title: Text('[${issue.severity}] $_location'),
+      subtitle: Text(issue.description),
+      trailing: issue.url == null
+          ? null
+          : IconButton(
+              tooltip: 'Open in GitLab',
+              icon: const Icon(Icons.open_in_new),
+              onPressed: () => openInNewTab(issue.url!),
+            ),
     );
   }
 }

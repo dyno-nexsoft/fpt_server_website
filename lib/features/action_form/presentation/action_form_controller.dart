@@ -25,6 +25,30 @@ import 'submitting_indicator.dart';
 /// what was actually created.
 const _resultLinkFields = {'note_url': 'View Review', 'mr_url': 'View MR'};
 
+/// `gitlab.review`'s findings, parsed the same defensively-typed way as
+/// every other field read off this external REST response — a malformed or
+/// missing entry is dropped rather than thrown.
+List<ReviewIssueView> _findIssues(Map<String, dynamic> response) {
+  final raw = response['issues'];
+  if (raw is! List) return const [];
+  return [
+    for (final entry in raw)
+      if (entry is Map<String, dynamic> &&
+          entry['severity'] is String &&
+          entry['file'] is String &&
+          entry['line_start'] is int &&
+          entry['description'] is String)
+        (
+          severity: entry['severity'] as String,
+          file: entry['file'] as String,
+          lineStart: entry['line_start'] as int,
+          lineEnd: entry['line_end'] as int?,
+          description: entry['description'] as String,
+          url: entry['url'] as String?,
+        ),
+  ];
+}
+
 /// The first recognized link field present (and non-null) in [response], if
 /// any — an action's result carries at most one of these.
 ({String label, String url})? _findResultLink(Map<String, dynamic> response) {
@@ -94,6 +118,7 @@ mixin ActionFormControllerState<T extends ConsumerStatefulWidget>
     String message,
     List<String> details,
     List<String> warnings,
+    List<ReviewIssueView> issues,
     ({String label, String url})? link,
   })?
   lastResult;
@@ -263,18 +288,23 @@ mixin ActionFormControllerState<T extends ConsumerStatefulWidget>
         for (final entry in keysByFile.entries)
           '${entry.key}: ${entry.value} key(s)',
       ];
+      final issues = _findIssues(response);
       if (mounted) {
         setState(
           () => lastResult = (
             message: message,
             details: details,
             warnings: warnings,
+            issues: issues,
             link: link,
           ),
         );
       }
       if (mounted &&
-          (link != null || warnings.isNotEmpty || details.isNotEmpty)) {
+          (link != null ||
+              warnings.isNotEmpty ||
+              details.isNotEmpty ||
+              issues.isNotEmpty)) {
         await showResultDialog();
       } else {
         ref.read(appToastProvider.notifier).show(message);
@@ -303,6 +333,7 @@ mixin ActionFormControllerState<T extends ConsumerStatefulWidget>
         message: result.message,
         details: result.details,
         warnings: result.warnings,
+        issues: result.issues,
         link: result.link,
       ),
     );
