@@ -29,8 +29,11 @@ const _resultLinkFields = {'note_url': 'View Review', 'mr_url': 'View MR'};
 /// any — an action's result carries at most one of these.
 ({String label, String url})? _findResultLink(Map<String, dynamic> response) {
   for (final entry in _resultLinkFields.entries) {
-    final url = response[entry.key] as String?;
-    if (url != null) return (label: entry.value, url: url);
+    // A type check, not a cast: this is parsing an external REST response,
+    // not trusted internal state — an unexpected shape should be treated
+    // as "no link" rather than throw and break the whole result handler.
+    final url = response[entry.key];
+    if (url is String) return (label: entry.value, url: url);
   }
   return null;
 }
@@ -83,6 +86,17 @@ mixin ActionFormControllerState<T extends ConsumerStatefulWidget>
   bool _initialized = false;
   bool submitting = false;
   List<String> problems = const [];
+
+  /// The last result [ActionResultDialog] was (or would have been) built
+  /// from — kept so "View last result" can reopen it after an accidental
+  /// dismiss, without re-running the action just to see it again.
+  ({
+    String message,
+    List<String> details,
+    List<String> warnings,
+    ({String label, String url})? link,
+  })?
+  lastResult;
 
   /// The template currently filled into the form, if any — highlighted in
   /// [_TemplatesBar] and used to pre-fill [saveAsTemplate]'s dialog so
@@ -229,31 +243,41 @@ mixin ActionFormControllerState<T extends ConsumerStatefulWidget>
         if (mounted) JobDetailRoute(job.id).go(context);
         return;
       }
-      final message = response['message'] as String?;
+      // Type checks, not casts, throughout this block: an external REST
+      // response with an unexpected shape should degrade (fall back to a
+      // default, drop a bad entry) rather than throw and turn a
+      // successful action into an unhandled exception.
+      final rawMessage = response['message'];
+      final message = rawMessage is String
+          ? rawMessage
+          : '${action.name} completed.';
       final link = _findResultLink(response);
       final warnings =
-          (response['warnings'] as List<dynamic>?)?.cast<String>() ?? const [];
+          (response['warnings'] as List<dynamic>?)
+              ?.whereType<String>()
+              .toList() ??
+          const [];
       final keysByFile =
           (response['keys_by_file'] as Map<String, dynamic>?) ?? const {};
       final details = [
         for (final entry in keysByFile.entries)
           '${entry.key}: ${entry.value} key(s)',
       ];
-      if (mounted &&
-          (link != null || warnings.isNotEmpty || details.isNotEmpty)) {
-        await showDialog<void>(
-          context: context,
-          builder: (_) => ActionResultDialog(
-            message: message ?? '${action.name} completed.',
+      if (mounted) {
+        setState(
+          () => lastResult = (
+            message: message,
             details: details,
             warnings: warnings,
             link: link,
           ),
         );
+      }
+      if (mounted &&
+          (link != null || warnings.isNotEmpty || details.isNotEmpty)) {
+        await showResultDialog();
       } else {
-        ref
-            .read(appToastProvider.notifier)
-            .show(message ?? '${action.name} completed.');
+        ref.read(appToastProvider.notifier).show(message);
       }
     } on ApiException catch (e) {
       if (e.isValidation && e.problems != null) {
@@ -264,6 +288,24 @@ mixin ActionFormControllerState<T extends ConsumerStatefulWidget>
     } finally {
       if (mounted) setState(() => submitting = false);
     }
+  }
+
+  /// Opens [ActionResultDialog] for [lastResult] — called right after a
+  /// submit that has something worth it, and again by "View last result"
+  /// if the dialog gets dismissed and the user wants it back without
+  /// re-running the action.
+  Future<void> showResultDialog() async {
+    final result = lastResult;
+    if (result == null) return;
+    await showDialog<void>(
+      context: context,
+      builder: (_) => ActionResultDialog(
+        message: result.message,
+        details: result.details,
+        warnings: result.warnings,
+        link: result.link,
+      ),
+    );
   }
 
   /// The async-loading scaffold every action form shares: watches the action
@@ -355,23 +397,31 @@ mixin ActionFormControllerState<T extends ConsumerStatefulWidget>
             const SizedBox(height: 16),
             _ProblemsCard(problems: problems),
           ],
-          if (submitting) ...[
-            const SizedBox(height: 16),
-            SubmittingIndicator(messages: _submittingMessages(action.name)),
-          ],
           const SizedBox(height: 8),
-          FilledButton(
-            style: action.isDangerous
-                ? AppTheme.destructiveButtonStyle(theme.colorScheme)
-                : null,
-            onPressed: submitting ? null : () => submit(action),
-            child: submitting
-                ? const SizedBox(
-                    height: 16,
-                    width: 16,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : Text(action.kind == ActionKind.job ? 'Start build' : 'Run'),
+          Row(
+            spacing: 12,
+            children: [
+              Expanded(
+                child: FilledButton(
+                  style: action.isDangerous
+                      ? AppTheme.destructiveButtonStyle(theme.colorScheme)
+                      : null,
+                  onPressed: submitting ? null : () => submit(action),
+                  child: submitting
+                      ? SubmittingIndicator(
+                          messages: _submittingMessages(action.name),
+                        )
+                      : Text(
+                          action.kind == ActionKind.job ? 'Start build' : 'Run',
+                        ),
+                ),
+              ),
+              if (lastResult != null && !submitting)
+                OutlinedButton(
+                  onPressed: showResultDialog,
+                  child: const Text('View last result'),
+                ),
+            ],
           ),
         ],
       ),

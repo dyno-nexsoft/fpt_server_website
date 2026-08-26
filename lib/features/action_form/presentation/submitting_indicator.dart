@@ -46,26 +46,31 @@ class _SubmittingIndicatorState extends State<SubmittingIndicator> {
 
   @override
   Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          spacing: 12,
-          children: [
-            const LinearProgressIndicator(),
-            AnimatedSwitcher(
-              duration: const Duration(milliseconds: 300),
-              child: Text(
-                widget.messages[_index],
-                key: ValueKey(_index),
-                style: textTheme.bodyMedium,
-                textAlign: TextAlign.center,
-              ),
-            ),
-          ],
+    // Lives inside the submit button itself (its `FilledButton.icon`-style
+    // label) rather than a separate card above it — a disabled button that
+    // still visibly changes reads as "working", not "stuck", without a
+    // second widget competing for attention right next to it.
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      spacing: 12,
+      children: [
+        const SizedBox(
+          height: 16,
+          width: 16,
+          child: CircularProgressIndicator(strokeWidth: 2),
         ),
-      ),
+        Flexible(
+          child: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 300),
+            child: Text(
+              widget.messages[_index],
+              key: ValueKey(_index),
+              overflow: TextOverflow.ellipsis,
+              maxLines: 1,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

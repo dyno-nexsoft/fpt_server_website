@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 
 import '../../../core/browser/browser_utils.dart';
 
-/// Result of a mutation action, shown as a dialog rather than a toast
-/// whenever there's something worth a closer look: a link to what was
-/// created (mirrors Discord's "View Review"/"View MR" buttons), or
+/// Result of a mutation action, shown as a full-screen dialog rather than
+/// a toast whenever there's something worth a closer look: a link to what
+/// was created (mirrors Discord's "View Review"/"View MR" buttons), or
 /// warnings about the data itself (e.g. `gitlab.translateArb`'s duplicate
-/// arb key findings) that a passing toast would be too easy to miss.
+/// arb key findings and per-file breakdown) that a passing toast — or a
+/// small centered dialog, for a module with many locales/warnings — would
+/// be too easy to miss or too cramped to read.
 class ActionResultDialog extends StatelessWidget {
   const ActionResultDialog({
     super.key,
@@ -28,18 +30,43 @@ class ActionResultDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      icon: Icon(
-        warnings.isEmpty ? Icons.check_circle_outline : Icons.warning_amber,
-      ),
-      content: SizedBox(
-        width: 420,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          spacing: 12,
+    return Dialog.fullscreen(
+      child: Scaffold(
+        appBar: AppBar(
+          leading: IconButton(
+            icon: const Icon(Icons.close),
+            tooltip: 'Close',
+            onPressed: () => Navigator.of(context).pop(),
+          ),
+          title: const Text('Result'),
+          actions: [
+            if (link != null)
+              Padding(
+                padding: const EdgeInsets.only(right: 16),
+                child: FilledButton(
+                  onPressed: () {
+                    openInNewTab(link!.url);
+                    Navigator.of(context).pop();
+                  },
+                  child: Text(link!.label),
+                ),
+              ),
+          ],
+        ),
+        body: ListView(
+          padding: const EdgeInsets.all(16),
           children: [
-            Text(message),
+            Row(
+              spacing: 12,
+              children: [
+                Icon(
+                  warnings.isEmpty
+                      ? Icons.check_circle_outline
+                      : Icons.warning_amber,
+                ),
+                Expanded(child: Text(message)),
+              ],
+            ),
             if (details.isNotEmpty)
               _ResultSection(
                 icon: Icons.description_outlined,
@@ -57,26 +84,12 @@ class ActionResultDialog extends StatelessWidget {
           ],
         ),
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Close'),
-        ),
-        if (link != null)
-          FilledButton(
-            onPressed: () {
-              openInNewTab(link!.url);
-              Navigator.of(context).pop();
-            },
-            child: Text(link!.label),
-          ),
-      ],
     );
   }
 }
 
-/// One collapsible-by-scroll list inside [ActionResultDialog] — a header
-/// row naming the section, then each item as its own tile.
+/// One section of [ActionResultDialog]'s body — a header row naming it,
+/// then each item as its own tile.
 class _ResultSection extends StatelessWidget {
   const _ResultSection({
     required this.icon,
@@ -93,20 +106,12 @@ class _ResultSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Column(
-      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         const Divider(),
         ListTile(dense: true, leading: Icon(icon), title: Text(title)),
-        ConstrainedBox(
-          constraints: const BoxConstraints(maxHeight: 220),
-          child: ListView(
-            shrinkWrap: true,
-            children: [
-              for (final item in items)
-                ListTile(leading: Icon(itemIcon), title: Text(item)),
-            ],
-          ),
-        ),
+        for (final item in items)
+          ListTile(leading: Icon(itemIcon), title: Text(item)),
       ],
     );
   }
