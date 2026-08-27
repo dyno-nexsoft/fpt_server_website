@@ -150,12 +150,18 @@ mixin ActionFormControllerState<T extends ConsumerStatefulWidget>
         case ParamType.number:
         case ParamType.string:
           controllers[param.name] = TextEditingController(
-            text: param.defaultValue?.toString() ?? '',
+            text: _defaultFieldText(param.defaultValue),
           );
       }
     }
     _initialized = true;
   }
+
+  /// A param's default/template value rendered into a text field — joined
+  /// with `\n` when it's a [List] (an [ActionParam.isStringList] field's
+  /// wire value), since that's what [collectParams] later splits back on.
+  String _defaultFieldText(Object? value) =>
+      value is List ? value.join('\n') : value?.toString() ?? '';
 
   /// Reads the form's current values into a plain params map — shared by
   /// [submit] (which sends it as the request body) and [saveAsTemplate]
@@ -173,9 +179,20 @@ mixin ActionFormControllerState<T extends ConsumerStatefulWidget>
           params[param.name] = boolValues[param.name];
         case ParamType.integer:
         case ParamType.number:
-        case ParamType.string:
           final text = controllers[param.name]!.text.trim();
           if (text.isNotEmpty) params[param.name] = text;
+        case ParamType.string:
+          final text = controllers[param.name]!.text.trim();
+          if (param.isStringList) {
+            final entries = text
+                .split('\n')
+                .map((line) => line.trim())
+                .where((line) => line.isNotEmpty)
+                .toList();
+            if (entries.isNotEmpty) params[param.name] = entries;
+          } else if (text.isNotEmpty) {
+            params[param.name] = text;
+          }
       }
     }
     return params;
@@ -193,7 +210,7 @@ mixin ActionFormControllerState<T extends ConsumerStatefulWidget>
           case ParamType.integer:
           case ParamType.number:
           case ParamType.string:
-            controllers[param.name]!.text = value?.toString() ?? '';
+            controllers[param.name]!.text = _defaultFieldText(value);
         }
       }
       selectedTemplateName = template.name;

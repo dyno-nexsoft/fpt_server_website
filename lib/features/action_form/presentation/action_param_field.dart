@@ -65,6 +65,19 @@ class ActionParamField extends StatelessWidget {
             label: _label,
           );
         }
+        if (param.isStringList) {
+          return TextFormField(
+            controller: controller,
+            decoration: InputDecoration(
+              labelText: _label,
+              hintText: 'One per line',
+              alignLabelWithHint: true,
+            ),
+            minLines: 3,
+            maxLines: 6,
+            validator: (value) => _validateText(value),
+          );
+        }
         return TextFormField(
           controller: controller,
           decoration: InputDecoration(labelText: _label),
