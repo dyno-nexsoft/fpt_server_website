@@ -80,7 +80,6 @@ class _AppShellState extends ConsumerState<AppShell> {
     final mobile = isMobileWidth(context);
 
     void onNavSelected(int index) {
-      if (navIndex == index) return;
       AppShell._navRoutes[index].go(context);
     }
 
