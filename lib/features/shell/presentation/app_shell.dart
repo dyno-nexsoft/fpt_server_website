@@ -9,6 +9,40 @@ import '../../../shared/utils/responsive.dart';
 import 'connect_control.dart';
 import 'status_chips_bar.dart';
 
+/// One destination shared by mobile's [NavigationBar] and desktop's
+/// [NavigationRail] — a single source for icon/label pairs that used to be
+/// declared twice, with nothing to stop the two lists drifting apart if one
+/// of the two got a new destination or a relabel and the other didn't.
+class _NavItem {
+  const _NavItem({
+    required this.icon,
+    required this.selectedIcon,
+    required this.label,
+  });
+
+  final IconData icon;
+  final IconData selectedIcon;
+  final String label;
+}
+
+const _navItems = [
+  _NavItem(
+    icon: Icons.dashboard_outlined,
+    selectedIcon: Icons.dashboard,
+    label: 'Dashboard',
+  ),
+  _NavItem(
+    icon: Icons.build_outlined,
+    selectedIcon: Icons.build,
+    label: 'Builds',
+  ),
+  _NavItem(
+    icon: Icons.settings_outlined,
+    selectedIcon: Icons.settings,
+    label: 'Settings',
+  ),
+];
+
 /// Persistent layout for every screen — Material 3's adaptive navigation
 /// shape: a [NavigationRail] on desktop, a [NavigationBar] on mobile, a
 /// running/queued status strip under the app bar either way, and the routed
@@ -45,7 +79,10 @@ class _AppShellState extends ConsumerState<AppShell> {
     final actions = ref.watch(actionsProvider);
     final mobile = isMobileWidth(context);
 
-    void onNavSelected(int index) => AppShell._navRoutes[index].go(context);
+    void onNavSelected(int index) {
+      if (navIndex == index) return;
+      AppShell._navRoutes[index].go(context);
+    }
 
     return Scaffold(
       appBar: AppBar(
@@ -81,36 +118,51 @@ class _AppShellState extends ConsumerState<AppShell> {
           ? NavigationBar(
               selectedIndex: navIndex,
               onDestinationSelected: onNavSelected,
-              destinations: const [
-                NavigationDestination(
-                  icon: Icon(Icons.dashboard_outlined),
-                  selectedIcon: Icon(Icons.dashboard),
-                  label: 'Dashboard',
-                ),
-                NavigationDestination(
-                  icon: Icon(Icons.build_outlined),
-                  selectedIcon: Icon(Icons.build),
-                  label: 'Builds',
-                ),
-                NavigationDestination(
-                  icon: Icon(Icons.settings_outlined),
-                  selectedIcon: Icon(Icons.settings),
-                  label: 'Settings',
-                ),
+              destinations: [
+                for (final item in _navItems)
+                  NavigationDestination(
+                    icon: Icon(item.icon),
+                    selectedIcon: Icon(item.selectedIcon),
+                    label: item.label,
+                  ),
               ],
             )
           : null,
       body: mobile
           ? widget.child
-          : _buildDesktopBody(actions, navIndex, onNavSelected),
+          : _DesktopShellBody(
+              actions: actions,
+              navIndex: navIndex,
+              railExtended: _railExtended,
+              onNavSelected: onNavSelected,
+              child: widget.child,
+            ),
     );
   }
+}
 
-  Widget _buildDesktopBody(
-    AsyncValue<List<ActionSchema>> actions,
-    int navIndex,
-    ValueChanged<int> onNavSelected,
-  ) {
+/// Desktop/tablet body: a [NavigationRail] beside the routed screen — split
+/// out of [_AppShellState] because a widget-returning method there would
+/// rebuild on every [AppShell] change regardless of whether anything this
+/// body actually reads changed; a proper widget lets Flutter skip work
+/// `const` children of it don't need redone.
+class _DesktopShellBody extends StatelessWidget {
+  const _DesktopShellBody({
+    required this.actions,
+    required this.navIndex,
+    required this.railExtended,
+    required this.onNavSelected,
+    required this.child,
+  });
+
+  final AsyncValue<List<ActionSchema>> actions;
+  final int navIndex;
+  final bool railExtended;
+  final ValueChanged<int> onNavSelected;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -118,38 +170,29 @@ class _AppShellState extends ConsumerState<AppShell> {
           leading: actions.when(
             data: (data) => Padding(
               padding: const EdgeInsets.symmetric(vertical: 8),
-              child: _BuildFab(actions: data, isExtended: _railExtended),
+              child: _BuildFab(actions: data, isExtended: railExtended),
             ),
             loading: () => const SizedBox(height: 56),
             error: (_, _) => const SizedBox(height: 56),
           ),
-          extended: _railExtended,
+          extended: railExtended,
           // NavigationRail forbids a labelType once extended — the label
           // already sits beside the icon then, so a separate
           // "always/selected/never" mode has nothing left to control.
-          labelType: _railExtended ? null : NavigationRailLabelType.all,
+          labelType: railExtended ? null : NavigationRailLabelType.all,
           selectedIndex: navIndex,
           onDestinationSelected: onNavSelected,
-          destinations: const [
-            NavigationRailDestination(
-              icon: Icon(Icons.dashboard_outlined),
-              selectedIcon: Icon(Icons.dashboard),
-              label: Text('Dashboard'),
-            ),
-            NavigationRailDestination(
-              icon: Icon(Icons.build_outlined),
-              selectedIcon: Icon(Icons.build),
-              label: Text('Builds'),
-            ),
-            NavigationRailDestination(
-              icon: Icon(Icons.settings_outlined),
-              selectedIcon: Icon(Icons.settings),
-              label: Text('Settings'),
-            ),
+          destinations: [
+            for (final item in _navItems)
+              NavigationRailDestination(
+                icon: Icon(item.icon),
+                selectedIcon: Icon(item.selectedIcon),
+                label: Text(item.label),
+              ),
           ],
         ),
         const VerticalDivider(width: 1),
-        Expanded(child: widget.child),
+        Expanded(child: child),
       ],
     );
   }
