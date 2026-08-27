@@ -7,7 +7,6 @@ import '../../../core/providers/catalogue_providers.dart';
 import '../../../core/providers/connection_provider.dart';
 import '../../../core/providers/session_provider.dart';
 import '../../../core/router/app_router.dart';
-import '../../../core/theme/app_theme.dart';
 import '../../../shared/toast/app_toast.dart';
 
 /// Discord's `name` argument is optional (falls back to the caller's Discord
@@ -77,12 +76,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   textAlign: TextAlign.center,
                   style: textTheme.headlineSmall,
                 ),
-                const Text(
-                  'A key is only needed to start, cancel, or retry a '
-                  'build — browsing status, logs, and artifacts works '
-                  'without one.',
-                  textAlign: TextAlign.center,
-                ),
                 Card(
                   margin: EdgeInsets.zero,
                   child: Padding(
@@ -102,8 +95,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                     const TextSpan(text: 'Run '),
                                     TextSpan(
                                       text: _apiKeyAddCommand,
-                                      style: textTheme.bodyMedium?.merge(
-                                        AppTheme.monospaceTextStyle,
+                                      style: TextStyle(
+                                        color: theme.primaryColor,
                                       ),
                                     ),
                                     const TextSpan(text: ' in Discord.'),
