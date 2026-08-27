@@ -58,80 +58,48 @@ class _BuildsScreenState extends ConsumerState<BuildsScreen> {
           ? routeState
           : null;
     }
-    final textTheme = Theme.of(context).textTheme;
     final jobs = ref.watch(
       jobsListProvider(JobsQuery(state: _stateFilter, limit: 100)),
     );
+    final header = _BuildsHeader(
+      jobsAsync: jobs,
+      onSearchChanged: (value) => setState(() => _search = value),
+    );
+    final chips = _FilterChipsRow(
+      selected: _stateFilter,
+      onSelected: (value) => setState(() => _stateFilter = value),
+    );
+
+    if (isTabletWidth(context)) {
+      // One scrollable for the header, filter chips, and the list together
+      // — they used to sit in a fixed `Column` above a separately-scrolling
+      // `Expanded` list, permanently eating vertical space on a phone-sized
+      // viewport. Now everything scrolls away together, the same way a
+      // native app's collapsing filter bar would.
+      return CustomScrollView(
+        slivers: [
+          SliverToBoxAdapter(child: header),
+          SliverToBoxAdapter(child: chips),
+          jobs.when(
+            data: (list) => BuildsListMobile(jobs: _applySearch(list)),
+            loading: () => const SliverFillRemaining(
+              child: Center(child: CircularProgressIndicator()),
+            ),
+            error: (error, _) =>
+                SliverFillRemaining(child: ErrorView(error: error)),
+          ),
+        ],
+      );
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            spacing: 8,
-            children: [
-              const Icon(Icons.list_alt_outlined),
-              Text('Builds', style: textTheme.headlineSmall),
-              const Spacer(),
-              SearchAnchor(
-                viewHintText: 'Search action or job id',
-                // Keeps the table below filtering live as the reader types,
-                // the same way the old inline field did — suggestions alone
-                // would only help someone who wants to jump straight to one
-                // match, not someone scanning a narrowed table.
-                viewOnChanged: (value) => setState(() => _search = value),
-                builder: (context, controller) => IconButton(
-                  tooltip: 'Search action or job id',
-                  icon: const Icon(Icons.search),
-                  onPressed: controller.openView,
-                ),
-                suggestionsBuilder: (context, controller) {
-                  if (controller.text.trim().isEmpty) return const [];
-                  final matches = jobs.maybeWhen(
-                    data: (list) => _filterJobs(list, controller.text),
-                    orElse: () => const <Job>[],
-                  );
-                  return [
-                    for (final job in matches.take(10))
-                      ListTile(
-                        leading: JobStateChip(state: job.state),
-                        title: Text(job.actionName ?? job.command),
-                        subtitle: Text(job.id),
-                        onTap: () {
-                          controller.closeView(job.actionName ?? job.id);
-                          setState(() => _search = '');
-                          JobDetailRoute(job.id).go(context);
-                        },
-                      ),
-                  ];
-                },
-              ),
-            ],
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-          child: Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              for (final (label, value, icon) in _filters)
-                ChoiceChip(
-                  avatar: Icon(icon, size: 18),
-                  label: Text(label),
-                  selected: _stateFilter == value,
-                  showCheckmark: false,
-                  onSelected: (_) => setState(() => _stateFilter = value),
-                ),
-            ],
-          ),
-        ),
+        header,
+        chips,
         Expanded(
           child: jobs.when(
-            data: (list) => isTabletWidth(context)
-                ? BuildsListMobile(jobs: _applySearch(list))
-                : BuildsTableDesktop(jobs: _applySearch(list)),
+            data: (list) => BuildsTableDesktop(jobs: _applySearch(list)),
             loading: () => const Center(child: CircularProgressIndicator()),
             error: (error, _) => ErrorView(error: error),
           ),
@@ -141,6 +109,90 @@ class _BuildsScreenState extends ConsumerState<BuildsScreen> {
   }
 
   List<Job> _applySearch(List<Job> jobs) => _filterJobs(jobs, _search);
+}
+
+class _BuildsHeader extends StatelessWidget {
+  const _BuildsHeader({required this.jobsAsync, required this.onSearchChanged});
+
+  final AsyncValue<List<Job>> jobsAsync;
+  final ValueChanged<String> onSearchChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Row(
+        spacing: 8,
+        children: [
+          const Icon(Icons.list_alt_outlined),
+          Text('Builds', style: textTheme.headlineSmall),
+          const Spacer(),
+          SearchAnchor(
+            viewHintText: 'Search action or job id',
+            // Keeps the list below filtering live as the reader types,
+            // the same way the old inline field did — suggestions alone
+            // would only help someone who wants to jump straight to one
+            // match, not someone scanning a narrowed list.
+            viewOnChanged: onSearchChanged,
+            builder: (context, controller) => IconButton(
+              tooltip: 'Search action or job id',
+              icon: const Icon(Icons.search),
+              onPressed: controller.openView,
+            ),
+            suggestionsBuilder: (context, controller) {
+              if (controller.text.trim().isEmpty) return const [];
+              final matches = jobsAsync.maybeWhen(
+                data: (list) => _filterJobs(list, controller.text),
+                orElse: () => const <Job>[],
+              );
+              return [
+                for (final job in matches.take(10))
+                  ListTile(
+                    leading: JobStateChip(state: job.state),
+                    title: Text(job.actionName ?? job.command),
+                    subtitle: Text(job.id),
+                    onTap: () {
+                      controller.closeView(job.actionName ?? job.id);
+                      onSearchChanged('');
+                      JobDetailRoute(job.id).go(context);
+                    },
+                  ),
+              ];
+            },
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _FilterChipsRow extends StatelessWidget {
+  const _FilterChipsRow({required this.selected, required this.onSelected});
+
+  final String? selected;
+  final ValueChanged<String?> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+      child: Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        children: [
+          for (final (label, value, icon) in _filters)
+            ChoiceChip(
+              avatar: Icon(icon, size: 18),
+              label: Text(label),
+              selected: selected == value,
+              showCheckmark: false,
+              onSelected: (_) => onSelected(value),
+            ),
+        ],
+      ),
+    );
+  }
 }
 
 /// Shared by the table's own live filter (driven by [_search], set from

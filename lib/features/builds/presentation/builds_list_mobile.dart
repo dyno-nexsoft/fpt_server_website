@@ -11,6 +11,12 @@ import 'job_row_widgets.dart';
 /// table — a table only reads well once a row can spread across real
 /// width, and on a phone that meant two-axis scrolling just to see the
 /// state or duration of the job you're already looking at.
+///
+/// A sliver, not a boxed [ListView] — `BuildsScreen` puts it inside a
+/// [CustomScrollView] alongside the header and filter chips, so the whole
+/// page scrolls as one instead of the chips staying pinned above a
+/// separately-scrolling list and permanently eating vertical space on a
+/// phone-sized viewport.
 class BuildsListMobile extends StatelessWidget {
   const BuildsListMobile({super.key, required this.jobs});
 
@@ -19,13 +25,18 @@ class BuildsListMobile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (jobs.isEmpty) {
-      return const Center(child: Text('No builds match this filter'));
+      return const SliverFillRemaining(
+        hasScrollBody: false,
+        child: Center(child: Text('No builds match this filter')),
+      );
     }
-    return ListView.separated(
+    return SliverPadding(
       padding: const EdgeInsets.all(16),
-      itemCount: jobs.length,
-      separatorBuilder: (_, _) => const SizedBox(height: 8),
-      itemBuilder: (context, index) => _JobCard(job: jobs[index]),
+      sliver: SliverList.separated(
+        itemCount: jobs.length,
+        separatorBuilder: (_, _) => const SizedBox(height: 8),
+        itemBuilder: (context, index) => _JobCard(job: jobs[index]),
+      ),
     );
   }
 }
