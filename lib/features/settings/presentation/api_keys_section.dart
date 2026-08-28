@@ -23,45 +23,49 @@ class ApiKeysSection extends ConsumerWidget {
       data: (list) {
         if (list == null) return const SizedBox.shrink();
         return Card(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            // Matches the Appearance card: a Column with
-            // crossAxisAlignment.start otherwise shrink-wraps to the
-            // DataTable's intrinsic width instead of the card stretching
-            // full width like its siblings.
-            child: SizedBox(
-              width: double.infinity,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                spacing: 12,
-                children: [
-                  Text(
-                    'API keys',
-                    style: Theme.of(context).textTheme.titleMedium,
+          child: ExpansionTile(
+            leading: const Icon(Icons.vpn_key_outlined),
+            title: const Text('API keys'),
+            subtitle: Text('${list.length} key(s)'),
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                // Matches the Appearance card: a Column with
+                // crossAxisAlignment.start otherwise shrink-wraps to the
+                // DataTable's intrinsic width instead of stretching full
+                // width like every other expanded child here.
+                child: SizedBox(
+                  width: double.infinity,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    spacing: 12,
+                    children: [
+                      SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: DataTable(
+                          columns: const [
+                            DataColumn(label: Text('Name')),
+                            DataColumn(label: Text('Hash')),
+                            DataColumn(label: Text('Scopes')),
+                            DataColumn(label: Text('Last used')),
+                            DataColumn(label: Text('')),
+                          ],
+                          rows: [
+                            for (final key in list)
+                              _row(context, ref, key, myKey),
+                          ],
+                        ),
+                      ),
+                      FilledButton.icon(
+                        onPressed: () => _showCreateKeyFlow(context, ref),
+                        icon: const Icon(Icons.add),
+                        label: const Text('Create key'),
+                      ),
+                    ],
                   ),
-                  SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: DataTable(
-                      columns: const [
-                        DataColumn(label: Text('Name')),
-                        DataColumn(label: Text('Hash')),
-                        DataColumn(label: Text('Scopes')),
-                        DataColumn(label: Text('Last used')),
-                        DataColumn(label: Text('')),
-                      ],
-                      rows: [
-                        for (final key in list) _row(context, ref, key, myKey),
-                      ],
-                    ),
-                  ),
-                  FilledButton.icon(
-                    onPressed: () => _showCreateKeyFlow(context, ref),
-                    icon: const Icon(Icons.add),
-                    label: const Text('Create key'),
-                  ),
-                ],
+                ),
               ),
-            ),
+            ],
           ),
         );
       },
