@@ -59,13 +59,17 @@ bool isBuildMenuAction(ActionSchema action) =>
 
 /// [isBuildMenuAction] entries the connected key can actually call.
 ///
-/// `myKey == null` (no key, or resolution still loading/failed) shows
-/// everything rather than nothing — an anonymous visitor was always going to
-/// hit a 401 on submit regardless, and hiding the whole menu for them would
-/// be a regression, not a permission fix. Once a key resolves, an action
-/// whose permission the key's scopes don't cover (e.g. `ci.clean` needs
-/// `invokeDangerous`, an `invoke`-only key doesn't have it) never gets a
-/// chance to show its "requires elevated permission" warning after the fact.
+/// `myKey == null` (no key, or resolution still loading/failed) shows every
+/// routine action rather than nothing — an anonymous visitor was always
+/// going to hit a 401 on submit regardless, and hiding those for them would
+/// be a regression, not a permission fix. Dangerous ones (`ci.clean`,
+/// `cron.run`, ...) are the exception: they stay hidden until a key actually
+/// resolves with `invokeDangerous` (or `admin`), so a build-menu browse
+/// doesn't casually surface "wipe the build cache" to whoever happens to be
+/// looking, logged in or not. Once a key resolves, every action is filtered
+/// by its real scopes either way, so a routine action a lesser key can't
+/// call never gets a chance to show its "requires elevated permission"
+/// warning after the fact.
 ///
 /// [actions] is expected to already be [actionsProvider]'s dangerous-last
 /// order — filtering here preserves it rather than re-deriving it.
@@ -74,7 +78,11 @@ List<ActionSchema> visibleBuildMenuActions(
   ApiKeyInfo? myKey,
 ) => actions
     .where(isBuildMenuAction)
-    .where((action) => myKey == null || myKey.can(action.permission))
+    .where(
+      (action) => myKey == null
+          ? !action.isDangerous
+          : myKey.can(action.permission),
+    )
     .toList();
 
 /// One-off, unauthenticated health check against an arbitrary base URL —
