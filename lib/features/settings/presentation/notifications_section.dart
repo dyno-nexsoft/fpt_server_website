@@ -38,7 +38,6 @@ class _NotificationsSectionState extends ConsumerState<NotificationsSection> {
         leading: Icon(icon),
         title: const Text('Notifications'),
         subtitle: Text(subtitle),
-        initiallyExpanded: !granted,
         children: [
           ListTile(
             title: const Text('Browser permission'),
