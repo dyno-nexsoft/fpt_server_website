@@ -57,14 +57,27 @@ class RouterNotifier extends ChangeNotifier {
     final loggingIn = state.matchedLocation == '/login';
     final needsKey = state.matchedLocation.startsWith('/builds/actions/');
 
-    if (needsKey && !creds.hasKey) return '/login';
+    // Carries the blocked screen through the login round trip as a query
+    // param, since this redirect only returns a path — there is nowhere else
+    // to stash it. Confirmed live: without this, submitting a build form
+    // while logged out always landed back on the dashboard after login
+    // instead of the form the user was actually trying to reach.
+    if (needsKey && !creds.hasKey) {
+      return '/login?from=${Uri.encodeComponent(state.uri.toString())}';
+    }
 
     final connection = _ref.read(connectionControllerProvider);
     if (loggingIn &&
         creds.hasKey &&
         connection.hasValue &&
         connection.value != null) {
-      return '/dashboard';
+      final from = state.uri.queryParameters['from'];
+      // Only ever set by the branch above, to an internal path — but decoded
+      // query input is still external input, so this stays a same-app
+      // redirect rather than trusting it outright.
+      return from != null && from.startsWith('/') && !from.startsWith('//')
+          ? Uri.decodeComponent(from)
+          : '/dashboard';
     }
     return null;
   }
