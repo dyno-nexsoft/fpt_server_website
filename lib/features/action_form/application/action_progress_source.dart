@@ -11,11 +11,15 @@ import '../../../core/sse/sse_client.dart';
 /// server could have handed out to address it by. The same id then travels
 /// with the request as `X-Invocation-Id`.
 ///
-/// Only [ProgressKind.status] frames are subscribed to: a `log` frame would
-/// be raw process output, which no mutation produces today and which the
-/// job log viewer already renders properly when one does.
+/// Subscribes to `status` and `error`, the two kinds a `mutation` reports:
+/// a named SSE event reaches only a listener registered for that exact name,
+/// so a kind missing here is silently dropped. `log` is deliberately left
+/// out — that is raw process output, which belongs in the job log viewer,
+/// and `queued`/`started`/`finished` are job lifecycle a mutation never
+/// emits (its completion is the POST response itself).
 class ActionProgressSource {
-  ActionProgressSource() : _client = SseClient(eventTypes: const ['status']);
+  ActionProgressSource()
+    : _client = SseClient(eventTypes: const ['status', 'error']);
 
   static final _random = Random();
 
