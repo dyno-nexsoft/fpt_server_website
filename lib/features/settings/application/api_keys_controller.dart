@@ -52,6 +52,20 @@ class ApiKeysController {
     _ref.invalidate(apiKeysProvider);
     return body['secret'] as String?;
   }
+
+  /// Replaces [key]'s scopes with [scopes] — admin-only server-side (see
+  /// `ApiKeySetScopesAction`'s doc comment for why this isn't self-service
+  /// like create/delete).
+  Future<bool> setScopes(ApiKeyInfo key, List<String> scopes) async {
+    final body = await _ref.read(adminActionsControllerProvider).run(
+      'admin.apiKeys.setScopes',
+      {'id': key.id, 'scopes': scopes},
+    );
+    if (body == null) return false;
+    _ref.invalidate(apiKeysProvider);
+    _ref.read(appToastProvider.notifier).show('Scopes updated.');
+    return true;
+  }
 }
 
 final apiKeysControllerProvider = Provider<ApiKeysController>(

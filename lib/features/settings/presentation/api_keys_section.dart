@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/browser/browser_utils.dart';
 import 'package:fpt_server_shared/fpt_server_shared.dart';
 import '../../../core/providers/catalogue_providers.dart';
+import '../../../shared/utils/format.dart';
 import '../application/api_keys_controller.dart';
 import '../application/settings_providers.dart';
 
@@ -45,6 +46,7 @@ class ApiKeysSection extends ConsumerWidget {
                         DataColumn(label: Text('Name')),
                         DataColumn(label: Text('Hash')),
                         DataColumn(label: Text('Scopes')),
+                        DataColumn(label: Text('Last used')),
                         DataColumn(label: Text('')),
                       ],
                       rows: [
@@ -75,22 +77,53 @@ class ApiKeysSection extends ConsumerWidget {
     ApiKeyInfo? myKey,
   ) {
     final isSelf = myKey != null && myKey.id == key.id;
-    final canDelete = isSelf || (myKey?.isAdmin ?? false);
+    final isAdmin = myKey?.isAdmin ?? false;
+    final canDelete = isSelf || isAdmin;
+    final lastUsed = key.lastUsedAt;
     return DataRow(
       cells: [
         DataCell(Text(key.name)),
         DataCell(Text(key.keyHash)),
         DataCell(Text(key.scopes.join(', '))),
         DataCell(
-          canDelete
-              ? IconButton(
+          Text(lastUsed == null ? 'Never' : formatRelativeTimestamp(lastUsed)),
+        ),
+        DataCell(
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Scope changes are admin-only server-side (see
+              // ApiKeySetScopesAction) — hidden rather than shown-disabled
+              // for anyone else, since a non-admin can never make it work.
+              if (isAdmin)
+                IconButton(
+                  tooltip: 'Edit scopes',
+                  icon: const Icon(Icons.edit_outlined),
+                  onPressed: () => _editScopes(context, ref, key),
+                ),
+              if (canDelete)
+                IconButton(
                   icon: const Icon(Icons.delete_outline),
                   onPressed: () => _confirmDelete(context, ref, key),
-                )
-              : const SizedBox.shrink(),
+                ),
+            ],
+          ),
         ),
       ],
     );
+  }
+
+  Future<void> _editScopes(
+    BuildContext context,
+    WidgetRef ref,
+    ApiKeyInfo key,
+  ) async {
+    final scopes = await showDialog<List<String>>(
+      context: context,
+      builder: (context) => _ScopesEditDialog(initialScopes: key.scopes),
+    );
+    if (scopes == null || !context.mounted) return;
+    await ref.read(apiKeysControllerProvider).setScopes(key, scopes);
   }
 
   Future<void> _confirmDelete(
@@ -212,6 +245,57 @@ class _SecretDialogState extends State<_SecretDialog> {
         FilledButton(
           onPressed: () => Navigator.pop(context),
           child: const Text('Done'),
+        ),
+      ],
+    );
+  }
+}
+
+/// Checkbox per [Permission] value — resolves to the new scope list (Dart
+/// enum-name strings, matching how scopes are already stored) or `null` on
+/// cancel.
+class _ScopesEditDialog extends StatefulWidget {
+  const _ScopesEditDialog({required this.initialScopes});
+
+  final List<String> initialScopes;
+
+  @override
+  State<_ScopesEditDialog> createState() => _ScopesEditDialogState();
+}
+
+class _ScopesEditDialogState extends State<_ScopesEditDialog> {
+  late final Set<String> _selected = widget.initialScopes.toSet();
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Edit scopes'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          for (final permission in Permission.values)
+            CheckboxListTile(
+              contentPadding: EdgeInsets.zero,
+              title: Text(permission.name),
+              value: _selected.contains(permission.name),
+              onChanged: (checked) => setState(() {
+                if (checked ?? false) {
+                  _selected.add(permission.name);
+                } else {
+                  _selected.remove(permission.name);
+                }
+              }),
+            ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.pop(context, _selected.toList()),
+          child: const Text('Save'),
         ),
       ],
     );
