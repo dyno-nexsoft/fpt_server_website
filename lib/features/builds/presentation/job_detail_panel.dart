@@ -84,7 +84,7 @@ class JobDetailPanel extends ConsumerWidget {
             onPressed: () =>
                 ref.read(jobActionsControllerProvider).promote(context, job),
             icon: const Icon(Icons.upgrade),
-            label: const Text('Promote'),
+            label: const Text('Run Now'),
           ),
         if (canCancel) ...[
           FilledButton.icon(

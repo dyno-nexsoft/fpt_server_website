@@ -66,7 +66,7 @@ class JobRowActions extends ConsumerWidget {
       children: [
         if (canPromote)
           IconButton(
-            tooltip: 'Promote',
+            tooltip: 'Run Now',
             icon: const Icon(Icons.upgrade),
             onPressed: () =>
                 ref.read(jobActionsControllerProvider).promote(context, job),
