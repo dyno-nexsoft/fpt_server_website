@@ -15,6 +15,18 @@ typedef ReviewIssueView = ({
   String? url,
 });
 
+/// Everything [ActionResultDialog] needs to render — named so it can be a
+/// field type (`ActionFormControllerState.lastResult`) and a
+/// [LastResultStore] persistence payload without repeating this shape
+/// inline at each use.
+typedef ActionResultView = ({
+  String message,
+  List<String> details,
+  List<String> warnings,
+  List<ReviewIssueView> issues,
+  ({String label, String url})? link,
+});
+
 /// Result of a mutation action, shown as a full-screen dialog rather than
 /// a toast whenever there's something worth a closer look: a link to what
 /// was created (mirrors Discord's "View Review"/"View MR" buttons), findings

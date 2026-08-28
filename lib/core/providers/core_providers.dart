@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../api/api_client.dart';
 import '../storage/action_template_store.dart';
+import '../storage/last_result_store.dart';
 import '../storage/session_prefs.dart';
 import 'session_provider.dart';
 
@@ -18,6 +19,10 @@ final sessionPrefsProvider = Provider<SessionPrefs>(
 
 final actionTemplateStoreProvider = Provider<ActionTemplateStore>(
   (ref) => ActionTemplateStore(ref.watch(sharedPreferencesProvider)),
+);
+
+final lastResultStoreProvider = Provider<LastResultStore>(
+  (ref) => LastResultStore(ref.watch(sharedPreferencesProvider)),
 );
 
 final apiClientProvider = Provider<ApiClient>((ref) {

@@ -113,15 +113,10 @@ mixin ActionFormControllerState<T extends ConsumerStatefulWidget>
 
   /// The last result [ActionResultDialog] was (or would have been) built
   /// from — kept so "View last result" can reopen it after an accidental
-  /// dismiss, without re-running the action just to see it again.
-  ({
-    String message,
-    List<String> details,
-    List<String> warnings,
-    List<ReviewIssueView> issues,
-    ({String label, String url})? link,
-  })?
-  lastResult;
+  /// dismiss, without re-running the action just to see it again. Mirrored
+  /// to [LastResultStore] on every change and restored from there in
+  /// [initFields], so a page refresh doesn't lose it either.
+  ActionResultView? lastResult;
 
   /// The template currently filled into the form, if any — highlighted in
   /// [_TemplatesBar] and used to pre-fill [saveAsTemplate]'s dialog so
@@ -154,6 +149,7 @@ mixin ActionFormControllerState<T extends ConsumerStatefulWidget>
           );
       }
     }
+    lastResult = ref.read(lastResultStoreProvider).load(action.name);
     _initialized = true;
   }
 
@@ -306,17 +302,15 @@ mixin ActionFormControllerState<T extends ConsumerStatefulWidget>
           '${entry.key}: ${entry.value} key(s)',
       ];
       final issues = _findIssues(response);
-      if (mounted) {
-        setState(
-          () => lastResult = (
-            message: message,
-            details: details,
-            warnings: warnings,
-            issues: issues,
-            link: link,
-          ),
-        );
-      }
+      final result = (
+        message: message,
+        details: details,
+        warnings: warnings,
+        issues: issues,
+        link: link,
+      );
+      await ref.read(lastResultStoreProvider).save(action.name, result);
+      if (mounted) setState(() => lastResult = result);
       if (mounted &&
           (link != null ||
               warnings.isNotEmpty ||
