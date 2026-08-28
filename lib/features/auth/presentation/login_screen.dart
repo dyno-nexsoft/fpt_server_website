@@ -96,7 +96,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                     TextSpan(
                                       text: _apiKeyAddCommand,
                                       style: TextStyle(
-                                        color: theme.primaryColor,
+                                        color: theme.colorScheme.primary,
                                       ),
                                     ),
                                     const TextSpan(text: ' in Discord.'),
