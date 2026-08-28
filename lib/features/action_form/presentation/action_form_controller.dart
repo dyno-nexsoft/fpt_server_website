@@ -27,28 +27,28 @@ import 'submitting_indicator.dart';
 /// what was actually created.
 const _resultLinkFields = {'note_url': 'View Review', 'mr_url': 'View MR'};
 
-/// `gitlab.review`'s findings, parsed the same defensively-typed way as
-/// every other field read off this external REST response — a malformed or
-/// missing entry is dropped rather than thrown.
-List<ReviewIssueView> _findIssues(Map<String, dynamic> response) {
+/// `gitlab.review`'s findings, parsed the same defensively as every other
+/// field read off this external REST response — a malformed entry is dropped
+/// rather than taking the whole result down with it.
+///
+/// [ReviewIssue.fromJson] does the field mapping (it is the same generated
+/// definition the server serializes with), but it throws on a missing or
+/// wrongly typed required field. That is the right behaviour for a wire
+/// contract and the wrong one here, where a successful review should still
+/// show its message and link even if one finding came back malformed.
+List<ReviewIssue> _findIssues(Map<String, dynamic> response) {
   final raw = response['issues'];
   if (raw is! List) return const [];
-  return [
-    for (final entry in raw)
-      if (entry is Map<String, dynamic> &&
-          entry['severity'] is String &&
-          entry['file'] is String &&
-          entry['line_start'] is int &&
-          entry['description'] is String)
-        (
-          severity: entry['severity'] as String,
-          file: entry['file'] as String,
-          lineStart: entry['line_start'] as int,
-          lineEnd: entry['line_end'] as int?,
-          description: entry['description'] as String,
-          url: entry['url'] as String?,
-        ),
-  ];
+  final issues = <ReviewIssue>[];
+  for (final entry in raw) {
+    if (entry is! Map<String, dynamic>) continue;
+    try {
+      issues.add(ReviewIssue.fromJson(entry));
+    } catch (_) {
+      // Skip this one finding, keep the rest.
+    }
+  }
+  return issues;
 }
 
 /// The first recognized link field present (and non-null) in [response], if

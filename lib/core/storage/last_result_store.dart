@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:fpt_server_shared/fpt_server_shared.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../features/action_form/presentation/action_result_dialog.dart';
@@ -45,21 +46,16 @@ class LastResultStore {
   Future<void> save(String actionName, ActionResultView result) =>
       _prefs.setString(_key(actionName), jsonEncode(_toJson(result)));
 
+  /// Round-trips findings through [ReviewIssue]'s own `toJson`/`fromJson`
+  /// rather than a hand-written copy of its fields. Stored entries outlive
+  /// deploys, so a field this file spelled differently from the model would
+  /// come back missing from a result saved by an older build — with no error
+  /// anywhere, just a finding that quietly lost its line number.
   Map<String, Object?> _toJson(ActionResultView result) => {
     'message': result.message,
     'details': result.details,
     'warnings': result.warnings,
-    'issues': [
-      for (final issue in result.issues)
-        {
-          'severity': issue.severity,
-          'file': issue.file,
-          'line_start': issue.lineStart,
-          'line_end': issue.lineEnd,
-          'description': issue.description,
-          'url': issue.url,
-        },
-    ],
+    'issues': [for (final issue in result.issues) issue.toJson()],
     'link': result.link == null
         ? null
         : {'label': result.link!.label, 'url': result.link!.url},
@@ -68,24 +64,19 @@ class LastResultStore {
   List<String> _stringList(Object? raw) =>
       raw is List ? raw.whereType<String>().toList() : const [];
 
-  List<ReviewIssueView> _issueList(Object? raw) {
+  List<ReviewIssue> _issueList(Object? raw) {
     if (raw is! List) return const [];
-    return [
-      for (final entry in raw)
-        if (entry is Map<String, dynamic> &&
-            entry['severity'] is String &&
-            entry['file'] is String &&
-            entry['line_start'] is int &&
-            entry['description'] is String)
-          (
-            severity: entry['severity'] as String,
-            file: entry['file'] as String,
-            lineStart: entry['line_start'] as int,
-            lineEnd: entry['line_end'] as int?,
-            description: entry['description'] as String,
-            url: entry['url'] as String?,
-          ),
-    ];
+    final issues = <ReviewIssue>[];
+    for (final entry in raw) {
+      if (entry is! Map<String, dynamic>) continue;
+      try {
+        issues.add(ReviewIssue.fromJson(entry));
+      } catch (_) {
+        // A single unreadable entry (written by an older build, say) drops
+        // out; the rest of the saved result still opens.
+      }
+    }
+    return issues;
   }
 
   ({String label, String url})? _link(Map<String, dynamic> json) {

@@ -1,29 +1,24 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/browser/browser_utils.dart';
+import 'package:fpt_server_shared/fpt_server_shared.dart';
 
-/// One `gitlab.review` finding — mirrors the backend's `ReportedIssue`, kept
-/// as loose fields (not a `fpt_server_shared` model) since it's parsed
-/// ad hoc off the REST response the same way `details`/`warnings` already
-/// are, not a proper wire-contract type.
-typedef ReviewIssueView = ({
-  String severity,
-  String file,
-  int lineStart,
-  int? lineEnd,
-  String description,
-  String? url,
-});
+import '../../../core/browser/browser_utils.dart';
 
 /// Everything [ActionResultDialog] needs to render — named so it can be a
 /// field type (`ActionFormControllerState.lastResult`) and a
 /// [LastResultStore] persistence payload without repeating this shape
 /// inline at each use.
+///
+/// A view model, not a wire type: it normalizes what several different
+/// actions each call something else (`keys_by_file`, `warnings`, `issues`,
+/// whichever link field they carry) into the one shape this dialog renders.
+/// [ReviewIssue] is the opposite and lives in `fpt_server_shared` — the
+/// server produces exactly it, so both sides share one definition.
 typedef ActionResultView = ({
   String message,
   List<String> details,
   List<String> warnings,
-  List<ReviewIssueView> issues,
+  List<ReviewIssue> issues,
   ({String label, String url})? link,
 });
 
@@ -54,7 +49,7 @@ class ActionResultDialog extends StatelessWidget {
 
   /// `gitlab.review`'s findings, in the same severity order already posted
   /// to the GitLab MR comment.
-  final List<ReviewIssueView> issues;
+  final List<ReviewIssue> issues;
 
   /// A link worth its own button — e.g. `{label: 'View MR', url: '...'}`.
   final ({String label, String url})? link;
@@ -130,24 +125,13 @@ class ActionResultDialog extends StatelessWidget {
 class _IssueTile extends StatelessWidget {
   const _IssueTile({required this.issue});
 
-  final ReviewIssueView issue;
+  final ReviewIssue issue;
 
   IconData get _icon => switch (issue.severity) {
-    'HIGH' => Icons.error_outline,
-    'MEDIUM' => Icons.warning_amber_outlined,
-    _ => Icons.info_outline,
+    ReviewSeverity.high => Icons.error_outline,
+    ReviewSeverity.medium => Icons.warning_amber_outlined,
+    ReviewSeverity.low => Icons.info_outline,
   };
-
-  /// `file:line` (or `file:start-end` for a multi-line finding) — just the
-  /// file name for a synthetic pipeline notice, which has no real line to
-  /// cite (see `ReportedIssue.fileUrl`'s doc comment).
-  String get _location {
-    if (issue.lineStart <= 0) return issue.file;
-    final end = issue.lineEnd;
-    return (end != null && end != issue.lineStart)
-        ? '${issue.file}:${issue.lineStart}-$end'
-        : '${issue.file}:${issue.lineStart}';
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -155,9 +139,9 @@ class _IssueTile extends StatelessWidget {
     return ListTile(
       leading: Icon(
         _icon,
-        color: issue.severity == 'HIGH' ? colorScheme.error : null,
+        color: issue.severity == ReviewSeverity.high ? colorScheme.error : null,
       ),
-      title: Text('[${issue.severity}] $_location'),
+      title: Text('[${issue.severity.toWire()}] ${issue.location}'),
       subtitle: Text(issue.description),
       trailing: issue.url == null
           ? null
