@@ -7,6 +7,7 @@ import '../../../core/api/api_exception.dart';
 import '../../../core/providers/catalogue_providers.dart';
 import '../../../core/providers/core_providers.dart';
 import '../../../core/providers/job_seed_provider.dart';
+import '../../../core/providers/notification_preferences_provider.dart';
 import '../../../core/providers/session_provider.dart';
 import '../../../core/providers/status_provider.dart';
 import '../../../core/router/app_router.dart';
@@ -344,9 +345,11 @@ mixin ActionFormControllerState<T extends ConsumerStatefulWidget>
       // see BrowserNotifications.show. A `gitlab.review`/`translateArb` run
       // takes minutes; without this, finding out it finished meant coming
       // back to check the tab yourself.
-      ref
-          .read(browserNotificationsProvider)
-          .show('${action.name} finished', body: message);
+      if (ref.read(notificationPreferencesProvider).myActivity) {
+        ref
+            .read(browserNotificationsProvider)
+            .show('${action.name} finished', body: message);
+      }
       await ref.read(lastResultStoreProvider).save(action.name, result);
       if (mounted) setState(() => lastResult = result);
       // Recorded, not shown, here: the dialog is opened after `finally` has

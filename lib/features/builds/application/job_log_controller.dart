@@ -7,6 +7,7 @@ import '../../../core/api/jobs_api.dart';
 import 'package:fpt_server_shared/fpt_server_shared.dart';
 import '../../../core/providers/core_providers.dart';
 import '../../../core/providers/job_seed_provider.dart';
+import '../../../core/providers/notification_preferences_provider.dart';
 import '../../../core/providers/status_provider.dart';
 import '../../../core/sse/job_event_source.dart';
 
@@ -309,9 +310,11 @@ class JobLogController extends Notifier<JobLogState> {
       // makes that actually useful: without it, "finished while I wasn't
       // looking at this tab" was silent until the next time this page
       // happened to be reopened.
-      ref
-          .read(browserNotificationsProvider)
-          .show('${job.actionName ?? 'Build'} ${finishedState.name}');
+      if (ref.read(notificationPreferencesProvider).myActivity) {
+        ref
+            .read(browserNotificationsProvider)
+            .show('${job.actionName ?? 'Build'} ${finishedState.name}');
+      }
     }
     state = state.copyWith(mode: LogConnectionMode.static);
     ref.read(statusControllerProvider.notifier).refreshNow();

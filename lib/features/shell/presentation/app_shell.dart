@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import 'package:fpt_server_shared/fpt_server_shared.dart';
 import '../../../core/providers/catalogue_providers.dart';
+import '../../../core/providers/team_activity_watcher.dart';
 import '../../../core/router/app_router.dart';
 import '../../../shared/utils/responsive.dart';
 import 'connect_control.dart';
@@ -78,6 +79,10 @@ class _AppShellState extends ConsumerState<AppShell> {
     final navIndex = AppShell._navIndexOf(location);
     final actions = ref.watch(actionsProvider);
     final mobile = isMobileWidth(context);
+    // Side-effect-only watch: keeps the watcher alive for the app's whole
+    // session, since AppShell wraps every route. Nothing here reads its
+    // (`void`) value.
+    ref.watch(teamActivityWatcherProvider);
 
     void onNavSelected(int index) {
       AppShell._navRoutes[index].go(context);
