@@ -33,6 +33,12 @@ class SseClient {
   Stream<void> get connectionErrors => _connectionErrors.stream;
 
   void connect(String url) {
+    // Reconnecting without releasing the previous socket would leave it
+    // streaming into handlers that still fire, with only the newest one
+    // reachable by [close] — the browser's own reconnect keeps it alive for
+    // the life of the tab. No caller does this today; the guard is here so
+    // that staying true is not a precondition of using this class.
+    _source?.close();
     final source = web.EventSource(url);
     for (final type in eventTypes) {
       source.addEventListener(

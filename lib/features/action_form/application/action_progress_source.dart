@@ -21,14 +21,23 @@ class ActionProgressSource {
   ActionProgressSource()
     : _client = SseClient(eventTypes: const ['status', 'error']);
 
-  static final _random = Random();
+  /// `Random.secure()`, not `Random()`: this id is the only thing guarding
+  /// the (unauthenticated, header-less) `EventSource` route, and the server
+  /// opens a feed for whatever id it is handed. A seeded PRNG plus a
+  /// timestamp is guessable within a narrow window — enough to read another
+  /// user's review status lines, and enough that a hundred guesses exhaust
+  /// `ProgressFeedRegistry`'s open-feed cap and block everyone's progress
+  /// for two minutes. See `ApiRouter._streamPath`'s comment.
+  static final _random = Random.secure();
 
-  /// Random rather than sequential: this id is the only thing guarding the
-  /// (unauthenticated, header-less) `EventSource` route, so it must not be
-  /// guessable from another one. See `ApiRouter._streamPath`'s comment.
   static String generateId() {
     final micros = DateTime.now().microsecondsSinceEpoch.toRadixString(36);
-    final salt = _random.nextInt(1679616).toRadixString(36).padLeft(4, '0');
+    // 60 bits of secure entropy, in two draws because `nextInt`'s own
+    // argument caps at 2^32.
+    final salt = List.generate(
+      2,
+      (_) => _random.nextInt(1 << 30).toRadixString(36).padLeft(6, '0'),
+    ).join();
     return 'i-$micros$salt';
   }
 

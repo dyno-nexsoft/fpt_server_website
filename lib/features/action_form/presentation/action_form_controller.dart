@@ -267,29 +267,34 @@ mixin ActionFormControllerState<T extends ConsumerStatefulWidget>
             invocationId: invocationId,
           ));
 
+    var showDialogAfterwards = false;
     setState(() {
       submitting = true;
       problems = const [];
       progressSource = progress;
     });
-    final rawParams = collectParams(action);
-    final body = <String, dynamic>{};
-    for (final param in action.params) {
-      final value = rawParams[param.name];
-      switch (param.type) {
-        case ParamType.enumeration:
-        case ParamType.boolean:
-          if (value != null) body[param.name] = value;
-        case ParamType.integer:
-          if (value != null) body[param.name] = int.parse(value as String);
-        case ParamType.number:
-          if (value != null) body[param.name] = double.parse(value as String);
-        case ParamType.string:
-          if (value != null) body[param.name] = value;
-      }
-    }
-
+    // Inside the try, not before it: `submitting` is already true and the
+    // progress stream already open by this point, so a throw out here (an
+    // `int.parse` on a field the validator somehow let through) would strand
+    // the form disabled forever and leak the EventSource.
     try {
+      final rawParams = collectParams(action);
+      final body = <String, dynamic>{};
+      for (final param in action.params) {
+        final value = rawParams[param.name];
+        switch (param.type) {
+          case ParamType.enumeration:
+          case ParamType.boolean:
+            if (value != null) body[param.name] = value;
+          case ParamType.integer:
+            if (value != null) body[param.name] = int.parse(value as String);
+          case ParamType.number:
+            if (value != null) body[param.name] = double.parse(value as String);
+          case ParamType.string:
+            if (value != null) body[param.name] = value;
+        }
+      }
+
       final api = ref.read(apiClientProvider);
       final response = await api.decodeMap(
         api.endpoints.invokeAction(
@@ -337,13 +342,18 @@ mixin ActionFormControllerState<T extends ConsumerStatefulWidget>
       );
       await ref.read(lastResultStoreProvider).save(action.name, result);
       if (mounted) setState(() => lastResult = result);
-      if (mounted &&
-          (link != null ||
-              warnings.isNotEmpty ||
-              details.isNotEmpty ||
-              issues.isNotEmpty)) {
-        await showResultDialog();
-      } else {
+      // Recorded, not shown, here: the dialog is opened after `finally` has
+      // run. Awaiting it inside the try held the whole cleanup hostage to
+      // the user dismissing it — the submit button stayed disabled and still
+      // spinning on the last progress line, "View last result" stayed
+      // hidden, and the EventSource stayed connected the entire time the
+      // dialog was on screen.
+      showDialogAfterwards =
+          link != null ||
+          warnings.isNotEmpty ||
+          details.isNotEmpty ||
+          issues.isNotEmpty;
+      if (!showDialogAfterwards) {
         ref.read(appToastProvider.notifier).show(message);
       }
     } on ApiException catch (e) {
@@ -364,6 +374,8 @@ mixin ActionFormControllerState<T extends ConsumerStatefulWidget>
         });
       }
     }
+
+    if (showDialogAfterwards && mounted) await showResultDialog();
   }
 
   /// Opens [ActionResultDialog] for [lastResult] — called right after a

@@ -233,6 +233,13 @@ class JobLogController extends Notifier<JobLogState> {
       final streamToken = await createStreamToken(api, jobId);
       final origin = Uri.parse(api.baseUrl).origin;
       final url = '$origin${streamToken.eventsUrl}';
+      // The token POST above is a real round trip, and the page can be left
+      // during it. `ref.onDispose` has already run by then and closed a
+      // still-null `_sse`, so without this the connection opened here would
+      // never be closed by anything: the browser keeps streaming the whole
+      // build's log into a disposed notifier, and its reconnect loop lives
+      // as long as the tab does.
+      if (_disposed) return;
       final source = JobEventSource()..connect(url);
       _sse = source;
       source.events.listen(_onEvent);
