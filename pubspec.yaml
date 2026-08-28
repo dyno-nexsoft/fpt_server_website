@@ -22,6 +22,7 @@ dependencies:
   intl: any
   shared_preferences: ^2.5.5
   web: any
+  rxdart: ^0.28.0
 
 dev_dependencies:
   flutter_test:

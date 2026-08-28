@@ -48,7 +48,13 @@ class _SubmittingIndicatorState extends State<SubmittingIndicator> {
       setState(() => _index++);
     });
     _statusSub = widget.liveStatus?.listen((status) {
-      if (mounted) setState(() => _live = status);
+      if (!mounted) return;
+      // Once the server is reporting for itself, the canned rotation is dead
+      // weight — it can never be shown again, so leaving it ticking is a
+      // rebuild every 5s that changes nothing on screen.
+      _timer?.cancel();
+      _timer = null;
+      setState(() => _live = status);
     });
   }
 

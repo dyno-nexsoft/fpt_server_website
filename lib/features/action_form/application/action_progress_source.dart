@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:math';
 
+import 'package:rxdart/rxdart.dart';
+
 import '../../../core/sse/sse_client.dart';
 
 /// Live progress for one in-flight `mutation` call, over
@@ -43,11 +45,31 @@ class ActionProgressSource {
 
   final SseClient _client;
 
+  /// How long a status line is guaranteed to stay on screen before another
+  /// can replace it.
+  ///
+  /// Matched to [SubmittingIndicator]'s own 300ms cross-fade with room to
+  /// spare: a line replaced mid-fade is one the reader never sees resolve,
+  /// which reads as flickering rather than as progress.
+  static const _minDisplayTime = Duration(milliseconds: 900);
+
   /// The latest status line, as the server reports it.
+  ///
+  /// Throttled with `trailing: true`, not debounced. Debouncing holds every
+  /// line until the stream goes quiet, which for steady progress means
+  /// showing nothing for the whole run — the exact impression the status line
+  /// exists to dispel. This emits the first line at once, then at most one
+  /// per window, and the window's last line is the one that gets shown.
+  ///
+  /// Smoothing is done here rather than server-side on purpose: the feed is
+  /// a shared wire contract, and dropping frames there would take the choice
+  /// away from every other client. The server paces only what it has an
+  /// actual rate limit on (Discord edits).
   Stream<String> get status => _client.frames
       .map((frame) => frame.data['text'] as String?)
       .where((text) => text != null && text.isNotEmpty)
-      .cast<String>();
+      .cast<String>()
+      .throttleTime(_minDisplayTime, trailing: true);
 
   void connect({required String baseUrl, required String invocationId}) {
     final origin = Uri.parse(baseUrl).origin;
