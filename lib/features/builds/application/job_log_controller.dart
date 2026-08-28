@@ -294,14 +294,24 @@ class JobLogController extends Notifier<JobLogState> {
     _flushNow();
     final job = state.job;
     if (job != null) {
+      final finishedState = JobState.fromWire(event.state ?? 'succeeded');
       _setJob(
         job.copyWith(
-          state: JobState.fromWire(event.state ?? 'succeeded'),
+          state: finishedState,
           finishedAt: DateTime.now(),
           exitCode: event.exitCode,
           lastSeq: event.seq ?? job.lastSeq,
         ),
       );
+      // This controller outlives the job detail page — it isn't
+      // `autoDispose`, precisely so the SSE connection above keeps running
+      // in the background after navigating away. A notification is what
+      // makes that actually useful: without it, "finished while I wasn't
+      // looking at this tab" was silent until the next time this page
+      // happened to be reopened.
+      ref
+          .read(browserNotificationsProvider)
+          .show('${job.actionName ?? 'Build'} ${finishedState.name}');
     }
     state = state.copyWith(mode: LogConnectionMode.static);
     ref.read(statusControllerProvider.notifier).refreshNow();

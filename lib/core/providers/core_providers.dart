@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../api/api_client.dart';
+import '../browser/notifications.dart';
 import '../storage/action_template_store.dart';
 import '../storage/last_result_store.dart';
 import '../storage/session_prefs.dart';
@@ -23,6 +24,10 @@ final actionTemplateStoreProvider = Provider<ActionTemplateStore>(
 
 final lastResultStoreProvider = Provider<LastResultStore>(
   (ref) => LastResultStore(ref.watch(sharedPreferencesProvider)),
+);
+
+final browserNotificationsProvider = Provider<BrowserNotifications>(
+  (ref) => const BrowserNotifications(),
 );
 
 final apiClientProvider = Provider<ApiClient>((ref) {

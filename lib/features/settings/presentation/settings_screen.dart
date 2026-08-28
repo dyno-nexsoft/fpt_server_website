@@ -9,6 +9,7 @@ import '../../../shared/utils/format.dart';
 import 'api_keys_section.dart';
 import 'appearance_section.dart';
 import 'hive_panel.dart';
+import 'notifications_section.dart';
 import 'system_panel.dart';
 
 class SettingsScreen extends ConsumerWidget {
@@ -32,6 +33,7 @@ class SettingsScreen extends ConsumerWidget {
             ],
           ),
           const AppearanceSection(),
+          const NotificationsSection(),
           const _ConnectionCard(),
           const ApiKeysSection(),
           if (isAdmin)

@@ -340,6 +340,13 @@ mixin ActionFormControllerState<T extends ConsumerStatefulWidget>
         issues: issues,
         link: link,
       );
+      // Only actually shows anything when this tab is in the background —
+      // see BrowserNotifications.show. A `gitlab.review`/`translateArb` run
+      // takes minutes; without this, finding out it finished meant coming
+      // back to check the tab yourself.
+      ref
+          .read(browserNotificationsProvider)
+          .show('${action.name} finished', body: message);
       await ref.read(lastResultStoreProvider).save(action.name, result);
       if (mounted) setState(() => lastResult = result);
       // Recorded, not shown, here: the dialog is opened after `finally` has
