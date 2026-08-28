@@ -1,8 +1,6 @@
 import 'dart:async';
-import 'dart:convert';
-import 'dart:js_interop';
 
-import 'package:web/web.dart' as web;
+import 'sse_client.dart';
 
 /// One parsed SSE frame from `/jobs/{id}/events?raw=1`. Every frame — raw
 /// build output included — arrives as a JSON `data:` payload; `type` is
@@ -42,56 +40,22 @@ const jobStreamEventTypes = [
   'finished',
 ];
 
-/// Thin wrapper over the browser's native `EventSource` (via `package:web`)
-/// for the job log viewer. The browser handles reconnect + `Last-Event-ID`
-/// on its own; callers only need [events] and [connectionErrors].
+/// The job log viewer's typed view of [SseClient] — decodes each frame into
+/// a [JobStreamEvent]. The transport (reconnect, `Last-Event-ID`, JSON
+/// decoding, giving-up detection) lives in [SseClient], shared with the
+/// action-progress stream.
 class JobEventSource {
-  web.EventSource? _source;
-  final _events = StreamController<JobStreamEvent>.broadcast();
-  final _connectionErrors = StreamController<void>.broadcast();
+  JobEventSource() : _client = SseClient(eventTypes: jobStreamEventTypes);
 
-  Stream<JobStreamEvent> get events => _events.stream;
-  Stream<void> get connectionErrors => _connectionErrors.stream;
+  final SseClient _client;
 
-  void connect(String url) {
-    final source = web.EventSource(url);
-    for (final type in jobStreamEventTypes) {
-      source.addEventListener(
-        type,
-        ((web.Event event) => _handle(type, event)).toJS,
-      );
-    }
-    source.onerror = ((web.Event event) {
-      // The browser's EventSource retries transient drops on its own
-      // (`readyState` goes back to CONNECTING); `onerror` fires on every one
-      // of those too, not just fatal ones. Only a `CLOSED` state means the
-      // browser has given up — e.g. the response wasn't `text/event-stream`
-      // — and it's actually time to fall back to polling.
-      if (source.readyState != web.EventSource.CLOSED) return;
-      if (!_connectionErrors.isClosed) _connectionErrors.add(null);
-    }).toJS;
-    _source = source;
-  }
+  Stream<JobStreamEvent> get events => _client.frames.map(
+    (frame) => JobStreamEvent.fromJson(frame.type, frame.data),
+  );
 
-  void _handle(String type, web.Event event) {
-    if (!event.isA<web.MessageEvent>()) return;
-    final rawData = (event as web.MessageEvent).data;
-    if (rawData.isUndefinedOrNull) return;
-    final text = (rawData as JSString).toDart;
-    try {
-      final json = jsonDecode(text) as Map<String, dynamic>;
-      if (!_events.isClosed) {
-        _events.add(JobStreamEvent.fromJson(type, json));
-      }
-    } catch (_) {
-      // Malformed frame — ignore rather than crash the viewer.
-    }
-  }
+  Stream<void> get connectionErrors => _client.connectionErrors;
 
-  void close() {
-    _source?.close();
-    _source = null;
-    unawaited(_events.close());
-    unawaited(_connectionErrors.close());
-  }
+  void connect(String url) => _client.connect(url);
+
+  void close() => _client.close();
 }

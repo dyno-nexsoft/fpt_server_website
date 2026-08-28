@@ -31,11 +31,17 @@ abstract class FptApi extends ChopperService {
   @GET(path: '/actions')
   Future<Response<String>> listActions();
 
+  /// [invocationId] names a progress feed the caller already opened with
+  /// `GET /invocations/{id}/events`, so a long-running `mutation` can report
+  /// real steps while this request is still in flight. A header rather than a
+  /// body field on purpose — the server persists request params verbatim for
+  /// its Retry button, and a one-shot stream id must not be replayed later.
   @POST(path: '/actions/{name}', headers: {'Content-Type': 'application/json'})
   Future<Response<String>> invokeAction(
     @Path('name') String name,
-    @Body() String jsonBody,
-  );
+    @Body() String jsonBody, {
+    @Header('X-Invocation-Id') String? invocationId,
+  });
 
   @GET(path: '/jobs')
   Future<Response<String>> listJobs(@QueryMap() Map<String, dynamic> query);

@@ -2,20 +2,26 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
-/// Rotates through a canned list of "what's probably happening right now"
-/// messages while a long-running mutation is in flight.
+/// Shows what a long-running mutation is doing while it is in flight.
 ///
-/// The server's own progress reporting (`Action.onProgress`) only reaches
-/// Discord today — a REST caller (this website) gets one blocking response
-/// at the end, with nothing in between. For a fast action that's invisible;
-/// for `gitlab.review`/`gitlab.translateArb`, which can run for minutes
-/// while Gemini works, a bare disabled button reads as a hung request. This
-/// is deliberately fake progress, not real status, purely to keep the wait
-/// legible.
+/// Prefers [liveStatus] — the server's own `Action.onProgress` lines,
+/// streamed over `GET /invocations/{id}/events` for any action whose schema
+/// sets `supportsProgress`. Until the first of those arrives (and for any
+/// action that reports none at all), it falls back to rotating [messages],
+/// which are deliberately fake: for `gitlab.review`/`gitlab.translateArb`,
+/// which can run for minutes while Gemini works, a bare disabled button
+/// reads as a hung request.
 class SubmittingIndicator extends StatefulWidget {
-  const SubmittingIndicator({super.key, required this.messages});
+  const SubmittingIndicator({
+    super.key,
+    required this.messages,
+    this.liveStatus,
+  });
 
   final List<String> messages;
+
+  /// Real server-reported status lines, when this action streams them.
+  final Stream<String>? liveStatus;
 
   @override
   State<SubmittingIndicator> createState() => _SubmittingIndicatorState();
@@ -24,6 +30,11 @@ class SubmittingIndicator extends StatefulWidget {
 class _SubmittingIndicatorState extends State<SubmittingIndicator> {
   var _index = 0;
   Timer? _timer;
+  StreamSubscription<String>? _statusSub;
+
+  /// Non-null once the server has reported anything — from then on the
+  /// canned rotation is irrelevant and stops being shown.
+  String? _live;
 
   @override
   void initState() {
@@ -36,11 +47,15 @@ class _SubmittingIndicatorState extends State<SubmittingIndicator> {
       if (_index >= widget.messages.length - 1) return;
       setState(() => _index++);
     });
+    _statusSub = widget.liveStatus?.listen((status) {
+      if (mounted) setState(() => _live = status);
+    });
   }
 
   @override
   void dispose() {
     _timer?.cancel();
+    unawaited(_statusSub?.cancel());
     super.dispose();
   }
 
@@ -63,8 +78,8 @@ class _SubmittingIndicatorState extends State<SubmittingIndicator> {
           child: AnimatedSwitcher(
             duration: const Duration(milliseconds: 300),
             child: Text(
-              widget.messages[_index],
-              key: ValueKey(_index),
+              _live ?? widget.messages[_index],
+              key: ValueKey(_live ?? '$_index'),
               overflow: TextOverflow.ellipsis,
               maxLines: 1,
             ),

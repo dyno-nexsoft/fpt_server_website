@@ -7,6 +7,7 @@ import '../../../core/api/api_exception.dart';
 import '../../../core/providers/catalogue_providers.dart';
 import '../../../core/providers/core_providers.dart';
 import '../../../core/providers/job_seed_provider.dart';
+import '../../../core/providers/session_provider.dart';
 import '../../../core/providers/status_provider.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/storage/action_template_store.dart';
@@ -15,6 +16,7 @@ import '../../../shared/toast/app_toast.dart';
 import '../../../shared/utils/responsive.dart';
 import '../../../shared/widgets/error_view.dart';
 import '../../../shared/widgets/name_template_dialog.dart';
+import '../application/action_progress_source.dart';
 import 'action_result_dialog.dart';
 import 'submitting_indicator.dart';
 
@@ -110,6 +112,12 @@ mixin ActionFormControllerState<T extends ConsumerStatefulWidget>
   bool _initialized = false;
   bool submitting = false;
   List<String> problems = const [];
+
+  /// Live server-reported progress for the call currently in flight, for any
+  /// action whose schema sets `supportsProgress`. Null while idle, and for
+  /// an action that reports nothing — [SubmittingIndicator] falls back to
+  /// its canned messages then.
+  ActionProgressSource? progressSource;
 
   /// The last result [ActionResultDialog] was (or would have been) built
   /// from — kept so "View last result" can reopen it after an accidental
@@ -246,9 +254,23 @@ mixin ActionFormControllerState<T extends ConsumerStatefulWidget>
 
   Future<void> submit(ActionSchema action) async {
     if (!(formKey.currentState?.validate() ?? false)) return;
+    // Opened before the request goes out, not after: the feed is addressed
+    // by an id this client invents, so there is nothing to subscribe to
+    // until it does — and a step reported early would otherwise be missed.
+    final invocationId = action.supportsProgress
+        ? ActionProgressSource.generateId()
+        : null;
+    final progress = invocationId == null
+        ? null
+        : (ActionProgressSource()..connect(
+            baseUrl: ref.read(sessionProvider).normalizedServerUrl,
+            invocationId: invocationId,
+          ));
+
     setState(() {
       submitting = true;
       problems = const [];
+      progressSource = progress;
     });
     final rawParams = collectParams(action);
     final body = <String, dynamic>{};
@@ -270,7 +292,11 @@ mixin ActionFormControllerState<T extends ConsumerStatefulWidget>
     try {
       final api = ref.read(apiClientProvider);
       final response = await api.decodeMap(
-        api.endpoints.invokeAction(action.name, api.encodeBody(body)),
+        api.endpoints.invokeAction(
+          action.name,
+          api.encodeBody(body),
+          invocationId: invocationId,
+        ),
       );
       ref.read(statusControllerProvider.notifier).refreshNow();
       if (action.kind == ActionKind.job) {
@@ -327,7 +353,16 @@ mixin ActionFormControllerState<T extends ConsumerStatefulWidget>
         ref.read(appToastProvider.notifier).show(e.message, isError: true);
       }
     } finally {
-      if (mounted) setState(() => submitting = false);
+      // The server closes its side once the invocation ends; closing here
+      // too releases the browser's EventSource rather than leaving it
+      // retrying a feed that will never speak again.
+      progress?.close();
+      if (mounted) {
+        setState(() {
+          submitting = false;
+          progressSource = null;
+        });
+      }
     }
   }
 
@@ -452,6 +487,7 @@ mixin ActionFormControllerState<T extends ConsumerStatefulWidget>
                   child: submitting
                       ? SubmittingIndicator(
                           messages: _submittingMessages(action.name),
+                          liveStatus: progressSource?.status,
                         )
                       : Text(
                           action.kind == ActionKind.job ? 'Start build' : 'Run',

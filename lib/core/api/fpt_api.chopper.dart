@@ -40,9 +40,16 @@ final class _$FptApi extends FptApi {
   }
 
   @override
-  Future<Response<String>> invokeAction(String name, String jsonBody) {
+  Future<Response<String>> invokeAction(
+    String name,
+    String jsonBody, {
+    String? invocationId,
+  }) {
     final Uri $url = Uri.parse('/actions/${name}');
-    final Map<String, String> $headers = {'Content-Type': 'application/json'};
+    final Map<String, String> $headers = {
+      if (invocationId != null) 'X-Invocation-Id': invocationId,
+      'Content-Type': 'application/json',
+    };
     final $body = jsonBody;
     final Request $request = Request(
       'POST',
