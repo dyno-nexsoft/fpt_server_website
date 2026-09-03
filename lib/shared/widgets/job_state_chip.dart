@@ -2,15 +2,11 @@ import 'package:flutter/material.dart';
 
 import 'package:fpt_server_shared/fpt_server_shared.dart';
 
-/// State glyph + label. Differentiated by icon and text only — no per-state
-/// colors — so the default Material theme stays the single source of truth
-/// for appearance.
-class JobStateChip extends StatelessWidget {
-  const JobStateChip({super.key, required this.state});
-
-  final JobState state;
-
-  IconData get _icon => switch (state) {
+/// Icon + label for each [JobState] — the one place either is decided, so a
+/// filter chip, a table row, and a `ListTile` icon can never show a
+/// different glyph for the same state.
+extension JobStateGlyph on JobState {
+  IconData get icon => switch (this) {
     JobState.queued => Icons.schedule,
     JobState.running => Icons.autorenew,
     JobState.succeeded => Icons.check_circle_outline,
@@ -20,7 +16,7 @@ class JobStateChip extends StatelessWidget {
     JobState.unknown => Icons.help_outline,
   };
 
-  String get _label => switch (state) {
+  String get label => switch (this) {
     JobState.queued => 'Queued',
     JobState.running => 'Running',
     JobState.succeeded => 'Succeeded',
@@ -29,10 +25,19 @@ class JobStateChip extends StatelessWidget {
     JobState.interrupted => 'Interrupted',
     JobState.unknown => 'Unknown',
   };
+}
+
+/// State glyph + label. Differentiated by icon and text only — no per-state
+/// colors — so the default Material theme stays the single source of truth
+/// for appearance.
+class JobStateChip extends StatelessWidget {
+  const JobStateChip({super.key, required this.state});
+
+  final JobState state;
 
   @override
   Widget build(BuildContext context) {
-    return Chip(avatar: Icon(_icon), label: Text(_label));
+    return Chip(avatar: Icon(state.icon), label: Text(state.label));
   }
 }
 
@@ -45,13 +50,5 @@ class JobStateIcon extends StatelessWidget {
   final JobState state;
 
   @override
-  Widget build(BuildContext context) => Icon(switch (state) {
-    JobState.queued => Icons.schedule,
-    JobState.running => Icons.autorenew,
-    JobState.succeeded => Icons.check_circle_outline,
-    JobState.failed => Icons.error_outline,
-    JobState.cancelled => Icons.block,
-    JobState.interrupted => Icons.warning_amber,
-    JobState.unknown => Icons.help_outline,
-  });
+  Widget build(BuildContext context) => Icon(state.icon);
 }

@@ -11,13 +11,16 @@ import '../application/jobs_providers.dart';
 import 'builds_list_mobile.dart';
 import 'builds_table_desktop.dart';
 
-const _filters = <(String label, String? value, IconData icon)>[
+/// Sourced from [JobState] itself rather than a hand-copied list — this
+/// previously dropped [JobState.interrupted] entirely, so an interrupted job
+/// had no filter chip that could ever show it. [JobState.unknown] is a
+/// client-side fallback for a wire value neither side recognises; the server
+/// never persists a job under that state, so there is nothing real to filter
+/// by and it stays out of the list.
+final _filters = <(String label, String? value, IconData icon)>[
   ('All', null, Icons.apps),
-  ('Running', 'running', Icons.autorenew),
-  ('Queued', 'queued', Icons.schedule),
-  ('Succeeded', 'succeeded', Icons.check_circle_outline),
-  ('Failed', 'failed', Icons.error_outline),
-  ('Cancelled', 'cancelled', Icons.block),
+  for (final state in JobState.values.where((s) => s != JobState.unknown))
+    (state.label, state.name, state.icon),
 ];
 
 /// `GET /jobs?state=&limit=` — a live wire-screen of what the API returns;
