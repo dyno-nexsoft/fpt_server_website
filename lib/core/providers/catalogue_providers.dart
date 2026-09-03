@@ -8,13 +8,12 @@ import 'package:fpt_server_shared/fpt_server_shared.dart';
 import 'core_providers.dart';
 import 'session_provider.dart';
 
-/// Action name prefixes this dashboard never exposes: `attendance.*`
-/// (personal/HR), `zentao.*` (daily reports), and `admin.owners.*` (Discord
-/// bot ownership) are all real API capabilities but none belong on a CI/CD
-/// build dashboard. `gitlab.*` used to be hidden here too, but code review
-/// is close enough to "build" that it now shows in the New Build menu (see
-/// [isBuildMenuAction]).
-const _hiddenActionPrefixes = ['attendance.', 'zentao.', 'admin.owners.'];
+/// Action name prefixes this dashboard never exposes: `zentao.*` (daily
+/// reports) and `admin.owners.*` (Discord bot ownership) are real API
+/// capabilities but neither belongs on a CI/CD build dashboard. `gitlab.*`
+/// used to be hidden here too, but code review is close enough to "build"
+/// that it now shows in the New Build menu (see [isBuildMenuAction]).
+const _hiddenActionPrefixes = ['zentao.', 'admin.owners.'];
 
 /// The action catalogue drives navigation and every generated form — see
 /// `docs/web-ui-wireframe.md`. It is refetched whenever the session changes.
