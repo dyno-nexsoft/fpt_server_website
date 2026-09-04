@@ -31,7 +31,11 @@ class _ActionFormScreenState extends ConsumerState<ActionFormScreen>
         context,
         action,
         title: action.name,
-        fields: _buildFields(action),
+        fields: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          spacing: 12,
+          children: _fieldWidgets(action),
+        ),
       ),
     );
   }
@@ -49,34 +53,4 @@ class _ActionFormScreenState extends ConsumerState<ActionFormScreen>
             setState(() => boolValues[param.name] = value),
       ),
   ];
-
-  /// A fixed two-column grid once there are enough fields to make one
-  /// worthwhile, a single full-width column otherwise — two fields spread
-  /// across a grid (`ci.replace`'s `url` + `tbchat`) just leaves one column
-  /// stretched and the rest of the row (and most of the space below it)
-  /// empty, which reads worse than the plain full-width list this is meant
-  /// to improve on. Fixed at 2 columns rather than
-  /// SliverGridDelegateWithMaxCrossAxisExtent's "as many as fit" — a wide
-  /// desktop window fit 4 narrow fields per row, each barely wider than its
-  /// own label.
-  Widget _buildFields(ActionSchema action) {
-    if (action.params.length <= 2) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        spacing: 12,
-        children: _fieldWidgets(action),
-      );
-    }
-    return GridView(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        mainAxisExtent: 60,
-        mainAxisSpacing: 12,
-        crossAxisSpacing: 16,
-      ),
-      children: _fieldWidgets(action),
-    );
-  }
 }
