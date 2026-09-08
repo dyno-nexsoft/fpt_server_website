@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:fpt_server_shared/fpt_server_shared.dart';
+import '../../../core/providers/action_invoker.dart';
 import '../../../core/providers/catalogue_providers.dart';
 import '../../../core/providers/connection_provider.dart';
 import '../../../core/router/app_router.dart';
 import '../../../shared/toast/app_toast.dart';
-import 'admin_actions_controller.dart';
 import 'settings_providers.dart';
 
 /// `admin.apiKeys.add`/`.remove` — owns the invoke/invalidate/self-delete
@@ -26,7 +26,7 @@ class ApiKeysController {
     // myKeyInfoProvider would refetch) 401s.
     final isSelf = _ref.read(myKeyInfoProvider).value?.id == key.id;
 
-    final body = await _ref.read(adminActionsControllerProvider).run(
+    final body = await _ref.read(actionInvokerProvider).run(
       'admin.apiKeys.remove',
       {'id': key.id},
     );
@@ -44,7 +44,7 @@ class ApiKeysController {
   /// Creates a key named [name] and returns its one-time secret, or `null`
   /// after the error toast was already shown.
   Future<String?> create(String name) async {
-    final body = await _ref.read(adminActionsControllerProvider).run(
+    final body = await _ref.read(actionInvokerProvider).run(
       'admin.apiKeys.add',
       {'name': name},
     );
@@ -57,7 +57,7 @@ class ApiKeysController {
   /// `ApiKeySetScopesAction`'s doc comment for why this isn't self-service
   /// like create/delete).
   Future<bool> setScopes(ApiKeyInfo key, List<String> scopes) async {
-    final body = await _ref.read(adminActionsControllerProvider).run(
+    final body = await _ref.read(actionInvokerProvider).run(
       'admin.apiKeys.setScopes',
       {'id': key.id, 'scopes': scopes},
     );

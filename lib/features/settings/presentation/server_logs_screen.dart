@@ -35,10 +35,7 @@ class ServerLogsScreen extends ConsumerWidget {
             spacing: 8,
             children: [
               const Icon(Icons.article_outlined),
-              Text(
-                _titles[source] ?? 'Logs',
-                style: textTheme.headlineSmall,
-              ),
+              Text(_titles[source] ?? 'Logs', style: textTheme.headlineSmall),
               const Spacer(),
               IconButton(
                 tooltip: 'Refresh',

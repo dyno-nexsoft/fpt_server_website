@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/providers/action_invoker.dart';
 import '../../../shared/toast/app_toast.dart';
-import 'admin_actions_controller.dart';
 
 /// One entry from `system.hive.list`'s `boxes` array.
 class HiveBoxInfo {
@@ -19,7 +19,7 @@ class HiveBoxesController extends Notifier<List<HiveBoxInfo>?> {
 
   Future<void> load() async {
     final body = await ref
-        .read(adminActionsControllerProvider)
+        .read(actionInvokerProvider)
         .run('system.hive.list', const {});
     if (body == null) return;
     final raw = body['boxes'] as List<dynamic>? ?? const [];
@@ -33,7 +33,7 @@ class HiveBoxesController extends Notifier<List<HiveBoxInfo>?> {
   }
 
   Future<void> clean(String boxName) async {
-    final body = await ref.read(adminActionsControllerProvider).run(
+    final body = await ref.read(actionInvokerProvider).run(
       'system.hive.clean',
       {'box': boxName},
     );

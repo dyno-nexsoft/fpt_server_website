@@ -12,10 +12,11 @@ import 'session_provider.dart';
 /// `docs/web-ui-wireframe.md`. It is refetched whenever the session changes.
 ///
 /// Filtered on [ActionSchema.exposedInDashboard] rather than a client-side
-/// name-prefix list — `zentao.*`/`admin.owners.*` are real capabilities other
-/// callers (a Discord slash command, `fpt_server_mcp`) still reach, this
-/// dashboard just has no screen for them yet, and the server is the one that
-/// knows that.
+/// name-prefix list: the server is the one that knows whether a client has
+/// anywhere to put an action. `zentao.*` and `admin.owners.*` were the
+/// original reason for the flag and are now listed like anything else, since
+/// this dashboard grew screens for both — only `zentao.link` still opts out,
+/// because the generic form cannot obscure its password field.
 ///
 /// Sorted dangerous-last, then by name: every list built from this provider
 /// (New Build, ...) inherits the same order instead of each screen
@@ -66,9 +67,8 @@ List<ActionSchema> visibleBuildMenuActions(
 ) => actions
     .where((action) => action.isBuildMenu)
     .where(
-      (action) => myKey == null
-          ? !action.isDangerous
-          : myKey.can(action.permission),
+      (action) =>
+          myKey == null ? !action.isDangerous : myKey.can(action.permission),
     )
     .toList();
 

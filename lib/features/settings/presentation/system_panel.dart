@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/providers/action_invoker.dart';
 import '../../../shared/toast/app_toast.dart';
 import '../../../shared/widgets/confirm_dialog.dart';
-import '../application/admin_actions_controller.dart';
 
 /// `system.restart` and `system.hotReload` are `admin`-only but, like
 /// `admin.logs.tail`, are exposed over REST — see `SystemAction`'s doc
@@ -112,9 +112,7 @@ class _ActionTile extends ConsumerWidget {
       params = const {};
     }
 
-    final body = await ref
-        .read(adminActionsControllerProvider)
-        .run(name, params);
+    final body = await ref.read(actionInvokerProvider).run(name, params);
     if (body == null) return;
     ref
         .read(appToastProvider.notifier)
