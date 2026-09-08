@@ -12,60 +12,56 @@ import 'report_description_dialog.dart';
 /// then `get`/`edit`/`finish`/`close` on the task once there is.
 ///
 /// Which of those are offered comes from [DailyTask.availableActions] — a
-/// server-side domain rule, so this card cannot drift from what the Discord
+/// server-side domain rule, so this cannot drift from what the Discord
 /// buttons allow.
-class ZentaoReportCard extends ConsumerWidget {
-  const ZentaoReportCard({super.key, required this.status});
+class ZentaoReportTile extends ConsumerWidget {
+  const ZentaoReportTile({super.key, required this.status});
 
   final ZentaoStatus status;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final taskId = status.todayTaskId;
-    if (taskId == null) return const _NoReportCard();
+    if (taskId == null) return const _StartReportTile();
 
     final task = ref.watch(zentaoTaskProvider(taskId));
-    return Card(
-      child: task.when(
-        data: (data) => _TaskDetail(task: data),
-        loading: () => const ListTile(
-          leading: Icon(Icons.assignment_outlined),
-          title: Text('Loading task…'),
-          trailing: SizedBox.square(
-            dimension: 24,
-            child: CircularProgressIndicator(),
-          ),
+    return task.when(
+      data: (data) => _TaskDetail(task: data),
+      loading: () => const ListTile(
+        leading: Icon(Icons.assignment_outlined),
+        title: Text('Loading task…'),
+        trailing: SizedBox.square(
+          dimension: 24,
+          child: CircularProgressIndicator(),
         ),
-        error: (error, _) => ListTile(
-          leading: const Icon(Icons.error_outline),
-          title: Text('Task #$taskId could not be loaded'),
-          subtitle: Text('$error'),
-          trailing: IconButton(
-            tooltip: 'Retry',
-            icon: const Icon(Icons.refresh),
-            onPressed: () => ref.invalidate(zentaoTaskProvider(taskId)),
-          ),
+      ),
+      error: (error, _) => ListTile(
+        leading: const Icon(Icons.error_outline),
+        title: Text('Task #$taskId could not be loaded'),
+        subtitle: Text('$error'),
+        trailing: IconButton(
+          tooltip: 'Retry',
+          icon: const Icon(Icons.refresh),
+          onPressed: () => ref.invalidate(zentaoTaskProvider(taskId)),
         ),
       ),
     );
   }
 }
 
-class _NoReportCard extends ConsumerWidget {
-  const _NoReportCard();
+class _StartReportTile extends ConsumerWidget {
+  const _StartReportTile();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return Card(
-      child: ListTile(
-        leading: const Icon(Icons.assignment_outlined),
-        title: const Text('No report started today'),
-        subtitle: const Text('Creates today\'s task in Zentao and starts it'),
-        trailing: FilledButton.icon(
-          onPressed: () => _start(context, ref),
-          icon: const Icon(Icons.play_arrow),
-          label: const Text('Start report'),
-        ),
+    return ListTile(
+      leading: const Icon(Icons.assignment_outlined),
+      title: const Text('No report started today'),
+      subtitle: const Text('Creates today\'s task in Zentao and starts it'),
+      trailing: FilledButton.icon(
+        onPressed: () => _start(context, ref),
+        icon: const Icon(Icons.play_arrow),
+        label: const Text('Start'),
       ),
     );
   }

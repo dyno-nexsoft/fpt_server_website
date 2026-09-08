@@ -6,42 +6,28 @@ import '../application/zentao_controller.dart';
 
 /// `zentao.config.setProject` / `setExecution` — server-wide, not per-user.
 ///
-/// Shown only to a key holding `invokeDangerous`, which is what the actions
-/// require: changing either silently redirects *everyone's* next report, so
-/// the confirmation says so rather than treating it as a personal setting.
-class ZentaoConfigCard extends ConsumerWidget {
-  const ZentaoConfigCard({super.key, required this.status});
-
-  final ZentaoStatus status;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return Card(
-      child: ExpansionTile(
-        leading: const Icon(Icons.tune),
-        title: const Text('Server-wide Zentao config'),
-        subtitle: Text(
-          'Project ${status.projectId} · execution ${status.executionId}',
-        ),
-        children: [
-          _IdTile(
-            icon: Icons.folder_outlined,
-            label: 'Project',
-            value: status.projectId,
-            onSubmit: (id) => ref.read(zentaoControllerProvider).setProject(id),
-          ),
-          _IdTile(
-            icon: Icons.timeline_outlined,
-            label: 'Execution',
-            value: status.executionId,
-            onSubmit: (id) =>
-                ref.read(zentaoControllerProvider).setExecution(id),
-          ),
-        ],
-      ),
-    );
-  }
-}
+/// A function rather than a widget: these are two sibling rows in the Zentao
+/// card's own list, and wrapping them in a container widget would nest a
+/// second list inside that one.
+///
+/// Only ever called for a key holding `invokeDangerous`, which is what the
+/// actions require: changing either silently redirects *everyone's* next
+/// report, so the prompt says so rather than treating it as a personal
+/// setting.
+List<Widget> zentaoConfigTiles(WidgetRef ref, ZentaoStatus status) => [
+  _IdTile(
+    icon: Icons.folder_outlined,
+    label: 'Project',
+    value: status.projectId,
+    onSubmit: (id) => ref.read(zentaoControllerProvider).setProject(id),
+  ),
+  _IdTile(
+    icon: Icons.timeline_outlined,
+    label: 'Execution',
+    value: status.executionId,
+    onSubmit: (id) => ref.read(zentaoControllerProvider).setExecution(id),
+  ),
+];
 
 class _IdTile extends StatelessWidget {
   const _IdTile({

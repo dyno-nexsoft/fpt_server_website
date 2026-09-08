@@ -13,7 +13,6 @@ import '../../features/dashboard/presentation/dashboard_screen.dart';
 import '../../features/settings/presentation/server_logs_screen.dart';
 import '../../features/settings/presentation/settings_screen.dart';
 import '../../features/shell/presentation/app_shell.dart';
-import '../../features/zentao/presentation/zentao_screen.dart';
 import '../providers/connection_provider.dart';
 import '../providers/session_provider.dart';
 
@@ -139,7 +138,6 @@ class LoginRoute extends GoRouteData with $LoginRoute {
         ),
       ],
     ),
-    TypedGoRoute<ZentaoRoute>(path: '/zentao'),
     TypedGoRoute<SettingsRoute>(
       path: '/settings',
       routes: [TypedGoRoute<ServerLogsRoute>(path: 'logs')],
@@ -221,18 +219,6 @@ class ArtifactsRoute extends GoRouteData with $ArtifactsRoute {
   @override
   Widget build(BuildContext context, GoRouterState state) =>
       ArtifactsScreen(key: ValueKey(id), jobId: id);
-}
-
-/// Top-level rather than nested under Settings: filing a daily report is
-/// daily work, not configuration. The server-wide project/execution *is*
-/// configuration, but it lives on this screen because it is the thing every
-/// report on it is filed against.
-class ZentaoRoute extends GoRouteData with $ZentaoRoute {
-  const ZentaoRoute();
-
-  @override
-  Widget build(BuildContext context, GoRouterState state) =>
-      const ZentaoScreen();
 }
 
 class SettingsRoute extends GoRouteData with $SettingsRoute {

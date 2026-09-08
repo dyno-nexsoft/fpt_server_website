@@ -6,34 +6,23 @@ import '../application/zentao_controller.dart';
 
 /// `zentao.link` / `zentao.unlink` — which Zentao account this Discord
 /// account acts as.
-class ZentaoAccountCard extends ConsumerWidget {
-  const ZentaoAccountCard({super.key, required this.status});
+class ZentaoAccountTile extends ConsumerWidget {
+  const ZentaoAccountTile({super.key, required this.status});
 
   final ZentaoStatus status;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    if (!status.linked) {
-      return const Card(
-        child: ExpansionTile(
-          leading: Icon(Icons.link_off),
-          title: Text('Not linked'),
-          subtitle: Text('Link a Zentao account to file daily reports'),
-          children: [_LinkForm()],
-        ),
-      );
-    }
+    if (!status.linked) return const _LinkForm();
 
-    return Card(
-      child: ListTile(
-        leading: const Icon(Icons.link),
-        title: Text(status.account ?? 'Linked'),
-        subtitle: const Text('Linked Zentao account'),
-        trailing: FilledButton.tonalIcon(
-          onPressed: () => _confirmUnlink(context, ref),
-          icon: const Icon(Icons.link_off),
-          label: const Text('Unlink'),
-        ),
+    return ListTile(
+      leading: const Icon(Icons.link),
+      title: Text(status.account ?? 'Linked'),
+      subtitle: const Text('Linked Zentao account'),
+      trailing: FilledButton.tonalIcon(
+        onPressed: () => _confirmUnlink(context, ref),
+        icon: const Icon(Icons.link_off),
+        label: const Text('Unlink'),
       ),
     );
   }
@@ -126,10 +115,9 @@ class _LinkFormState extends ConsumerState<_LinkForm> {
       await ref
           .read(zentaoControllerProvider)
           .link(account: account, password: password);
-      // Cleared whether or not the link succeeded: on success the card
-      // rebuilds into its linked state and this form is gone, and on failure
-      // a stale password sitting in a field is worth less than not leaving
-      // one there.
+      // Cleared whether or not the link succeeded: on success this form is
+      // replaced by the linked tile, and on failure a stale password sitting
+      // in a field is worth less than not leaving one there.
       _password.clear();
     } finally {
       if (mounted) setState(() => _submitting = false);

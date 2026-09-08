@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/providers/catalogue_providers.dart';
+import '../../zentao/presentation/zentao_section.dart';
 import 'api_keys_section.dart';
 import 'appearance_section.dart';
 import 'connection_card.dart';
@@ -34,6 +35,7 @@ class SettingsScreen extends ConsumerWidget {
           const AppearanceSection(),
           const NotificationsSection(),
           const ConnectionCard(),
+          const ZentaoSection(),
           const ApiKeysSection(),
           if (isAdmin) const OwnersSection(),
           if (isAdmin) const LogsCard(),

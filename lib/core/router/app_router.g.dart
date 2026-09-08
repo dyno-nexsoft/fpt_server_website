@@ -74,11 +74,6 @@ RouteBase get $appShellRouteData => ShellRouteData.$route(
       ],
     ),
     GoRouteData.$route(
-      path: '/zentao',
-      hasOverriddenOnExit: false,
-      factory: $ZentaoRoute._fromState,
-    ),
-    GoRouteData.$route(
       path: '/settings',
       hasOverriddenOnExit: false,
       factory: $SettingsRoute._fromState,
@@ -224,26 +219,6 @@ mixin $ArtifactsRoute on GoRouteData {
   String get location => GoRouteData.$location(
     '/builds/${Uri.encodeComponent(_self.id)}/artifacts',
   );
-
-  @override
-  void go(BuildContext context) => context.go(location);
-
-  @override
-  Future<T?> push<T>(BuildContext context) => context.push<T>(location);
-
-  @override
-  void pushReplacement(BuildContext context) =>
-      context.pushReplacement(location);
-
-  @override
-  void replace(BuildContext context) => context.replace(location);
-}
-
-mixin $ZentaoRoute on GoRouteData {
-  static ZentaoRoute _fromState(GoRouterState state) => const ZentaoRoute();
-
-  @override
-  String get location => GoRouteData.$location('/zentao');
 
   @override
   void go(BuildContext context) => context.go(location);

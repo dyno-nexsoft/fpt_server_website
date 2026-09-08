@@ -38,11 +38,6 @@ const _navItems = [
     label: 'Builds',
   ),
   _NavItem(
-    icon: Icons.assignment_outlined,
-    selectedIcon: Icons.assignment,
-    label: 'Zentao',
-  ),
-  _NavItem(
     icon: Icons.settings_outlined,
     selectedIcon: Icons.settings,
     label: 'Settings',
@@ -65,17 +60,11 @@ class AppShell extends ConsumerStatefulWidget {
   /// be worse than crediting the section they actually belong to.
   static int _navIndexOf(String location) {
     if (location.startsWith('/builds')) return 1;
-    if (location.startsWith('/zentao')) return 2;
-    if (location.startsWith('/settings')) return 3;
+    if (location.startsWith('/settings')) return 2;
     return 0;
   }
 
-  static const _navRoutes = [
-    DashboardRoute(),
-    BuildsRoute(),
-    ZentaoRoute(),
-    SettingsRoute(),
-  ];
+  static const _navRoutes = [DashboardRoute(), BuildsRoute(), SettingsRoute()];
 
   @override
   ConsumerState<AppShell> createState() => _AppShellState();
