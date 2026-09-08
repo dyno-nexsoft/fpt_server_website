@@ -25,6 +25,14 @@ abstract final class AppTheme {
   static ButtonStyle destructiveIconButtonStyle(ColorScheme colorScheme) =>
       IconButton.styleFrom(foregroundColor: colorScheme.error);
 
+  /// Text/icon tint for a plain (non-button) row that represents a
+  /// destructive action — `system.shutdown`'s tile in [SystemPanel], which
+  /// has no button of its own to carry [destructiveButtonStyle]. Centralized
+  /// so a widget never reaches for `colorScheme.error` inline; it asks for
+  /// the meaning ("this row is destructive") and gets whatever color that
+  /// currently maps to.
+  static Color destructiveTint(ColorScheme colorScheme) => colorScheme.error;
+
   /// Filled, fully-rounded fields (a "pill" search bar, and every other
   /// TextField in the app along with it) instead of Material's default
   /// underline — set once here rather than per-field.

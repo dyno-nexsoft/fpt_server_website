@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/theme/app_theme.dart';
 import '../../../shared/widgets/confirm_dialog.dart';
+import '../../../shared/widgets/tile_grid.dart';
 import '../application/hive_boxes_controller.dart';
 
 /// Lets an admin inspect and wipe any Hive storage box straight from the
@@ -45,7 +47,7 @@ class _HivePanelState extends ConsumerState<HivePanel> {
         child: Text('No boxes open.'),
       );
     }
-    return Column(
+    return TileGrid(
       children: [
         for (final box in boxes)
           Card(
@@ -58,10 +60,10 @@ class _HivePanelState extends ConsumerState<HivePanel> {
               ),
               trailing: IconButton(
                 tooltip: 'Clean this box',
-                icon: Icon(
-                  Icons.delete_outline,
-                  color: Theme.of(context).colorScheme.error,
+                style: AppTheme.destructiveIconButtonStyle(
+                  Theme.of(context).colorScheme,
                 ),
+                icon: const Icon(Icons.delete_outline),
                 onPressed: () => _clean(context, ref, box),
               ),
             ),

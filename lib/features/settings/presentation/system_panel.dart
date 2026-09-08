@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/providers/action_invoker.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../../shared/toast/app_toast.dart';
 import '../../../shared/widgets/confirm_dialog.dart';
+import '../../../shared/widgets/tile_grid.dart';
 
 /// `system.restart` and `system.hotReload` are `admin`-only but, like
 /// `admin.logs.tail`, are exposed over REST — see `SystemAction`'s doc
@@ -20,7 +22,7 @@ class SystemPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Column(
+    return const TileGrid(
       children: [
         Card(
           child: _ActionTile(
@@ -84,13 +86,12 @@ class _ActionTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final colorScheme = Theme.of(context).colorScheme;
+    final tint = isDangerous
+        ? AppTheme.destructiveTint(Theme.of(context).colorScheme)
+        : null;
     return ListTile(
-      leading: Icon(icon, color: isDangerous ? colorScheme.error : null),
-      title: Text(
-        name,
-        style: isDangerous ? TextStyle(color: colorScheme.error) : null,
-      ),
+      leading: Icon(icon, color: tint),
+      title: Text(name, style: tint == null ? null : TextStyle(color: tint)),
       subtitle: Text(description),
       onTap: () => _confirmAndRun(context, ref),
     );

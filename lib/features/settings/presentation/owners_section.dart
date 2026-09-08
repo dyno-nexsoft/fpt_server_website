@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/providers/catalogue_providers.dart';
+import '../../../shared/widgets/tile_grid.dart';
 import '../application/owners_controller.dart';
 
 /// `admin.owners.list/add/remove` — the Discord accounts that hold bot
@@ -21,30 +22,36 @@ class OwnersSection extends ConsumerWidget {
     return owners.when(
       data: (ids) {
         final list = ids ?? const [];
-        return ListView(
+        return SingleChildScrollView(
           padding: const EdgeInsets.all(16),
-          children: [
-            if (list.isEmpty)
-              const ListTile(
-                leading: Icon(Icons.shield_outlined),
-                title: Text('No owners stored.'),
-                subtitle: Text(
-                  'OWNER_ID in the launch config still grants access.',
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            spacing: 16,
+            children: [
+              if (list.isEmpty)
+                const Card(
+                  child: ListTile(
+                    leading: Icon(Icons.shield_outlined),
+                    title: Text('No owners stored.'),
+                    subtitle: Text(
+                      'OWNER_ID in the launch config still grants access.',
+                    ),
+                  ),
+                )
+              else
+                TileGrid(
+                  children: [
+                    for (final id in list)
+                      _OwnerTile(id: id, isSelf: id == myDiscordId),
+                  ],
                 ),
-              )
-            else
-              for (final id in list)
-                _OwnerTile(id: id, isSelf: id == myDiscordId),
-            const SizedBox(height: 8),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: FilledButton.icon(
+              FilledButton.icon(
                 onPressed: () => _add(context, ref),
                 icon: const Icon(Icons.add),
                 label: const Text('Add owner'),
               ),
-            ),
-          ],
+            ],
+          ),
         );
       },
       loading: () => const Center(child: CircularProgressIndicator()),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/router/app_router.dart';
+import '../../../shared/widgets/tile_grid.dart';
 
 /// The server-side logs `admin.logs.tail` can read, one entry each. A tab of
 /// [AdminScreen].
@@ -11,28 +12,30 @@ class LogsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListView(
+    return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
-      children: [
-        Card(
-          child: ListTile(
-            leading: const Icon(Icons.dns_outlined),
-            title: const Text('Server Logs'),
-            subtitle: const Text('View the tail of server.log'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => const ServerLogsRoute().go(context),
+      child: TileGrid(
+        children: [
+          Card(
+            child: ListTile(
+              leading: const Icon(Icons.dns_outlined),
+              title: const Text('Server Logs'),
+              subtitle: const Text('View the tail of server.log'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => const ServerLogsRoute().go(context),
+            ),
           ),
-        ),
-        Card(
-          child: ListTile(
-            leading: const Icon(Icons.desktop_windows_outlined),
-            title: const Text('Remote Desktop Logs'),
-            subtitle: const Text('View the tail of the noVNC service log'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => const ServerLogsRoute(source: 'novnc').go(context),
+          Card(
+            child: ListTile(
+              leading: const Icon(Icons.desktop_windows_outlined),
+              title: const Text('Remote Desktop Logs'),
+              subtitle: const Text('View the tail of the noVNC service log'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => const ServerLogsRoute(source: 'novnc').go(context),
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
