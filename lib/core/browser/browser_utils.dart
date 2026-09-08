@@ -11,15 +11,19 @@ void openInNewTab(String url) {
 /// Deliberately not `package:flutter/services.dart`'s `Clipboard.setData` —
 /// that goes through the browser's async Clipboard API
 /// (`navigator.clipboard.writeText`), which most browsers refuse outside a
-/// secure context. This dashboard is served over plain HTTP on the LAN by
-/// design (see docs/deployment.md — it is never published to the public
-/// internet, so there is no certificate to serve HTTPS with), so that call
-/// silently no-ops here: nothing throws, nothing gets copied, and whatever
-/// was already on the clipboard is left untouched — which reads as "copy
-/// copied the wrong thing" when it is actually "copy did nothing at all".
+/// secure context. This dashboard is served over HTTPS with a self-signed
+/// certificate the bot generates on first boot (`FtpServer._ensureCertificate`,
+/// never a CA-trusted one — see docs/deployment.md), and browsers are
+/// inconsistent about treating that as "secure" for API purposes even after a
+/// visitor clicks through the certificate warning. Rather than depend on that,
+/// this call silently no-ops when it is refused: nothing throws, nothing gets
+/// copied, and whatever was already on the clipboard is left untouched —
+/// which reads as "copy copied the wrong thing" when it is actually "copy did
+/// nothing at all".
 ///
 /// `document.execCommand('copy')` (via a hidden, focused, selected
-/// textarea) has no such restriction and works identically over HTTP.
+/// textarea) has no such restriction and works regardless of certificate
+/// trust.
 void copyToClipboard(String text) {
   final textarea = web.HTMLTextAreaElement()
     ..value = text
