@@ -1,0 +1,46 @@
+name: fpt_server_website
+description: "A new Flutter project."
+publish_to: 'none'
+version: 0.2.0+2
+
+environment:
+  sdk: ^3.12.0
+
+dependencies:
+  chopper: ^8.7.0
+  crypto: ^3.0.7
+  data_table_2: ^2.5.16
+  flutter:
+    sdk: flutter
+  fpt_server_shared:
+    git: 
+      url: https://github.com/dyno-nexsoft/fpt_server_shared.git
+      ref: main
+  flutter_riverpod: ^3.4.2
+  go_router: ^17.5.0
+  http: any
+  intl: any
+  shared_preferences: ^2.5.5
+  web: any
+  rxdart: ^0.28.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  flutter_launcher_icons: ^0.14.4
+  build_runner: ^2.15.1
+  go_router_builder: ^4.4.0
+  chopper_generator: ^8.7.0
+
+dependency_overrides:
+  fpt_server_shared:
+    path: ../fpt_server_shared
+
+flutter:
+  uses-material-design: true
+
+flutter_launcher_icons:
+  image_path: "assets/logo.png"
+  web:
+    generate: true
