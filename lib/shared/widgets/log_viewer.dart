@@ -115,6 +115,14 @@ class _LogViewerState extends ConsumerState<LogViewer> {
   /// `_copySelection` read this field, the real selection was already gone.
   SelectedContent? _lastSelection;
 
+  /// Non-focusable on purpose: a `FloatingActionButton` normally grabs focus
+  /// on tap, which steals it from the `SelectionArea` and clears the visible
+  /// highlight the instant the Copy button is pressed — the user copies the
+  /// right text (see [_lastSelection]'s stickiness) but watches their own
+  /// selection disappear as they do it. Keeping focus on the log means the
+  /// highlight survives the click.
+  final _copyButtonFocusNode = FocusNode(canRequestFocus: false);
+
   int _lastRowCount = 0;
   bool _stickToBottom = true;
   bool _scrollScheduled = false;
@@ -153,6 +161,7 @@ class _LogViewerState extends ConsumerState<LogViewer> {
     _ownedVerticalController?.dispose();
     _horizontalController.dispose();
     _metrics.dispose();
+    _copyButtonFocusNode.dispose();
     super.dispose();
   }
 
@@ -315,11 +324,14 @@ class _LogViewerState extends ConsumerState<LogViewer> {
             mainAxisSize: MainAxisSize.min,
             spacing: 8,
             children: [
-              FloatingActionButton.small(
-                heroTag: null,
-                tooltip: 'Copy to clipboard',
-                onPressed: _copySelection,
-                child: const Icon(Icons.content_copy_outlined),
+              ExcludeFocus(
+                child: FloatingActionButton.small(
+                  heroTag: null,
+                  tooltip: 'Copy to clipboard',
+                  focusNode: _copyButtonFocusNode,
+                  onPressed: _copySelection,
+                  child: const Icon(Icons.content_copy_outlined),
+                ),
               ),
               FloatingActionButton.small(
                 heroTag: null,
@@ -354,19 +366,38 @@ class _LogViewerState extends ConsumerState<LogViewer> {
           // right inert — a wheel or a drag over most of the pane did nothing
           // at all on a log of short lines.
           width: math.max(rowStyle.contentWidth, constraints.maxWidth),
-          child: SelectionArea(
-            onSelectionChanged: _onSelectionChanged,
-            child: _HorizontalTouchPan(
-              controller: _horizontalController,
-              child: NotificationListener<ScrollNotification>(
-                onNotification: _onScrollNotification,
-                child: _LogRows(
-                  lines: widget.lines,
-                  pendingLine: widget.pendingLine,
-                  rowCount: rowCount,
-                  rowHeight: _metrics.rowHeight,
-                  style: rowStyle,
-                  controller: _verticalController,
+          // Overrides Ctrl+C/Cmd+C rather than leaving it to
+          // `SelectionArea`'s own default: that default calls
+          // `Clipboard.setData` directly, the same async Clipboard API that
+          // silently no-ops on this plain-HTTP origin (see
+          // `copyToClipboard`'s doc comment) — so a keyboard copy would look
+          // like it worked and paste nothing. `SelectableRegion` wraps its
+          // own default with `Action.overridable`, specifically so an
+          // ancestor `Actions` widget like this one can replace it; placing
+          // it *outside* `SelectionArea` is what makes the override win.
+          // `_copySelection` runs while the region still has focus, so
+          // unlike the FAB it never needs the anti-focus-theft workaround on
+          // [_copyButtonFocusNode].
+          child: Actions(
+            actions: <Type, Action<Intent>>{
+              CopySelectionTextIntent: CallbackAction<CopySelectionTextIntent>(
+                onInvoke: (_) => _copySelection(),
+              ),
+            },
+            child: SelectionArea(
+              onSelectionChanged: _onSelectionChanged,
+              child: _HorizontalTouchPan(
+                controller: _horizontalController,
+                child: NotificationListener<ScrollNotification>(
+                  onNotification: _onScrollNotification,
+                  child: _LogRows(
+                    lines: widget.lines,
+                    pendingLine: widget.pendingLine,
+                    rowCount: rowCount,
+                    rowHeight: _metrics.rowHeight,
+                    style: rowStyle,
+                    controller: _verticalController,
+                  ),
                 ),
               ),
             ),
