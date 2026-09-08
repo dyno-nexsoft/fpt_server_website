@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fpt_server_shared/fpt_server_shared.dart';
 
 import '../../../shared/utils/responsive.dart';
+import '../../../shared/widgets/section_title.dart';
 import 'action_form_controller.dart';
 import 'action_param_field.dart';
 
@@ -45,7 +46,7 @@ class _CiBuildFormScreenState extends ConsumerState<CiBuildFormScreen>
   Widget _buildFields(ActionSchema action) => Column(
     crossAxisAlignment: CrossAxisAlignment.stretch,
     children: [
-      const _SectionTitle('Source control & modules'),
+      const SectionTitle('Source control & modules'),
       const SizedBox(height: 16),
       _fieldRow(action, 'tbchat', 'database'),
       const SizedBox(height: 12),
@@ -53,11 +54,11 @@ class _CiBuildFormScreenState extends ConsumerState<CiBuildFormScreen>
       const SizedBox(height: 12),
       _fieldRow(action, 'cloud_storage', 'socialfi'),
       const SizedBox(height: 24),
-      const _SectionTitle('Target environment'),
+      const SectionTitle('Target environment'),
       const SizedBox(height: 16),
       _fieldRow(action, 'platform', 'environment'),
       const SizedBox(height: 24),
-      const _SectionTitle('Details'),
+      const SectionTitle('Details'),
       const SizedBox(height: 16),
       _releaseNotesField(_param(action, 'release_notes')),
     ],
@@ -111,26 +112,4 @@ class _CiBuildFormScreenState extends ConsumerState<CiBuildFormScreen>
       alignLabelWithHint: true,
     ),
   );
-}
-
-/// A group heading for the sections a dedicated form is split into — the
-/// flat generated form has no such grouping, which is exactly why it reads
-/// as one undifferentiated wall of fields.
-class _SectionTitle extends StatelessWidget {
-  const _SectionTitle(this.title);
-
-  final String title;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      spacing: 4,
-      children: [
-        Text(title.toUpperCase(), style: theme.textTheme.labelLarge),
-        const Divider(height: 1),
-      ],
-    );
-  }
 }

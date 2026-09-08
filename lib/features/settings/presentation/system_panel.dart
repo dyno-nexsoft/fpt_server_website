@@ -11,26 +11,28 @@ import '../../../shared/widgets/confirm_dialog.dart';
 /// is actually withheld from REST entirely (`Action.exposedOverRest` is
 /// false there — an unattended `exit(0)` has no automatic recovery), so it's
 /// the only one still listed as unavailable rather than actionable.
-/// Admin-only display: nobody else's key could call these even if shown.
-class SystemPanel extends ConsumerWidget {
+///
+/// One group of tiles within [AdminScreen]'s Operations tab, not a card of
+/// its own — bare rather than scrolling, since the tab around it already
+/// scrolls the whole group alongside [HivePanel].
+class SystemPanel extends StatelessWidget {
   const SystemPanel({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return Card(
-      child: ExpansionTile(
-        leading: const Icon(Icons.computer),
-        title: Text('System'),
-        subtitle: const Text('Restart, hot reload, or shut down the bot'),
-        children: [
-          _ActionTile(
+  Widget build(BuildContext context) {
+    return const Column(
+      children: [
+        Card(
+          child: _ActionTile(
             icon: Icons.refresh,
             name: 'system.hotReload',
             description: 'Pull the latest code and hot reload — no restart.',
             confirmTitle: 'Hot reload?',
             confirmBody: 'Pulls the latest code and hot reloads the bot.',
           ),
-          _ActionTile(
+        ),
+        Card(
+          child: _ActionTile(
             icon: Icons.restart_alt,
             name: 'system.restart',
             description:
@@ -41,7 +43,9 @@ class SystemPanel extends ConsumerWidget {
                 'Pulls code, installs dependencies, and restarts the bot. '
                 'It will be briefly unreachable.',
           ),
-          const _ActionTile(
+        ),
+        Card(
+          child: _ActionTile(
             icon: Icons.block,
             name: 'system.shutdown',
             description: 'Unavailable in browser — use Discord.',
@@ -51,8 +55,8 @@ class SystemPanel extends ConsumerWidget {
                 'Use Discord to restart it.',
             isDangerous: true,
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }

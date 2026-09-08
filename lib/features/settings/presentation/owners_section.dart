@@ -5,7 +5,7 @@ import '../../../core/providers/catalogue_providers.dart';
 import '../application/owners_controller.dart';
 
 /// `admin.owners.list/add/remove` — the Discord accounts that hold bot
-/// ownership regardless of API key scopes.
+/// ownership regardless of API key scopes. One tab of [AdminScreen].
 ///
 /// Ownership is granted by Discord user id, so that is all there is to show:
 /// this dashboard never talks to Discord and cannot resolve an id to a
@@ -20,40 +20,35 @@ class OwnersSection extends ConsumerWidget {
 
     return owners.when(
       data: (ids) {
-        if (ids == null) return const SizedBox.shrink();
-        return Card(
-          child: ExpansionTile(
-            leading: const Icon(Icons.shield_outlined),
-            title: const Text('Owners'),
-            subtitle: Text('${ids.length} Discord account(s) with full access'),
-            children: [
-              if (ids.isEmpty)
-                const ListTile(
-                  title: Text('No owners stored.'),
-                  subtitle: Text(
-                    'OWNER_ID in the launch config still grants access.',
-                  ),
-                )
-              else
-                for (final id in ids)
-                  _OwnerTile(id: id, isSelf: id == myDiscordId),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: FilledButton.icon(
-                    onPressed: () => _add(context, ref),
-                    icon: const Icon(Icons.add),
-                    label: const Text('Add owner'),
-                  ),
+        final list = ids ?? const [];
+        return ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            if (list.isEmpty)
+              const ListTile(
+                leading: Icon(Icons.shield_outlined),
+                title: Text('No owners stored.'),
+                subtitle: Text(
+                  'OWNER_ID in the launch config still grants access.',
                 ),
+              )
+            else
+              for (final id in list)
+                _OwnerTile(id: id, isSelf: id == myDiscordId),
+            const SizedBox(height: 8),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: FilledButton.icon(
+                onPressed: () => _add(context, ref),
+                icon: const Icon(Icons.add),
+                label: const Text('Add owner'),
               ),
-            ],
-          ),
+            ),
+          ],
         );
       },
-      loading: () => const LinearProgressIndicator(),
-      error: (error, _) => Text('$error'),
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (error, _) => Center(child: Text('$error')),
     );
   }
 
@@ -100,14 +95,16 @@ class _OwnerTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return ListTile(
-      leading: const Icon(Icons.person_outline),
-      title: Text(id),
-      subtitle: isSelf ? const Text('This is you') : null,
-      trailing: IconButton(
-        tooltip: 'Remove owner',
-        icon: const Icon(Icons.delete_outline),
-        onPressed: () => _confirmRemove(context, ref),
+    return Card(
+      child: ListTile(
+        leading: const Icon(Icons.person_outline),
+        title: Text(id),
+        subtitle: isSelf ? const Text('This is you') : null,
+        trailing: IconButton(
+          tooltip: 'Remove owner',
+          icon: const Icon(Icons.delete_outline),
+          onPressed: () => _confirmRemove(context, ref),
+        ),
       ),
     );
   }

@@ -9,53 +9,64 @@ import '../application/hive_boxes_controller.dart';
 /// otherwise. Useful after a refactor changes what a box's records look
 /// like: list first to see names and entry counts, then clean the specific
 /// one that's now stale instead of needing shell access to the box files.
-class HivePanel extends ConsumerWidget {
+///
+/// The other group of tiles within [AdminScreen]'s Operations tab, alongside
+/// [SystemPanel] — loads its own data on first build rather than waiting for
+/// an expand event, since there is no longer a collapsed state to expand
+/// from.
+class HivePanel extends ConsumerStatefulWidget {
   const HivePanel({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<HivePanel> createState() => _HivePanelState();
+}
+
+class _HivePanelState extends ConsumerState<HivePanel> {
+  @override
+  void initState() {
+    super.initState();
+    Future.microtask(
+      () => ref.read(hiveBoxesControllerProvider.notifier).load(),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final boxes = ref.watch(hiveBoxesControllerProvider);
-    return Card(
-      child: ExpansionTile(
-        leading: const Icon(Icons.storage),
-        title: const Text('Hive database'),
-        subtitle: const Text('Inspect and clean storage boxes'),
-        onExpansionChanged: (value) {
-          if (value && boxes == null) {
-            ref.read(hiveBoxesControllerProvider.notifier).load();
-          }
-        },
-        children: [
-          if (boxes == null)
-            const Padding(
-              padding: EdgeInsets.all(16),
-              child: Center(child: CircularProgressIndicator()),
-            )
-          else if (boxes.isEmpty)
-            const Padding(
-              padding: EdgeInsets.all(16),
-              child: Text('No boxes open.'),
-            )
-          else
-            for (final box in boxes)
-              ListTile(
-                leading: const Icon(Icons.inventory_2_outlined),
-                title: Text(box.name),
-                subtitle: Text(
-                  '${box.entryCount} '
-                  'entr${box.entryCount == 1 ? 'y' : 'ies'}',
-                ),
-                trailing: IconButton(
-                  tooltip: 'Clean this box',
-                  icon: Icon(
-                    Icons.delete_outline,
-                    color: Theme.of(context).colorScheme.error,
-                  ),
-                  onPressed: () => _clean(context, ref, box),
-                ),
+    if (boxes == null) {
+      return const Padding(
+        padding: EdgeInsets.all(16),
+        child: Center(child: CircularProgressIndicator()),
+      );
+    }
+    if (boxes.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.all(16),
+        child: Text('No boxes open.'),
+      );
+    }
+    return Column(
+      children: [
+        for (final box in boxes)
+          Card(
+            child: ListTile(
+              leading: const Icon(Icons.inventory_2_outlined),
+              title: Text(box.name),
+              subtitle: Text(
+                '${box.entryCount} '
+                'entr${box.entryCount == 1 ? 'y' : 'ies'}',
               ),
-        ],
-      ),
+              trailing: IconButton(
+                tooltip: 'Clean this box',
+                icon: Icon(
+                  Icons.delete_outline,
+                  color: Theme.of(context).colorScheme.error,
+                ),
+                onPressed: () => _clean(context, ref, box),
+              ),
+            ),
+          ),
+      ],
     );
   }
 

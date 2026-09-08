@@ -10,6 +10,7 @@ import '../../features/builds/presentation/builds_screen.dart';
 import '../../features/builds/presentation/job_detail_screen.dart';
 import '../../features/builds/presentation/new_build_screen.dart';
 import '../../features/dashboard/presentation/dashboard_screen.dart';
+import '../../features/settings/presentation/admin_screen.dart';
 import '../../features/settings/presentation/server_logs_screen.dart';
 import '../../features/settings/presentation/settings_screen.dart';
 import '../../features/shell/presentation/app_shell.dart';
@@ -140,7 +141,10 @@ class LoginRoute extends GoRouteData with $LoginRoute {
     ),
     TypedGoRoute<SettingsRoute>(
       path: '/settings',
-      routes: [TypedGoRoute<ServerLogsRoute>(path: 'logs')],
+      routes: [
+        TypedGoRoute<ServerLogsRoute>(path: 'logs'),
+        TypedGoRoute<AdminRoute>(path: 'admin'),
+      ],
     ),
   ],
 )
@@ -227,6 +231,17 @@ class SettingsRoute extends GoRouteData with $SettingsRoute {
   @override
   Widget build(BuildContext context, GoRouterState state) =>
       const SettingsScreen();
+}
+
+/// The admin-only tabs (Access/Operations/Logs) — nested under Settings
+/// rather than a sibling top-level route, since it is reached from a single
+/// entry point on that screen and nowhere else.
+class AdminRoute extends GoRouteData with $AdminRoute {
+  const AdminRoute();
+
+  @override
+  Widget build(BuildContext context, GoRouterState state) =>
+      const AdminScreen();
 }
 
 /// One route for every server-side log, told apart by [source].

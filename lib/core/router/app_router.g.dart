@@ -83,6 +83,11 @@ RouteBase get $appShellRouteData => ShellRouteData.$route(
           hasOverriddenOnExit: false,
           factory: $ServerLogsRoute._fromState,
         ),
+        GoRouteData.$route(
+          path: 'admin',
+          hasOverriddenOnExit: false,
+          factory: $AdminRoute._fromState,
+        ),
       ],
     ),
   ],
@@ -265,6 +270,26 @@ mixin $ServerLogsRoute on GoRouteData {
     '/settings/logs',
     queryParams: {if (_self.source != null) 'source': _self.source},
   );
+
+  @override
+  void go(BuildContext context) => context.go(location);
+
+  @override
+  Future<T?> push<T>(BuildContext context) => context.push<T>(location);
+
+  @override
+  void pushReplacement(BuildContext context) =>
+      context.pushReplacement(location);
+
+  @override
+  void replace(BuildContext context) => context.replace(location);
+}
+
+mixin $AdminRoute on GoRouteData {
+  static AdminRoute _fromState(GoRouterState state) => const AdminRoute();
+
+  @override
+  String get location => GoRouteData.$location('/settings/admin');
 
   @override
   void go(BuildContext context) => context.go(location);
