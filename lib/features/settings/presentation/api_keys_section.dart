@@ -19,60 +19,84 @@ class ApiKeysSection extends ConsumerWidget {
     final keys = ref.watch(apiKeysProvider);
     final myKey = ref.watch(myKeyInfoProvider).value;
 
-    return keys.when(
-      data: (list) {
-        if (list == null) return const SizedBox.shrink();
-        return Card(
-          child: ExpansionTile(
-            leading: const Icon(Icons.vpn_key_outlined),
-            title: const Text('API keys'),
-            subtitle: Text('${list.length} key(s)'),
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                // Matches the Appearance card: a Column with
-                // crossAxisAlignment.start otherwise shrink-wraps to the
-                // DataTable's intrinsic width instead of stretching full
-                // width like every other expanded child here.
-                child: SizedBox(
-                  width: double.infinity,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    spacing: 12,
-                    children: [
-                      SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        child: DataTable(
-                          columns: const [
-                            DataColumn(label: Text('Name')),
-                            DataColumn(label: Text('Hash')),
-                            DataColumn(label: Text('Scopes')),
-                            DataColumn(label: Text('Last used')),
-                            DataColumn(label: Text('')),
-                          ],
-                          rows: [
-                            for (final key in list)
-                              _row(context, ref, key, myKey),
-                          ],
-                        ),
+    // Same ambiguity as ZentaoSection's status check: `keys.value` is null
+    // both before the first load resolves and when it resolves to an actual
+    // null (no stored key, or the catalogue has no such action) — both cases
+    // hide the card the same way, so there's nothing to tell apart.
+    if (keys.value == null && !keys.hasError) {
+      return const SizedBox.shrink();
+    }
+
+    return Card(
+      child: ExpansionTile(
+        leading: const Icon(Icons.vpn_key_outlined),
+        title: const Text('API keys'),
+        subtitle: Text(_summary(keys)),
+        children: switch (keys) {
+          AsyncValue(:final error?) => [
+            ListTile(
+              leading: const Icon(Icons.error_outline),
+              title: const Text('Unable to load API keys'),
+              subtitle: Text('$error'),
+            ),
+          ],
+          AsyncValue(:final value?) => [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+              // Matches the Appearance card: a Column with
+              // crossAxisAlignment.start otherwise shrink-wraps to the
+              // DataTable's intrinsic width instead of stretching full
+              // width like every other expanded child here.
+              child: SizedBox(
+                width: double.infinity,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  spacing: 12,
+                  children: [
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: DataTable(
+                        columns: const [
+                          DataColumn(label: Text('Name')),
+                          DataColumn(label: Text('Hash')),
+                          DataColumn(label: Text('Scopes')),
+                          DataColumn(label: Text('Last used')),
+                          DataColumn(label: Text('')),
+                        ],
+                        rows: [
+                          for (final key in value)
+                            _row(context, ref, key, myKey),
+                        ],
                       ),
-                      FilledButton.icon(
-                        onPressed: () => _showCreateKeyFlow(context, ref),
-                        icon: const Icon(Icons.add),
-                        label: const Text('Create key'),
-                      ),
-                    ],
-                  ),
+                    ),
+                    FilledButton.icon(
+                      onPressed: () => _showCreateKeyFlow(context, ref),
+                      icon: const Icon(Icons.add),
+                      label: const Text('Create key'),
+                    ),
+                  ],
                 ),
               ),
-            ],
-          ),
-        );
-      },
-      loading: () => const LinearProgressIndicator(),
-      error: (error, _) => Text('$error'),
+            ),
+          ],
+          _ => const [
+            Padding(
+              padding: EdgeInsets.all(16),
+              child: LinearProgressIndicator(),
+            ),
+          ],
+        },
+      ),
     );
   }
+
+  /// Collapsed, this card is a status line — same convention as every other
+  /// card on this page.
+  String _summary(AsyncValue<List<ApiKeyInfo>?> keys) => switch (keys) {
+    AsyncValue(hasError: true) => 'Unable to load',
+    AsyncValue(:final value?) => '${value.length} key(s)',
+    _ => 'Checking…',
+  };
 
   DataRow _row(
     BuildContext context,

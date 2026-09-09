@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/providers/catalogue_providers.dart';
+import '../../../shared/widgets/error_card.dart';
 import '../../../shared/widgets/tile_grid.dart';
 import '../application/owners_controller.dart';
 
@@ -55,7 +56,10 @@ class OwnersSection extends ConsumerWidget {
         );
       },
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (error, _) => Center(child: Text('$error')),
+      error: (error, _) => Padding(
+        padding: const EdgeInsets.all(16),
+        child: ErrorCard(title: 'Unable to load owners', error: error),
+      ),
     );
   }
 
