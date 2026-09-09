@@ -38,7 +38,6 @@ class AdminScreen extends StatelessWidget {
             ),
           ),
           const TabBar(
-            isScrollable: true,
             tabs: [
               Tab(icon: Icon(Icons.shield_outlined), text: 'Access'),
               Tab(icon: Icon(Icons.build_circle_outlined), text: 'Operations'),
