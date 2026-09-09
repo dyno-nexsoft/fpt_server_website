@@ -45,24 +45,33 @@ class _CiBuildFormScreenState extends ConsumerState<CiBuildFormScreen>
 
   Widget _buildFields(ActionSchema action) => Column(
     crossAxisAlignment: CrossAxisAlignment.stretch,
+    spacing: 16,
     children: [
       const SectionTitle('Source control & modules'),
-      const SizedBox(height: 16),
       _fieldRow(action, 'tbchat', 'database'),
-      const SizedBox(height: 12),
       _fieldRow(action, 'im', 'wallet'),
-      const SizedBox(height: 12),
       _fieldRow(action, 'cloud_storage', 'socialfi'),
-      const SizedBox(height: 24),
       const SectionTitle('Target environment'),
-      const SizedBox(height: 16),
       _fieldRow(action, 'platform', 'environment'),
-      const SizedBox(height: 24),
       const SectionTitle('Details'),
-      const SizedBox(height: 16),
       _releaseNotesField(_param(action, 'release_notes')),
     ],
   );
+
+  /// Purely decorative, so an unrecognized param (a future field this form
+  /// hasn't been updated for) just renders with no icon instead of failing —
+  /// this form is hand-maintained per param name, unlike the generic one.
+  IconData? _iconFor(String name) => switch (name) {
+    'tbchat' ||
+    'database' ||
+    'im' ||
+    'wallet' ||
+    'cloud_storage' ||
+    'socialfi' => Icons.call_split,
+    'platform' => Icons.devices_outlined,
+    'environment' => Icons.public_outlined,
+    _ => null,
+  };
 
   /// Two fields side by side on desktop, stacked on mobile — the branch and
   /// module fields are related pairs (tbchat/database, im/wallet, ...), so
@@ -75,6 +84,7 @@ class _CiBuildFormScreenState extends ConsumerState<CiBuildFormScreen>
       boolValue: boolValues[first] ?? false,
       onEnumChanged: (value) => setState(() => enumValues[first] = value),
       onBoolChanged: (value) => setState(() => boolValues[first] = value),
+      icon: _iconFor(first),
     );
     final right = ActionParamField(
       param: _param(action, second),
@@ -83,6 +93,7 @@ class _CiBuildFormScreenState extends ConsumerState<CiBuildFormScreen>
       boolValue: boolValues[second] ?? false,
       onEnumChanged: (value) => setState(() => enumValues[second] = value),
       onBoolChanged: (value) => setState(() => boolValues[second] = value),
+      icon: _iconFor(second),
     );
     if (isMobileWidth(context)) {
       return Column(
@@ -110,6 +121,7 @@ class _CiBuildFormScreenState extends ConsumerState<CiBuildFormScreen>
     decoration: InputDecoration(
       labelText: param.description,
       alignLabelWithHint: true,
+      prefixIcon: const Icon(Icons.notes_outlined),
     ),
   );
 }

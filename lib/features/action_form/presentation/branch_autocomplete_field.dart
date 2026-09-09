@@ -13,11 +13,13 @@ class BranchAutocompleteField extends ConsumerStatefulWidget {
     required this.param,
     required this.controller,
     required this.label,
+    this.icon,
   });
 
   final ActionParam param;
   final TextEditingController controller;
   final String label;
+  final IconData? icon;
 
   @override
   ConsumerState<BranchAutocompleteField> createState() =>
@@ -54,7 +56,10 @@ class _BranchAutocompleteFieldState
         return TextFormField(
           controller: controller,
           focusNode: focusNode,
-          decoration: InputDecoration(labelText: widget.label),
+          decoration: InputDecoration(
+            labelText: widget.label,
+            prefixIcon: widget.icon == null ? null : Icon(widget.icon),
+          ),
           validator: (value) =>
               widget.param.isRequired && (value ?? '').trim().isEmpty
               ? 'Required'

@@ -14,6 +14,7 @@ class ActionParamField extends StatelessWidget {
     required this.boolValue,
     required this.onEnumChanged,
     required this.onBoolChanged,
+    this.icon,
   });
 
   final ActionParam param;
@@ -23,6 +24,12 @@ class ActionParamField extends StatelessWidget {
   final ValueChanged<String?> onEnumChanged;
   final ValueChanged<bool> onBoolChanged;
 
+  /// Purely decorative — the generic schema-driven form (every action
+  /// besides `ci.build`) leaves this null and gets Material's plain
+  /// unadorned field, since there's no per-field meaning to hang an icon on
+  /// for an arbitrary action's params.
+  final IconData? icon;
+
   // The description ("Branch repo tbchat") reads better as the prominent
   // label than the raw param name ("tbchat").
   String get _label {
@@ -30,13 +37,18 @@ class ActionParamField extends StatelessWidget {
     return param.isRequired ? '$base *' : base;
   }
 
+  Icon? get _prefixIcon => icon == null ? null : Icon(icon);
+
   @override
   Widget build(BuildContext context) {
     switch (param.type) {
       case ParamType.enumeration:
         return DropdownButtonFormField<String>(
           initialValue: enumValue,
-          decoration: InputDecoration(labelText: _label),
+          decoration: InputDecoration(
+            labelText: _label,
+            prefixIcon: _prefixIcon,
+          ),
           items: [
             for (final choice in param.choices)
               DropdownMenuItem(value: choice, child: Text(choice)),
@@ -45,6 +57,7 @@ class ActionParamField extends StatelessWidget {
         );
       case ParamType.boolean:
         return SwitchListTile(
+          secondary: _prefixIcon,
           title: Text(_label),
           value: boolValue,
           onChanged: onBoolChanged,
@@ -54,7 +67,10 @@ class ActionParamField extends StatelessWidget {
         return TextFormField(
           controller: controller,
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          decoration: InputDecoration(labelText: _label),
+          decoration: InputDecoration(
+            labelText: _label,
+            prefixIcon: _prefixIcon,
+          ),
           validator: (value) => _validateText(value),
         );
       case ParamType.string:
@@ -63,6 +79,7 @@ class ActionParamField extends StatelessWidget {
             param: param,
             controller: controller!,
             label: _label,
+            icon: icon,
           );
         }
         if (param.isStringList) {
@@ -72,6 +89,7 @@ class ActionParamField extends StatelessWidget {
               labelText: _label,
               hintText: 'One per line',
               alignLabelWithHint: true,
+              prefixIcon: _prefixIcon,
             ),
             minLines: 3,
             maxLines: 6,
@@ -80,7 +98,10 @@ class ActionParamField extends StatelessWidget {
         }
         return TextFormField(
           controller: controller,
-          decoration: InputDecoration(labelText: _label),
+          decoration: InputDecoration(
+            labelText: _label,
+            prefixIcon: _prefixIcon,
+          ),
           validator: (value) => _validateText(value),
         );
     }
