@@ -39,24 +39,15 @@ class ConnectionCard extends ConsumerWidget {
         leading: Icon(icon),
         title: const Text('Connection'),
         subtitle: Text(summary),
+        // The URL row this used to be is gone — expanding is itself the
+        // signal to refresh, so there is nothing left for a dedicated row
+        // (or its refresh button) to do.
+        onExpansionChanged: (expanded) {
+          if (expanded) {
+            ref.invalidate(healthCheckProvider(creds.normalizedServerUrl));
+          }
+        },
         children: [
-          ListTile(
-            leading: const Icon(Icons.dns_outlined),
-            title: Text(creds.serverUrl),
-            // No subtitle here: it would just repeat the header's, which is
-            // already visible collapsed — this row exists to show the URL
-            // and host the refresh button, not to restate the summary.
-            // On this row rather than the ExpansionTile's own `trailing`,
-            // which holds the expand arrow — replacing that would cost the
-            // only affordance saying the card opens at all.
-            trailing: IconButton(
-              tooltip: 'Refresh',
-              icon: const Icon(Icons.refresh),
-              onPressed: () => ref.invalidate(
-                healthCheckProvider(creds.normalizedServerUrl),
-              ),
-            ),
-          ),
           if (health.value?.remoteDesktopUrl case final url?)
             ListTile(
               leading: const Icon(Icons.desktop_windows_outlined),

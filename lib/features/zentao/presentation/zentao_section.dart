@@ -35,6 +35,12 @@ class ZentaoSection extends ConsumerWidget {
 
     return Card(
       child: ExpansionTile(
+        // Without this, collapsing tears down the report tile beneath —
+        // the last watcher on zentaoStatusProvider/zentaoTaskProvider
+        // (both `.autoDispose`) goes away, Riverpod discards their state,
+        // and re-expanding starts a brand-new fetch with nothing to show
+        // while it runs instead of the report that was already loaded.
+        maintainState: true,
         leading: Icon(_icon(status)),
         title: const Text('Zentao'),
         subtitle: Text(_summary(status)),
