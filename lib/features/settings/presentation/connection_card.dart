@@ -59,6 +59,17 @@ class ConnectionCard extends ConsumerWidget {
                 label: const Text('Open'),
               ),
             ),
+          if (health.value?.devToolsUrl case final url?)
+            ListTile(
+              leading: const Icon(Icons.bug_report_outlined),
+              title: const Text('DevTools'),
+              subtitle: Text(url),
+              trailing: FilledButton.tonalIcon(
+                onPressed: () => openInNewTab(url),
+                icon: const Icon(Icons.open_in_new),
+                label: const Text('Open'),
+              ),
+            ),
           if (creds.hasKey)
             myKey.when(
               data: (info) => ListTile(
