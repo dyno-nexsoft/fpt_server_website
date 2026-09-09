@@ -65,7 +65,8 @@ class ZentaoSection extends ConsumerWidget {
 
   IconData _icon(AsyncValue<ZentaoStatus?> status) => switch (status) {
     AsyncValue(hasError: true) => Icons.error_outline,
-    AsyncValue(:final value?) when value.linked => Icons.assignment_turned_in,
+    AsyncValue(:final value?) when value.linked =>
+      Icons.assignment_turned_in_outlined,
     _ => Icons.assignment_outlined,
   };
 
