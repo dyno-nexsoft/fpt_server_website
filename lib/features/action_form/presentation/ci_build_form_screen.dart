@@ -55,6 +55,7 @@ class _CiBuildFormScreenState extends ConsumerState<CiBuildFormScreen>
       _fieldRow(action, 'platform', 'environment'),
       const SectionTitle('Details'),
       _releaseNotesField(_param(action, 'release_notes')),
+      _fieldRow(action, 'build_name', 'build_number'),
     ],
   );
 
@@ -70,6 +71,8 @@ class _CiBuildFormScreenState extends ConsumerState<CiBuildFormScreen>
     'socialfi' => Icons.call_split,
     'platform' => Icons.devices_outlined,
     'environment' => Icons.public_outlined,
+    'build_name' => Icons.label_outlined,
+    'build_number' => Icons.numbers_outlined,
     _ => null,
   };
 
