@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/browser/browser_utils.dart';
 import 'package:fpt_server_shared/fpt_server_shared.dart';
+import '../../../core/providers/form_seed_provider.dart';
 import '../../../core/providers/session_provider.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_theme.dart';
@@ -57,12 +57,6 @@ class JobDetailPanel extends ConsumerWidget {
           ],
         ),
         const Divider(),
-        if (job.logUrl != null)
-          OutlinedButton.icon(
-            onPressed: () => openInNewTab('${job.logUrl!}?raw=1'),
-            icon: const Icon(Icons.description_outlined),
-            label: const Text('Open raw log'),
-          ),
         OutlinedButton.icon(
           onPressed: () => ArtifactsRoute(job.id).go(context),
           icon: const Icon(Icons.folder_outlined),
@@ -70,8 +64,9 @@ class JobDetailPanel extends ConsumerWidget {
         ),
         // `actionName` is null for a job predating action-tracking (or one
         // evicted from the registry) — there is no schema to key a
-        // template by, so there's nothing to offer saving here.
-        if (job.actionName != null)
+        // template by, or a form to reopen, so neither button below has
+        // anywhere to go.
+        if (job.actionName != null) ...[
           OutlinedButton.icon(
             onPressed: () => ref
                 .read(jobActionsControllerProvider)
@@ -79,6 +74,12 @@ class JobDetailPanel extends ConsumerWidget {
             icon: const Icon(Icons.bookmark_add_outlined),
             label: const Text('Save as template'),
           ),
+          OutlinedButton.icon(
+            onPressed: () => _editAndRebuild(context, ref),
+            icon: const Icon(Icons.edit_note_outlined),
+            label: const Text('Edit & Rebuild'),
+          ),
+        ],
         if (canPromote)
           FilledButton.tonalIcon(
             onPressed: () =>
@@ -130,6 +131,14 @@ class JobDetailPanel extends ConsumerWidget {
     );
     if (!confirmed || !context.mounted) return;
     await ref.read(jobActionsControllerProvider).cancel(context, job);
+  }
+
+  /// Reopens the same form this job was originally submitted from, seeded
+  /// with its `actionParams` — unlike Retry (which resubmits verbatim, no
+  /// form in sight), this is for changing something first.
+  void _editAndRebuild(BuildContext context, WidgetRef ref) {
+    ref.read(pendingFormSeedProvider.notifier).set(job.actionParams);
+    ActionFormRoute(job.actionName!).go(context);
   }
 
   Future<void> _retry(BuildContext context, WidgetRef ref) async {

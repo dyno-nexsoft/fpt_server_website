@@ -6,6 +6,7 @@ import 'package:fpt_server_shared/fpt_server_shared.dart';
 import '../../../core/api/api_exception.dart';
 import '../../../core/providers/catalogue_providers.dart';
 import '../../../core/providers/core_providers.dart';
+import '../../../core/providers/form_seed_provider.dart';
 import '../../../core/providers/job_seed_provider.dart';
 import '../../../core/providers/notification_preferences_provider.dart';
 import '../../../core/providers/session_provider.dart';
@@ -160,6 +161,21 @@ mixin ActionFormControllerState<T extends ConsumerStatefulWidget>
     }
     lastResult = ref.read(lastResultStoreProvider).load(action.name);
     _initialized = true;
+
+    // "Edit & Rebuild" on the job detail screen stashes the job's own
+    // actionParams here before navigating to this exact form — applied once,
+    // straight over the defaults just set above, then consumed so it can't
+    // leak into a form opened some other way afterwards. Deferred to after
+    // this build: initFields runs mid-build (from buildActionForm), and both
+    // clearing the provider and setState-ing the fields into place have to
+    // happen outside that frame.
+    if (ref.read(pendingFormSeedProvider) case final seed?) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        ref.read(pendingFormSeedProvider.notifier).clear();
+        setState(() => _fillFields(action, seed));
+      });
+    }
   }
 
   /// A param's default/template value rendered into a text field — joined
@@ -205,21 +221,29 @@ mixin ActionFormControllerState<T extends ConsumerStatefulWidget>
 
   void applyTemplate(ActionSchema action, ActionTemplate template) {
     setState(() {
-      for (final param in action.params) {
-        final value = template.params[param.name];
-        switch (param.type) {
-          case ParamType.enumeration:
-            if (value is String) enumValues[param.name] = value;
-          case ParamType.boolean:
-            boolValues[param.name] = value as bool? ?? false;
-          case ParamType.integer:
-          case ParamType.number:
-          case ParamType.string:
-            controllers[param.name]!.text = _defaultFieldText(value);
-        }
-      }
+      _fillFields(action, template.params);
       selectedTemplateName = template.name;
     });
+  }
+
+  /// Overwrites every field this schema has with [params]' values (or blank/
+  /// false for one it doesn't mention) — shared by [applyTemplate] and the
+  /// job-actionParams seed [initFields] applies, since both are "replace the
+  /// form's current contents with this other set of values" wholesale.
+  void _fillFields(ActionSchema action, Map<String, Object?> params) {
+    for (final param in action.params) {
+      final value = params[param.name];
+      switch (param.type) {
+        case ParamType.enumeration:
+          if (value is String) enumValues[param.name] = value;
+        case ParamType.boolean:
+          boolValues[param.name] = value as bool? ?? false;
+        case ParamType.integer:
+        case ParamType.number:
+        case ParamType.string:
+          controllers[param.name]!.text = _defaultFieldText(value);
+      }
+    }
   }
 
   Future<void> saveAsTemplate(ActionSchema action) async {
