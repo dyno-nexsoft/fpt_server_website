@@ -1,3 +1,4 @@
+import 'package:data_table_2/data_table_2.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -5,6 +6,7 @@ import '../../../core/browser/browser_utils.dart';
 import 'package:fpt_server_shared/fpt_server_shared.dart';
 import '../../../core/providers/catalogue_providers.dart';
 import '../../../shared/utils/format.dart';
+import '../../../shared/widgets/ellipsis_text.dart';
 import '../application/api_keys_controller.dart';
 import '../application/settings_providers.dart';
 
@@ -45,23 +47,40 @@ class ApiKeysSection extends ConsumerWidget {
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
               // Matches the Appearance card: a Column with
               // crossAxisAlignment.start otherwise shrink-wraps to the
-              // DataTable's intrinsic width instead of stretching full
-              // width like every other expanded child here.
+              // table's intrinsic width instead of stretching full width
+              // like every other expanded child here.
               child: SizedBox(
                 width: double.infinity,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   spacing: 12,
                   children: [
-                    SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: DataTable(
+                    // DataTable2 fills the available width by distributing
+                    // it across columns by relative [ColumnSize] instead of
+                    // sizing each to its content and scrolling horizontally
+                    // once they overflow — which is what the plain DataTable
+                    // this replaced did, given Hash's 64 hex characters.
+                    // It still needs a bounded height from somewhere (it
+                    // lays out its body as its own scrollable), which this
+                    // ExpansionTile's child list doesn't provide on its own.
+                    SizedBox(
+                      height: _tableHeight(value.length),
+                      child: DataTable2(
+                        columnSpacing: 16,
+                        horizontalMargin: 0,
+                        minWidth: 500,
                         columns: const [
-                          DataColumn(label: Text('Name')),
-                          DataColumn(label: Text('Hash')),
-                          DataColumn(label: Text('Scopes')),
-                          DataColumn(label: Text('Last used')),
-                          DataColumn(label: Text('')),
+                          DataColumn2(label: Text('Name'), size: ColumnSize.S),
+                          DataColumn2(label: Text('Hash'), size: ColumnSize.L),
+                          DataColumn2(
+                            label: Text('Scopes'),
+                            size: ColumnSize.S,
+                          ),
+                          DataColumn2(
+                            label: Text('Last used'),
+                            size: ColumnSize.S,
+                          ),
+                          DataColumn2(label: Text(''), size: ColumnSize.S),
                         ],
                         rows: [
                           for (final key in value)
@@ -98,7 +117,19 @@ class ApiKeysSection extends ConsumerWidget {
     _ => 'Checking…',
   };
 
-  DataRow _row(
+  /// [DataTable2]'s body scrolls itself and so needs a bounded height from
+  /// its parent — sized to fit every row up to a point, then capped so a
+  /// long key list scrolls in place instead of pushing the rest of this
+  /// card (and the "Create key" button below it) off no matter how tall.
+  double _tableHeight(int rowCount) {
+    const headingHeight = 56.0, rowHeight = 52.0, maxHeight = 400.0;
+    return (headingHeight + rowCount * rowHeight).clamp(
+      headingHeight + rowHeight,
+      maxHeight,
+    );
+  }
+
+  DataRow2 _row(
     BuildContext context,
     WidgetRef ref,
     ApiKeyInfo key,
@@ -108,10 +139,10 @@ class ApiKeysSection extends ConsumerWidget {
     final isAdmin = myKey?.isAdmin ?? false;
     final canDelete = isSelf || isAdmin;
     final lastUsed = key.lastUsedAt;
-    return DataRow(
+    return DataRow2(
       cells: [
         DataCell(Text(key.name)),
-        DataCell(Text(key.keyHash)),
+        DataCell(EllipsisText(key.keyHash)),
         DataCell(Text(key.scopes.join(', '))),
         DataCell(
           Text(lastUsed == null ? 'Never' : formatRelativeTimestamp(lastUsed)),
