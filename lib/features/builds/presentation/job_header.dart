@@ -25,7 +25,6 @@ class JobHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
     final duration = job.runningDuration;
     return Padding(
       padding: const EdgeInsets.all(16),
@@ -34,13 +33,23 @@ class JobHeader extends StatelessWidget {
         spacing: 12,
         runSpacing: 8,
         children: [
-          Text(job.id, style: textTheme.titleMedium),
-          Chip(label: Text(job.actionName ?? job.command)),
+          Chip(avatar: const Icon(Icons.tag), label: Text(job.id)),
+          Chip(
+            avatar: const Icon(Icons.code),
+            label: Text(job.actionName ?? job.command),
+          ),
           JobStateChip(state: job.state),
-          if (duration != null) Chip(label: Text(formatDuration(duration))),
-          Chip(label: Text(_modeLabel)),
+          if (duration != null)
+            Chip(
+              avatar: const Icon(Icons.timer_outlined),
+              label: Text(formatDuration(duration)),
+            ),
+          Chip(avatar: const Icon(Icons.donut_large), label: Text(_modeLabel)),
           if (job.resumedFrom != null)
-            Chip(label: Text('resumed from ${job.resumedFrom}')),
+            Chip(
+              avatar: const Icon(Icons.restart_alt),
+              label: Text('resumed from ${job.resumedFrom}'),
+            ),
         ],
       ),
     );
