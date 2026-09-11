@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fpt_server_shared/fpt_server_shared.dart';
 import '../../../core/browser/browser_utils.dart';
 import '../../../shared/utils/format.dart';
-import '../application/zentao_controller.dart';
 import '../application/zentao_providers.dart';
 import 'report_description_dialog.dart';
 
@@ -73,7 +72,7 @@ class _StartReportTile extends ConsumerWidget {
       confirmLabel: 'Start',
     );
     if (description == null) return;
-    await ref.read(zentaoControllerProvider).startReport(description);
+    await ref.read(zentaoStatusProvider.notifier).startReport(description);
   }
 }
 
@@ -131,17 +130,15 @@ class _TaskDetail extends ConsumerWidget {
                     ),
                   if (actions.contains(DailyTaskAction.finish))
                     FilledButton.icon(
-                      onPressed: () => ref
-                          .read(zentaoControllerProvider)
-                          .finishReport(task.id),
+                      onPressed: () =>
+                          ref.read(zentaoTaskProvider(task.id).notifier).finish(),
                       icon: const Icon(Icons.check),
                       label: const Text('Finish'),
                     ),
                   if (actions.contains(DailyTaskAction.close))
                     FilledButton.icon(
-                      onPressed: () => ref
-                          .read(zentaoControllerProvider)
-                          .closeReport(task.id),
+                      onPressed: () =>
+                          ref.read(zentaoTaskProvider(task.id).notifier).close(),
                       icon: const Icon(Icons.lock_outline),
                       label: const Text('Close'),
                     ),
@@ -162,6 +159,6 @@ class _TaskDetail extends ConsumerWidget {
       initialValue: task.description,
     );
     if (description == null) return;
-    await ref.read(zentaoControllerProvider).editReport(task.id, description);
+    await ref.read(zentaoTaskProvider(task.id).notifier).edit(description);
   }
 }

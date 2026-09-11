@@ -97,7 +97,7 @@ class OwnersSection extends ConsumerWidget {
       ),
     );
     if (id == null || id.isEmpty || !context.mounted) return;
-    await ref.read(ownersControllerProvider).add(id);
+    await ref.read(ownersProvider.notifier).add(id);
   }
 }
 
@@ -151,6 +151,6 @@ class _OwnerTile extends ConsumerWidget {
       ),
     );
     if (confirmed != true || !context.mounted) return;
-    await ref.read(ownersControllerProvider).remove(id);
+    await ref.read(ownersProvider.notifier).remove(id);
   }
 }

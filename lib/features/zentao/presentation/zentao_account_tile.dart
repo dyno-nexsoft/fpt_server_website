@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:fpt_server_shared/fpt_server_shared.dart';
-import '../application/zentao_controller.dart';
+import '../application/zentao_providers.dart';
 
 /// `zentao.link` / `zentao.unlink` — which Zentao account this Discord
 /// account acts as.
@@ -49,7 +49,7 @@ class ZentaoAccountTile extends ConsumerWidget {
       ),
     );
     if (confirmed != true) return;
-    await ref.read(zentaoControllerProvider).unlink();
+    await ref.read(zentaoStatusProvider.notifier).unlink();
   }
 }
 
@@ -113,7 +113,7 @@ class _LinkFormState extends ConsumerState<_LinkForm> {
     setState(() => _submitting = true);
     try {
       await ref
-          .read(zentaoControllerProvider)
+          .read(zentaoStatusProvider.notifier)
           .link(account: account, password: password);
       // Cleared whether or not the link succeeded: on success this form is
       // replaced by the linked tile, and on failure a stale password sitting

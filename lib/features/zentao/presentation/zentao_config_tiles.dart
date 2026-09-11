@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:fpt_server_shared/fpt_server_shared.dart';
-import '../application/zentao_controller.dart';
+import '../application/zentao_providers.dart';
 
 /// `zentao.config.setProject` / `setExecution` — server-wide, not per-user.
 ///
@@ -19,13 +19,13 @@ List<Widget> zentaoConfigTiles(WidgetRef ref, ZentaoStatus status) => [
     icon: Icons.folder_outlined,
     label: 'Project',
     value: status.projectId,
-    onSubmit: (id) => ref.read(zentaoControllerProvider).setProject(id),
+    onSubmit: (id) => ref.read(zentaoStatusProvider.notifier).setProject(id),
   ),
   _IdTile(
     icon: Icons.timeline_outlined,
     label: 'Execution',
     value: status.executionId,
-    onSubmit: (id) => ref.read(zentaoControllerProvider).setExecution(id),
+    onSubmit: (id) => ref.read(zentaoStatusProvider.notifier).setExecution(id),
   ),
 ];
 

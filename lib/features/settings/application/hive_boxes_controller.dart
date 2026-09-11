@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/providers/action_invoker.dart';
@@ -33,15 +35,30 @@ class HiveBoxesController extends Notifier<List<HiveBoxInfo>?> {
   }
 
   Future<void> clean(String boxName) async {
+    final previous = state;
+    state = [
+      for (final box in previous ?? const <HiveBoxInfo>[])
+        if (box.name == boxName)
+          HiveBoxInfo(name: box.name, entryCount: 0)
+        else
+          box,
+    ];
+
     final body = await ref.read(actionInvokerProvider).run(
       'system.hive.clean',
       {'box': boxName},
     );
-    if (body == null) return;
+    if (body == null) {
+      state = previous;
+      return;
+    }
     ref
         .read(appToastProvider.notifier)
         .show(body['message'] as String? ?? 'Done');
-    await load();
+    // Reconciles with the server's own count in the background rather than
+    // making the caller wait on a second round trip for what the optimistic
+    // zero above already shows.
+    unawaited(load());
   }
 }
 

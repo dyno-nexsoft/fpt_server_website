@@ -9,7 +9,6 @@ import '../../../core/providers/catalogue_providers.dart';
 import '../../../shared/utils/format.dart';
 import '../../../shared/widgets/ellipsis_text.dart';
 import '../application/api_keys_controller.dart';
-import '../application/settings_providers.dart';
 
 /// `admin.apiKeys.list/add/remove` — self-service key management. Delete on
 /// someone else's key is only offered when the local key holds `admin`,
@@ -207,7 +206,7 @@ class ApiKeysSection extends ConsumerWidget {
       builder: (context) => _ScopesEditDialog(initialScopes: key.scopes),
     );
     if (scopes == null || !context.mounted) return;
-    await ref.read(apiKeysControllerProvider).setScopes(key, scopes);
+    await ref.read(apiKeysProvider.notifier).setScopes(key, scopes);
   }
 
   Future<void> _confirmDelete(
@@ -233,7 +232,7 @@ class ApiKeysSection extends ConsumerWidget {
       ),
     );
     if (confirmed != true || !context.mounted) return;
-    await ref.read(apiKeysControllerProvider).delete(context, key);
+    await ref.read(apiKeysProvider.notifier).delete(context, key);
   }
 
   Future<void> _showCreateKeyFlow(BuildContext context, WidgetRef ref) async {
@@ -261,7 +260,7 @@ class ApiKeysSection extends ConsumerWidget {
     );
     if (name == null || name.isEmpty || !context.mounted) return;
 
-    final secret = await ref.read(apiKeysControllerProvider).create(name);
+    final secret = await ref.read(apiKeysProvider.notifier).create(name);
     if (secret != null && context.mounted) {
       await _showSecretDialog(context, secret);
     }
