@@ -1,6 +1,7 @@
 import 'package:data_table_2/data_table_2.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:fpt_server_website/shared/utils/responsive.dart';
 
 import '../../../core/browser/browser_utils.dart';
 import 'package:fpt_server_shared/fpt_server_shared.dart';
@@ -66,21 +67,18 @@ class ApiKeysSection extends ConsumerWidget {
                     SizedBox(
                       height: _tableHeight(value.length),
                       child: DataTable2(
+                        minWidth: kTabletBreakpoint,
                         columnSpacing: 16,
                         horizontalMargin: 0,
-                        minWidth: 500,
                         columns: const [
-                          DataColumn2(label: Text('Name'), size: ColumnSize.S),
+                          DataColumn2(label: Text('Name'), fixedWidth: 150),
                           DataColumn2(label: Text('Hash'), size: ColumnSize.L),
-                          DataColumn2(
-                            label: Text('Scopes'),
-                            size: ColumnSize.S,
-                          ),
+                          DataColumn2(label: Text('Scopes'), fixedWidth: 150),
                           DataColumn2(
                             label: Text('Last used'),
-                            size: ColumnSize.S,
+                            fixedWidth: 150,
                           ),
-                          DataColumn2(label: Text(''), size: ColumnSize.S),
+                          DataColumn2(label: Text('Actions'), fixedWidth: 150),
                         ],
                         rows: [
                           for (final key in value)
