@@ -31,8 +31,18 @@ class DashboardScreen extends ConsumerWidget {
           ),
           Expanded(
             child: all.when(
+              // Both default to true/false — set explicitly since this
+              // provider re-fetches every time statusControllerProvider
+              // changes (a `ref.watch`-triggered *reload*, not a manual
+              // refresh), which `skipLoadingOnReload`/`skipError`'s
+              // defaults don't cover: without them, every status push (or
+              // a transient error while the server is mid-restart) would
+              // otherwise blank the whole dashboard for whatever's already
+              // on screen.
+              skipLoadingOnReload: true,
+              skipError: true,
               data: (jobs) => _BuildStatsSection(jobs: jobs),
-              loading: () => Center(child: const CircularProgressIndicator()),
+              loading: () => const Center(child: CircularProgressIndicator()),
               error: (error, _) => ErrorListTile(error: error),
             ),
           ),

@@ -35,83 +35,110 @@ class ApiKeysSection extends ConsumerWidget {
         leading: const Icon(Icons.vpn_key_outlined),
         title: const Text('API keys'),
         subtitle: Text(_summary(keys)),
-        children: switch (keys) {
-          AsyncValue(:final error?) => [
+        // `.when` with both skip flags, not a hand-matched `switch` checking
+        // `error?` before `value?` (as this used to) — the latter shows the
+        // error tile even when a still-good previous list is sitting right
+        // in `.value`, which is exactly what a reload/refresh hitting a
+        // transient failure produces.
+        children: keys.when(
+          skipLoadingOnReload: true,
+          skipError: true,
+          error: (error, _) => [
             ListTile(
               leading: const Icon(Icons.error_outline),
               title: const Text('Unable to load API keys'),
               subtitle: Text('$error'),
             ),
           ],
-          AsyncValue(:final value?) => [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-              // Matches the Appearance card: a Column with
-              // crossAxisAlignment.start otherwise shrink-wraps to the
-              // table's intrinsic width instead of stretching full width
-              // like every other expanded child here.
-              child: SizedBox(
-                width: double.infinity,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  spacing: 12,
-                  children: [
-                    // DataTable2 fills the available width by distributing
-                    // it across columns by relative [ColumnSize] instead of
-                    // sizing each to its content and scrolling horizontally
-                    // once they overflow — which is what the plain DataTable
-                    // this replaced did, given Hash's 64 hex characters.
-                    // It still needs a bounded height from somewhere (it
-                    // lays out its body as its own scrollable), which this
-                    // ExpansionTile's child list doesn't provide on its own.
-                    SizedBox(
-                      height: _tableHeight(value.length),
-                      child: DataTable2(
-                        minWidth: kTabletBreakpoint,
-                        columnSpacing: 16,
-                        horizontalMargin: 0,
-                        columns: const [
-                          DataColumn2(label: Text('Name'), fixedWidth: 150),
-                          DataColumn2(label: Text('Hash'), size: ColumnSize.L),
-                          DataColumn2(label: Text('Scopes'), fixedWidth: 150),
-                          DataColumn2(
-                            label: Text('Last used'),
-                            fixedWidth: 150,
-                          ),
-                          DataColumn2(label: Text('Actions'), fixedWidth: 150),
-                        ],
-                        rows: [
-                          for (final key in value)
-                            _row(context, ref, key, myKey),
-                        ],
-                      ),
-                    ),
-                    FilledButton.icon(
-                      onPressed: () => _showCreateKeyFlow(context, ref),
-                      icon: const Icon(Icons.add),
-                      label: const Text('Create key'),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-          _ => const [
+          loading: () => const [
             Padding(
               padding: EdgeInsets.all(16),
               child: LinearProgressIndicator(),
             ),
           ],
-        },
+          // `value` is technically nullable (no stored key, or the catalogue
+          // has no such action) — but the early return above already sent
+          // that case back as `SizedBox.shrink()`, so it can't reach here.
+          data: (value) => value == null
+              ? const []
+              : [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                    // Matches the Appearance card: a Column with
+                    // crossAxisAlignment.start otherwise shrink-wraps to the
+                    // table's intrinsic width instead of stretching full
+                    // width like every other expanded child here.
+                    child: SizedBox(
+                      width: double.infinity,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        spacing: 12,
+                        children: [
+                          // DataTable2 fills the available width by
+                          // distributing it across columns by relative
+                          // [ColumnSize] instead of sizing each to its
+                          // content and scrolling horizontally once they
+                          // overflow — which is what the plain DataTable
+                          // this replaced did, given Hash's 64 hex
+                          // characters. It still needs a bounded height from
+                          // somewhere (it lays out its body as its own
+                          // scrollable), which this ExpansionTile's child
+                          // list doesn't provide on its own.
+                          SizedBox(
+                            height: _tableHeight(value.length),
+                            child: DataTable2(
+                              minWidth: kTabletBreakpoint,
+                              columnSpacing: 16,
+                              horizontalMargin: 0,
+                              columns: const [
+                                DataColumn2(
+                                  label: Text('Name'),
+                                  fixedWidth: 150,
+                                ),
+                                DataColumn2(
+                                  label: Text('Hash'),
+                                  size: ColumnSize.L,
+                                ),
+                                DataColumn2(
+                                  label: Text('Scopes'),
+                                  fixedWidth: 150,
+                                ),
+                                DataColumn2(
+                                  label: Text('Last used'),
+                                  fixedWidth: 150,
+                                ),
+                                DataColumn2(
+                                  label: Text('Actions'),
+                                  fixedWidth: 150,
+                                ),
+                              ],
+                              rows: [
+                                for (final key in value)
+                                  _row(context, ref, key, myKey),
+                              ],
+                            ),
+                          ),
+                          FilledButton.icon(
+                            onPressed: () => _showCreateKeyFlow(context, ref),
+                            icon: const Icon(Icons.add),
+                            label: const Text('Create key'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+        ),
       ),
     );
   }
 
   /// Collapsed, this card is a status line — same convention as every other
-  /// card on this page.
+  /// card on this page. Value checked before error, same reasoning as
+  /// [ZentaoSection]'s `_summary`/`_icon`.
   String _summary(AsyncValue<List<ApiKeyInfo>?> keys) => switch (keys) {
-    AsyncValue(hasError: true) => 'Unable to load',
     AsyncValue(:final value?) => '${value.length} key(s)',
+    AsyncValue(hasError: true) => 'Unable to load',
     _ => 'Checking…',
   };
 

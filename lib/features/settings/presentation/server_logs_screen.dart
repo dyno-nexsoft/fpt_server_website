@@ -48,6 +48,9 @@ class ServerLogsScreen extends ConsumerWidget {
         const Divider(height: 1),
         Expanded(
           child: logs.when(
+            // A failed manual refresh should keep the tail already on
+            // screen rather than replace it with an error view.
+            skipError: true,
             data: (lines) {
               if (lines == null) {
                 return const Center(

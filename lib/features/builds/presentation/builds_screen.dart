@@ -84,6 +84,11 @@ class _BuildsScreenState extends ConsumerState<BuildsScreen> {
           SliverToBoxAdapter(child: header),
           SliverToBoxAdapter(child: chips),
           jobs.when(
+            // See the desktop branch below for why these two flags matter
+            // here: this provider re-fetches on every status push, not
+            // just on an explicit refresh.
+            skipLoadingOnReload: true,
+            skipError: true,
             data: (list) => BuildsListMobile(jobs: _applySearch(list)),
             loading: () => const SliverFillRemaining(
               child: Center(child: CircularProgressIndicator()),
@@ -102,6 +107,15 @@ class _BuildsScreenState extends ConsumerState<BuildsScreen> {
         chips,
         Expanded(
           child: jobs.when(
+            // `jobsListProvider` watches statusControllerProvider purely to
+            // re-fetch on every status push/poll — that's a *reload*
+            // (Ref.watch-driven), which `skipLoadingOnReload`/`skipError`
+            // aren't true for by default. Without them, this table blanked
+            // to a spinner (or an error screen, mid a server restart) on
+            // every single status update instead of just staying put with
+            // whatever it already had.
+            skipLoadingOnReload: true,
+            skipError: true,
             data: (list) => BuildsTableDesktop(jobs: _applySearch(list)),
             loading: () => const Center(child: CircularProgressIndicator()),
             error: (error, _) => ErrorView(error: error),

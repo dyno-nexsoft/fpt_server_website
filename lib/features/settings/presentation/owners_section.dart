@@ -21,6 +21,12 @@ class OwnersSection extends ConsumerWidget {
     final myDiscordId = ref.watch(myKeyInfoProvider).value?.discordUserId;
 
     return owners.when(
+      // A reload/refresh that fails or briefly re-enters loading should
+      // keep showing the last-known owner list, not blank the tab out from
+      // under whoever's looking at it — same reasoning as
+      // ZentaoSection/ApiKeysSection.
+      skipLoadingOnReload: true,
+      skipError: true,
       data: (ids) {
         final list = ids ?? const [];
         return SingleChildScrollView(

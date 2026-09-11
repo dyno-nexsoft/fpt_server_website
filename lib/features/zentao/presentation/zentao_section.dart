@@ -44,29 +44,49 @@ class ZentaoSection extends ConsumerWidget {
         leading: Icon(_icon(status)),
         title: const Text('Zentao'),
         subtitle: Text(_summary(status)),
-        children: switch (status) {
-          AsyncValue(:final error?) => [
+        // `.when` over a hand-matched `switch`: both `skip*` flags default
+        // to what a first load needs, but this provider also *reloads* on
+        // anything `myKeyInfoProvider`/the session depend on, and a `switch`
+        // checking `error?` before `value?` (as this used to) shows the
+        // error tile even when a still-good previous value is sitting right
+        // there in `.value` — exactly the case a refresh/reload hitting a
+        // transient failure produces.
+        children: status.when(
+          skipLoadingOnReload: true,
+          skipError: true,
+          // `value` is technically nullable (`ZentaoStatus?`) since that's
+          // what the provider itself returns for "nothing to ask about" —
+          // but the early return above already sent that case back as
+          // `SizedBox.shrink()`, so it can never actually reach here.
+          data: (value) => value == null
+              ? const []
+              : [
+                  ZentaoAccountTile(status: value),
+                  if (value.linked) ZentaoReportTile(status: value),
+                  if (canConfigure) ...zentaoConfigTiles(ref, value),
+                ],
+          error: (error, _) => [
             ListTile(
               leading: const Icon(Icons.error_outline),
               title: const Text('Unavailable for this key'),
               subtitle: Text('$error'),
             ),
           ],
-          AsyncValue(:final value?) => [
-            ZentaoAccountTile(status: value),
-            if (value.linked) ZentaoReportTile(status: value),
-            if (canConfigure) ...zentaoConfigTiles(ref, value),
-          ],
-          _ => const [LinearProgressIndicator()],
-        },
+          loading: () => const [LinearProgressIndicator()],
+        ),
       ),
     );
   }
 
+  // Value checked before error in both helpers below — a transient failure
+  // on a reload/refresh that still has a previous value in `.value` should
+  // keep reading like the last-known-good state, not flip to "unavailable"
+  // out from under whatever was already showing.
   IconData _icon(AsyncValue<ZentaoStatus?> status) => switch (status) {
-    AsyncValue(hasError: true) => Icons.error_outline,
     AsyncValue(:final value?) when value.linked =>
       Icons.assignment_turned_in_outlined,
+    AsyncValue(hasValue: true) => Icons.assignment_outlined,
+    AsyncValue(hasError: true) => Icons.error_outline,
     _ => Icons.assignment_outlined,
   };
 
@@ -74,12 +94,12 @@ class ZentaoSection extends ConsumerWidget {
   /// today's report exists are the two things worth knowing without
   /// expanding, since they decide whether there is anything to do here.
   String _summary(AsyncValue<ZentaoStatus?> status) => switch (status) {
-    AsyncValue(hasError: true) => 'Unavailable for this key',
     AsyncValue(:final value?) when !value.linked => 'No account linked',
     AsyncValue(:final value?) =>
       value.todayTaskId == null
           ? '${value.account} · no report today'
           : '${value.account} · report #${value.todayTaskId}',
+    AsyncValue(hasError: true) => 'Unavailable for this key',
     _ => 'Checking…',
   };
 }

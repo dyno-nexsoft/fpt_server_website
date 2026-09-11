@@ -77,7 +77,15 @@ class StatusController extends AsyncNotifier<SystemStatus?> {
       );
       state = AsyncData(status);
     } catch (e, stackTrace) {
-      state = AsyncError(e, stackTrace);
+      // Only overwrite state with an error if there is nothing to fall back
+      // on yet — once a status has loaded successfully, one failed poll (the
+      // routine case during a server restart: the SSE connection drops, this
+      // falls back to polling, and that first poll fails while the server is
+      // still coming back up) should leave the last good reading in place
+      // rather than replace it with an error.
+      if (!state.hasValue) {
+        state = AsyncError(e, stackTrace);
+      }
     } finally {
       _polling = false;
     }
