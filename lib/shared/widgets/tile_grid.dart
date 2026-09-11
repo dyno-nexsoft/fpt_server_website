@@ -13,7 +13,7 @@ class TileGrid extends StatelessWidget {
   const TileGrid({
     super.key,
     required this.children,
-    this.minTileWidth = 280,
+    this.minTileWidth = 360,
     this.spacing = 12,
     this.runSpacing = 12,
   });
@@ -34,10 +34,10 @@ class TileGrid extends StatelessWidget {
     if (children.isEmpty) return const SizedBox.shrink();
     return LayoutBuilder(
       builder: (context, constraints) {
-        final columns = ((constraints.maxWidth + spacing) /
-                (minTileWidth + spacing))
-            .floor()
-            .clamp(1, children.length);
+        final columns =
+            ((constraints.maxWidth + spacing) / (minTileWidth + spacing))
+                .floor()
+                .clamp(1, children.length);
         final tileWidth =
             (constraints.maxWidth - spacing * (columns - 1)) / columns;
         return Wrap(
