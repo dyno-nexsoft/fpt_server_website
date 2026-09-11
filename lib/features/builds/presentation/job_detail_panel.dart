@@ -87,7 +87,7 @@ class JobDetailPanel extends ConsumerWidget {
             icon: const Icon(Icons.upgrade),
             label: const Text('Run Now'),
           ),
-        if (canCancel) ...[
+        if (canCancel)
           FilledButton.icon(
             style: AppTheme.destructiveButtonStyle(
               Theme.of(context).colorScheme,
@@ -96,8 +96,6 @@ class JobDetailPanel extends ConsumerWidget {
             icon: const Icon(Icons.cancel_outlined),
             label: const Text('Cancel'),
           ),
-          const Text('This deletes artifacts on the build server.'),
-        ],
         if (canRetry)
           FilledButton.icon(
             onPressed: () => _retry(context, ref),
