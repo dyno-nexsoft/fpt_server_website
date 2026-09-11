@@ -58,6 +58,12 @@ class _BranchAutocompleteFieldState
           focusNode: focusNode,
           decoration: InputDecoration(
             labelText: widget.label,
+            // Every one of these fields now also accepts a commit hash
+            // (`sync_repo`'s fallback to a detached checkout when the value
+            // isn't a branch on the remote) — the autocomplete above still
+            // only ever suggests branches, so this is the only hint a typed
+            // hash is just as valid as a branch name.
+            hintText: 'Branch name or commit hash',
             prefixIcon: widget.icon == null ? null : Icon(widget.icon),
           ),
           validator: (value) =>
